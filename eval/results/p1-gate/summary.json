@@ -1,0 +1,508 @@
+{
+  "generatedAt": "2026-09-23T04:04:21.399Z",
+  "benchCommit": "dd08cd3",
+  "bugsYamlHash": "eb16281ebdd853c58bf10a4f88f6b6af7ef9613c22bbe654a86703bb07cd38fc",
+  "runIds": ["run_20260923-040149_s2y0", "run_20260923-040259_m9hr", "run_20260923-040338_0bwa"],
+  "pipelines": {
+    "deterministic": {
+      "runs": 3,
+      "recall": {
+        "confirmed": [0.16666666666666666],
+        "confirmedLikely": [0.3333333333333333],
+        "all": [0.3333333333333333]
+      },
+      "precision": {
+        "bugs": [1, null, null],
+        "improvements": [1, 1, 1]
+      },
+      "cleanFalsePositives": [0, 0],
+      "tierAccuracy": [0.5],
+      "minutes": [0.57, 0.52, 0.52],
+      "costUsd": [0, 0, 0],
+      "llmCalls": [0, 0, 0],
+      "stabilityJaccard": null
+    }
+  },
+  "recallByCategory": {
+    "functional": 0,
+    "validation": 0,
+    "crash": 0,
+    "state": 0,
+    "broken-resource": 1,
+    "accessibility": 1,
+    "performance": 1,
+    "security": 0,
+    "responsive": 1
+  },
+  "perBug": [
+    {
+      "id": "B01",
+      "found": [false],
+      "bestTier": null,
+      "expectedTier": "Confirmed"
+    },
+    {
+      "id": "B02",
+      "found": [false],
+      "bestTier": null,
+      "expectedTier": "Confirmed"
+    },
+    {
+      "id": "B03",
+      "found": [false],
+      "bestTier": null,
+      "expectedTier": "Likely"
+    },
+    {
+      "id": "B04",
+      "found": [false],
+      "bestTier": null,
+      "expectedTier": "Likely"
+    },
+    {
+      "id": "B05",
+      "found": [false],
+      "bestTier": null,
+      "expectedTier": "Confirmed"
+    },
+    {
+      "id": "B06",
+      "found": [false],
+      "bestTier": null,
+      "expectedTier": "Confirmed"
+    },
+    {
+      "id": "B07",
+      "found": [false],
+      "bestTier": null,
+      "expectedTier": "Likely"
+    },
+    {
+      "id": "B08",
+      "found": [false],
+      "bestTier": null,
+      "expectedTier": "Confirmed"
+    },
+    {
+      "id": "B09",
+      "found": [true],
+      "bestTier": "likely",
+      "expectedTier": "Confirmed"
+    },
+    {
+      "id": "B10",
+      "found": [true],
+      "bestTier": "likely",
+      "expectedTier": "Confirmed"
+    },
+    {
+      "id": "B11",
+      "found": [false],
+      "bestTier": null,
+      "expectedTier": "Confirmed"
+    },
+    {
+      "id": "B12",
+      "found": [true],
+      "bestTier": "confirmed",
+      "expectedTier": "Confirmed"
+    },
+    {
+      "id": "B13",
+      "found": [true],
+      "bestTier": "confirmed",
+      "expectedTier": "Confirmed"
+    },
+    {
+      "id": "B14",
+      "found": [true],
+      "bestTier": "confirmed",
+      "expectedTier": "Confirmed"
+    },
+    {
+      "id": "B15",
+      "found": [false],
+      "bestTier": null,
+      "expectedTier": "Confirmed"
+    },
+    {
+      "id": "B16",
+      "found": [true],
+      "bestTier": "likely",
+      "expectedTier": "Confirmed"
+    },
+    {
+      "id": "B17",
+      "found": [false],
+      "bestTier": null,
+      "expectedTier": "Likely"
+    },
+    {
+      "id": "B18",
+      "found": [false],
+      "bestTier": null,
+      "expectedTier": "Needs review"
+    }
+  ],
+  "decoysFlagged": {
+    "D01": 0,
+    "D02": 0,
+    "D03": 0,
+    "D04": 0
+  },
+  "unlabelled": 0,
+  "runs": [
+    {
+      "runId": "run_20260923-040149_s2y0",
+      "pipeline": "deterministic",
+      "clean": false,
+      "findings": [
+        {
+          "findingId": "fd_gpipe3ty",
+          "fingerprint": "fp_7b76efbe19cde62c",
+          "title": "Image doesn't load: \"Carpet shampoo\"",
+          "kind": "bug",
+          "tier": "likely",
+          "category": "broken-resource",
+          "route": "/services",
+          "match": {
+            "kind": "bug",
+            "id": "B09",
+            "ruleIndex": 0,
+            "tentative": false
+          },
+          "outcome": "tp",
+          "bugId": "B09",
+          "why": "matches B09 rule 1"
+        },
+        {
+          "findingId": "fd_l87z5a0q",
+          "fingerprint": "fp_d2cffea3ad040b42",
+          "title": "Link \"Terms\" goes to a missing page (/terms-and-conditions → 404)",
+          "kind": "bug",
+          "tier": "likely",
+          "category": "broken-resource",
+          "route": "/",
+          "match": {
+            "kind": "bug",
+            "id": "B10",
+            "ruleIndex": 0,
+            "tentative": false
+          },
+          "outcome": "tp",
+          "bugId": "B10",
+          "why": "matches B10 rule 1"
+        },
+        {
+          "findingId": "fd_qqz4n9f0",
+          "fingerprint": "fp_0fa71620b9c525c3",
+          "title": "Page scrolls sideways on a phone (605 px content in a 375 px screen)",
+          "kind": "bug",
+          "tier": "likely",
+          "category": "responsive",
+          "route": "/book",
+          "match": {
+            "kind": "bug",
+            "id": "B16",
+            "ruleIndex": 0,
+            "tentative": false
+          },
+          "outcome": "tp",
+          "bugId": "B16",
+          "why": "matches B16 rule 1"
+        },
+        {
+          "findingId": "fd_p75dlada",
+          "fingerprint": "fp_47bcc5a3238b3d5f",
+          "title": "Accessibility: Buttons must have discernible text",
+          "kind": "improvement",
+          "tier": "evidence_based",
+          "category": "accessibility",
+          "route": "/contact",
+          "match": {
+            "kind": "bug",
+            "id": "B12",
+            "ruleIndex": 1,
+            "tentative": false
+          },
+          "outcome": "tp",
+          "bugId": "B12",
+          "why": "matches B12 rule 2"
+        },
+        {
+          "findingId": "fd_fbkyj87k",
+          "fingerprint": "fp_4b42d1f0cab26db3",
+          "title": "Accessibility: Elements must meet minimum color contrast ratio thresholds",
+          "kind": "improvement",
+          "tier": "evidence_based",
+          "category": "accessibility",
+          "route": "/",
+          "match": {
+            "kind": "bug",
+            "id": "B13",
+            "ruleIndex": 0,
+            "tentative": false
+          },
+          "outcome": "tp",
+          "bugId": "B13",
+          "why": "matches B13 rule 1"
+        },
+        {
+          "findingId": "fd_sp29glv6",
+          "fingerprint": "fp_88181b5b01b2e3b0",
+          "title": "Accessibility: Form elements must have labels",
+          "kind": "improvement",
+          "tier": "evidence_based",
+          "category": "accessibility",
+          "route": "/contact",
+          "match": {
+            "kind": "bug",
+            "id": "B12",
+            "ruleIndex": 0,
+            "tentative": false
+          },
+          "outcome": "tp",
+          "bugId": "B12",
+          "why": "matches B12 rule 1"
+        },
+        {
+          "findingId": "fd_920e4sfn",
+          "fingerprint": "fp_031bc07487cf3c29",
+          "title": "Missing X-Content-Type-Options: nosniff",
+          "kind": "improvement",
+          "tier": "evidence_based",
+          "category": "security",
+          "route": "/",
+          "label": "tp_unseeded",
+          "outcome": "tp",
+          "why": "labelled real (not seeded)"
+        },
+        {
+          "findingId": "fd_um3zpnyu",
+          "fingerprint": "fp_cf5703bdcd814b7c",
+          "title": "No Content-Security-Policy header",
+          "kind": "improvement",
+          "tier": "evidence_based",
+          "category": "security",
+          "route": "/",
+          "match": {
+            "kind": "bug",
+            "id": "B15",
+            "ruleIndex": 1,
+            "tentative": false
+          },
+          "label": "tp_unseeded",
+          "outcome": "tp",
+          "why": "labelled real (not seeded)"
+        },
+        {
+          "findingId": "fd_rawstomi",
+          "fingerprint": "fp_6cc1851db0e7ecdd",
+          "title": "Page can be embedded in other sites (no frame protection)",
+          "kind": "improvement",
+          "tier": "evidence_based",
+          "category": "security",
+          "route": "/",
+          "label": "tp_unseeded",
+          "outcome": "tp",
+          "why": "labelled real (not seeded)"
+        },
+        {
+          "findingId": "fd_b23v8wpi",
+          "fingerprint": "fp_fcb2c9f64fd53c70",
+          "title": "Slow API call: GET /api/bookings took 3.5 s",
+          "kind": "improvement",
+          "tier": "evidence_based",
+          "category": "performance",
+          "route": "/bookings",
+          "match": {
+            "kind": "bug",
+            "id": "B14",
+            "ruleIndex": 0,
+            "tentative": false
+          },
+          "outcome": "tp",
+          "bugId": "B14",
+          "why": "matches B14 rule 1"
+        }
+      ],
+      "found": {
+        "B09": "likely",
+        "B10": "likely",
+        "B16": "likely",
+        "B12": "confirmed",
+        "B13": "confirmed",
+        "B14": "confirmed"
+      },
+      "recall": {
+        "confirmed": 0.16666666666666666,
+        "confirmedLikely": 0.3333333333333333,
+        "all": 0.3333333333333333
+      },
+      "precision": {
+        "bugs": {
+          "confirmed": null,
+          "confirmedLikely": 1,
+          "all": 1
+        },
+        "improvements": {
+          "evidenceBased": 1,
+          "all": 1
+        }
+      },
+      "cleanFalsePositives": null,
+      "decoysFlagged": [],
+      "tierAccuracy": 0.5,
+      "unlabelled": 0,
+      "minutes": 0.5744,
+      "costUsd": 0,
+      "llmCalls": 0
+    },
+    {
+      "runId": "run_20260923-040259_m9hr",
+      "pipeline": "deterministic",
+      "clean": true,
+      "findings": [
+        {
+          "findingId": "fd_aqha0xsr",
+          "fingerprint": "fp_031bc07487cf3c29",
+          "title": "Missing X-Content-Type-Options: nosniff",
+          "kind": "improvement",
+          "tier": "evidence_based",
+          "category": "security",
+          "route": "/",
+          "label": "tp_unseeded",
+          "outcome": "tp",
+          "why": "labelled real (not seeded)"
+        },
+        {
+          "findingId": "fd_l1au32zr",
+          "fingerprint": "fp_cf5703bdcd814b7c",
+          "title": "No Content-Security-Policy header",
+          "kind": "improvement",
+          "tier": "evidence_based",
+          "category": "security",
+          "route": "/",
+          "match": {
+            "kind": "bug",
+            "id": "B15",
+            "ruleIndex": 1,
+            "tentative": false
+          },
+          "label": "tp_unseeded",
+          "outcome": "tp",
+          "why": "labelled real (not seeded)"
+        },
+        {
+          "findingId": "fd_61p4tl11",
+          "fingerprint": "fp_6cc1851db0e7ecdd",
+          "title": "Page can be embedded in other sites (no frame protection)",
+          "kind": "improvement",
+          "tier": "evidence_based",
+          "category": "security",
+          "route": "/",
+          "label": "tp_unseeded",
+          "outcome": "tp",
+          "why": "labelled real (not seeded)"
+        }
+      ],
+      "found": {},
+      "recall": {
+        "confirmed": 0,
+        "confirmedLikely": 0,
+        "all": 0
+      },
+      "precision": {
+        "bugs": {
+          "confirmed": null,
+          "confirmedLikely": null,
+          "all": null
+        },
+        "improvements": {
+          "evidenceBased": 1,
+          "all": 1
+        }
+      },
+      "cleanFalsePositives": 0,
+      "decoysFlagged": [],
+      "tierAccuracy": null,
+      "unlabelled": 0,
+      "minutes": 0.52495,
+      "costUsd": 0,
+      "llmCalls": 0
+    },
+    {
+      "runId": "run_20260923-040338_0bwa",
+      "pipeline": "deterministic",
+      "clean": true,
+      "findings": [
+        {
+          "findingId": "fd_lro6gpk2",
+          "fingerprint": "fp_031bc07487cf3c29",
+          "title": "Missing X-Content-Type-Options: nosniff",
+          "kind": "improvement",
+          "tier": "evidence_based",
+          "category": "security",
+          "route": "/",
+          "label": "tp_unseeded",
+          "outcome": "tp",
+          "why": "labelled real (not seeded)"
+        },
+        {
+          "findingId": "fd_gms13wic",
+          "fingerprint": "fp_cf5703bdcd814b7c",
+          "title": "No Content-Security-Policy header",
+          "kind": "improvement",
+          "tier": "evidence_based",
+          "category": "security",
+          "route": "/",
+          "match": {
+            "kind": "bug",
+            "id": "B15",
+            "ruleIndex": 1,
+            "tentative": false
+          },
+          "label": "tp_unseeded",
+          "outcome": "tp",
+          "why": "labelled real (not seeded)"
+        },
+        {
+          "findingId": "fd_kp9gjl0r",
+          "fingerprint": "fp_6cc1851db0e7ecdd",
+          "title": "Page can be embedded in other sites (no frame protection)",
+          "kind": "improvement",
+          "tier": "evidence_based",
+          "category": "security",
+          "route": "/",
+          "label": "tp_unseeded",
+          "outcome": "tp",
+          "why": "labelled real (not seeded)"
+        }
+      ],
+      "found": {},
+      "recall": {
+        "confirmed": 0,
+        "confirmedLikely": 0,
+        "all": 0
+      },
+      "precision": {
+        "bugs": {
+          "confirmed": null,
+          "confirmedLikely": null,
+          "all": null
+        },
+        "improvements": {
+          "evidenceBased": 1,
+          "all": 1
+        }
+      },
+      "cleanFalsePositives": 0,
+      "decoysFlagged": [],
+      "tierAccuracy": null,
+      "unlabelled": 0,
+      "minutes": 0.5178166666666667,
+      "costUsd": 0,
+      "llmCalls": 0
+    }
+  ]
+}

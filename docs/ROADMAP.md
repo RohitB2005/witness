@@ -19,16 +19,18 @@ Presentation: 7, 8 or 9 October 2026. Feature freeze: **Saturday 3 October**. Pr
 
 ## P1 — Deterministic engine (Fri 25 – Sat 26 Sep)
 
-- [ ] Config + budgets (zod); `RunStore` JSON implementation; event emitter
-- [ ] Browser layer + safety policy (origin guard, production write block, permissions, downloads, dialogs, masking) + tests (`SECURITY.md` §4)
-- [ ] Evidence recorder (IDs, screenshots, AI-mode aria snapshots, console, network, page errors, timings)
-- [ ] Preflight (reachability, login detection, credential login, success signal)
-- [ ] Crawler (BFS, same-origin, route normalisation, structure-hash dedupe, budget)
-- [ ] Detectors: DET-PAGEERROR, DET-CONSOLE, DET-HTTP5XX, DET-REQFAIL, DET-BROKENLINK, DET-BROKENIMG, DET-A11Y, DET-PERF, DET-OVERFLOW, DET-SECHEADERS (DET-XSS and DET-HTTP4XX land with edge inputs in P2) — each with fixture tests
-- [ ] Minimal report: JSON + Markdown; CLI `witness scan` with exit codes; `--pipeline deterministic`
-- [ ] Eval scorer v1 (`eval/score.ts`) against `bugs.yaml` — *good candidate for Rohit to write himself*
+- [x] Config + budgets (zod); `RunStore` JSON implementation; event emitter
+- [x] Browser layer + safety policy (origin guard, production write block, permissions, downloads, dialogs, masking) + tests (`SECURITY.md` §4)
+- [x] Evidence recorder (IDs, screenshots, AI-mode aria snapshots, console, network, page errors, timings)
+- [x] Preflight (reachability, login detection, credential login, success signal)
+- [x] Crawler (BFS, same-origin, route normalisation, structure-hash dedupe, budget)
+- [x] Detectors: DET-PAGEERROR, DET-CONSOLE, DET-HTTP5XX, DET-REQFAIL, DET-BROKENLINK, DET-BROKENIMG, DET-A11Y, DET-PERF, DET-OVERFLOW, DET-SECHEADERS (DET-XSS and DET-HTTP4XX land with edge inputs in P2) — each with fixture tests
+- [x] Minimal report: JSON + Markdown; CLI `witness scan` with exit codes; `--pipeline deterministic`
+- [x] Eval scorer v1 (`eval/score.ts`) against `bugs.yaml` — written by Claude at Rohit's request (23 Sep); matching explained in the P1 teach-back
 
 **Gate P1:** A0 on the buggy bench finds the universal-oracle bugs reachable by crawling (B09, B10, B12, B13, B14, B16 at minimum); A0 on the clean bench reports no bug-category findings; production-mode write-block test passes. Teach-back written.
+
+**P1 gate — passed 23 Sep 2026.** A0 buggy: all six found, no decoys; A0 clean: 0 bug findings (staging + production mode); policy tests pass. Results in `DEVLOG.md` and `eval/results/p1-gate/`.
 
 ## P2 — AI exploration (Sun 27 – Mon 28 Sep)
 

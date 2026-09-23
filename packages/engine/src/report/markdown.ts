@@ -1,0 +1,81 @@
+// Minimal Markdown report (P1). The full exporters (HTML/MD/JSON with evidence) arrive in P3.
+import type { Finding, RunResult } from "../types";
+
+const VERDICT_LABEL = {
+  ready: "READY",
+  caveats: "READY WITH CAVEATS",
+  not_ready: "NOT READY",
+} as const;
+const TIER_LABEL: Record<Finding["tier"], string> = {
+  confirmed: "Confirmed",
+  likely: "Likely",
+  needs_review: "Needs review",
+  discarded: "Discarded",
+  evidence_based: "Evidence-based",
+  suggestion: "Suggestion",
+};
+
+/** Escapes text so page-controlled strings can't inject Markdown/HTML structure into the report. */
+export function mdEscape(text: string): string {
+  return text.replace(/[\\`*_{}[\]<>#|]/g, (c) => `\\${c}`).replace(/\r?\n/g, " ");
+}
+
+export function renderMarkdown(r: RunResult): string {
+  const bugs = r.findings.filter((f) => f.kind === "bug" && f.tier !== "discarded");
+  const improvements = r.findings.filter((f) => f.kind === "improvement");
+  const discarded = r.findings.filter((f) => f.tier === "discarded");
+  const mins = (r.stats.durationMs / 60_000).toFixed(1);
+  const lines: string[] = [
+    `# Witness report — ${mdEscape(r.scope)}`,
+    "",
+    `**Verdict: ${VERDICT_LABEL[r.verdict.level]}.** ${mdEscape(r.verdict.reason)}`,
+    "",
+    `- Scope: ${mdEscape(r.scope)} (mode: ${r.config.mode}, budget: ${r.config.budget}, pipeline: ${r.config.pipeline})`,
+    `- Run: ${r.runId}, ${r.startedAt} (${mins} min)`,
+    `- Pages mapped: ${r.stats.pages}; candidates: ${r.stats.candidates}; bugs: ${bugs.length}; improvements: ${improvements.length}`,
+    `- LLM calls: ${r.stats.llmCalls} (US$${r.stats.costUsd.toFixed(2)})`,
+  ];
+  if (r.config.loggedInAs) lines.push(`- Logged in as: ${mdEscape(r.config.loggedInAs)}`);
+  if (r.stats.capsHit.length) lines.push(`- Budget caps hit: ${r.stats.capsHit.join(", ")}`);
+  if (r.aiStagesSkipped) lines.push(`- AI stages skipped: ${mdEscape(r.aiStagesSkipped)}`);
+  if (r.error) lines.push(`- **Scan error:** ${mdEscape(r.error)}`);
+  lines.push("", "## What wasn't tested", "");
+  for (const n of r.notTested.length ? r.notTested : ["Nothing noted."])
+    lines.push(`- ${mdEscape(n)}`);
+
+  lines.push("", `## Bugs (${bugs.length})`, "");
+  if (!bugs.length) lines.push("None found.");
+  bugs.forEach((f, i) => lines.push(...card(f, i + 1)));
+  lines.push("", `## Improvements (${improvements.length})`, "");
+  if (!improvements.length) lines.push("None found.");
+  improvements.forEach((f, i) => lines.push(...card(f, i + 1)));
+  if (discarded.length) {
+    lines.push("", `## Discarded (${discarded.length})`, "");
+    for (const f of discarded) lines.push(`- ${mdEscape(f.title)} — ${mdEscape(f.tierReason)}`);
+  }
+  lines.push("");
+  return lines.join("\n");
+}
+
+function card(f: Finding, n: number): string[] {
+  const out = [
+    `### ${n}. ${mdEscape(f.title)}`,
+    "",
+    `**Severity:** ${f.severity} · **Tier:** ${TIER_LABEL[f.tier]} · **Category:** ${f.category} · **Route:** \`${f.route.replace(/`/g, "")}\``,
+    "",
+    mdEscape(f.impact),
+    "",
+    `- **Why this tier:** ${mdEscape(f.tierReason)}`,
+    `- **Why flagged:** ${mdEscape(f.whyFlagged)}`,
+    `- **Expected:** ${mdEscape(f.expected)}`,
+    `- **Actual:** ${mdEscape(f.actual)}`,
+    "",
+    "Steps to reproduce:",
+    "",
+    ...f.steps.map((s, i) => `${i + 1}. ${mdEscape(s)}`),
+    "",
+    `Evidence: ${f.evidenceIds.join(", ")} · Fingerprint: ${f.fingerprint}`,
+    "",
+  ];
+  return out;
+}

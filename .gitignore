@@ -149,3 +149,6 @@ runs/
 test-results/
 playwright-report/
 blob-report/
+
+# Witness user data (suppressions)
+data/
