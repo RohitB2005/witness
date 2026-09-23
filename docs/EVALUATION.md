@@ -42,6 +42,7 @@ The scorer (`eval/score.ts`) implements the matching semantics documented at the
 - **Match.** Each finding (excluding Discarded) is matched against bug rules, then decoy rules. Keyword-only rules marked `confirm: manual` produce *tentative* matches listed for labelling.
 - **Labels.** `eval/labels.json` maps `fingerprint → "tp_unseeded" | "fp" | "tp:<bugId>"`. Unmatched findings stay *unlabelled* until labelled; the summary reports how many.
 - **Recall@T** = seeded bugs with at least one matching finding whose tier ∈ T, ÷ 18. Report T = {Confirmed}, {Confirmed, Likely}, {Confirmed, Likely, Needs review}.
+- **Improvement tiers in recall.** Some seeded bugs surface as improvements (e.g. B12–B14 via DET-A11Y / DET-PERF), whose tiers are `evidence_based` / `suggestion`. For the recall tiers only, `evidence_based` counts as Confirmed and `suggestion` counts as Needs review. Improvement precision is still computed separately (below) on the improvement tiers themselves. (Decided 23 Sep 2026, before `bugs.yaml` was frozen; `bugs.yaml` unchanged.)
 - **Precision@T** = TP ÷ (TP + FP) over findings with tier ∈ T, where TP = matched to a seeded bug, labelled `tp:*` or `tp_unseeded`; FP = matched to a decoy or labelled `fp`. Compute separately for bugs and improvements. Unlabelled findings are excluded and counted.
 - **Clean-build false positives** = bug findings with tier Confirmed or Likely in E2 (the clean bench is required to be genuinely clean — see `BENCH_SPEC.md` §1).
 - **Tier accuracy** = found bugs whose best tier equals `expected_tier` ÷ found bugs.

@@ -1,0 +1,41 @@
+{
+  "name": "witness",
+  "private": true,
+  "type": "module",
+  "packageManager": "pnpm@12.5.1",
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "test": "vitest run",
+    "lint": "eslint .",
+    "typecheck": "pnpm -r --if-present typecheck",
+    "format": "prettier --write .",
+    "bench": "pnpm --filter @witness/bench dev",
+    "bench:build": "pnpm --filter @witness/bench build",
+    "bench:serve": "pnpm --filter @witness/bench serve",
+    "bench:test": "pnpm --filter @witness/bench test:e2e",
+    "bench:reset": "node scripts/bench-control.mjs reset",
+    "bench:fix": "node scripts/bench-control.mjs fix",
+    "bench:break": "node scripts/bench-control.mjs break",
+    "bench:status": "node scripts/bench-control.mjs status",
+    "demo:check": "node scripts/demo-check.mjs",
+    "dev": "node scripts/not-yet.mjs \"pnpm dev\" P4",
+    "scan": "node scripts/not-yet.mjs \"pnpm scan\" P1",
+    "eval": "node scripts/not-yet.mjs \"pnpm eval\" P5",
+    "demo:up": "node scripts/not-yet.mjs \"pnpm demo:up\" P4",
+    "demo:test": "node scripts/not-yet.mjs \"pnpm demo:test\" P4",
+    "demo:replay": "node scripts/not-yet.mjs \"pnpm demo:replay\" P4"
+  },
+  "devDependencies": {
+    "@eslint/js": "^10.0.1",
+    "@types/node": "^22.20.4",
+    "eslint": "^10.11.0",
+    "eslint-config-prettier": "^10.1.8",
+    "prettier": "^3.9.8",
+    "tsx": "^4.23.15",
+    "typescript": "~6.0.3",
+    "typescript-eslint": "^8.70.1",
+    "vitest": "^5.0.1"
+  }
+}

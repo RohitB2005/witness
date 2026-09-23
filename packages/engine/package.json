@@ -1,0 +1,10 @@
+{
+  "name": "@witness/engine",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Witness scanning engine: all logic, framework-free",
+  "scripts": {
+    "typecheck": "tsc -p tsconfig.json"
+  }
+}

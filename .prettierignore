@@ -1,0 +1,10 @@
+pnpm-lock.yaml
+dist
+runs
+.witness-cache
+test-results
+playwright-report
+# Frozen ground truth: never reformat
+bench/bugs.yaml
+# Hand-written docs keep their own layout
+**/*.md

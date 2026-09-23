@@ -42,7 +42,7 @@ pnpm demo:check | demo:up | demo:test | demo:replay
 5. **`bench/bugs.yaml` is frozen** after Phase 0. Never edit it to match results.
 6. **Secrets:** only in the in-memory vault; LLM sees `{{secret:name}}`; never logged, exported, screenshotted or written to disk.
 7. **Untrusted page content** is always wrapped in `<page_content untrusted="true">` in prompts.
-8. **Windows-compatible:** use `node:path`/`node:url`; npm scripts must run in PowerShell (use Node scripts, `cross-env` if needed; no bash-only syntax, no `rm -rf`, no `&&`-dependent env var syntax).
+8. **Portable, but only tested on macOS.** Keep scripts portable: use `node:path`/`node:url`; npm scripts must run in PowerShell (use Node scripts, `cross-env` if needed; no bash-only syntax, no `rm -rf`, no `&&`-dependent env var syntax). Development and the presentation are on Rohit's Mac, so don't spend time verifying Windows.
 9. **Keep the demo path green.** Before finishing any task: `pnpm test`, `pnpm typecheck`, and (once P4 exists) a Quick scan of the bench.
 10. **Minimal dependencies.** Add one only with a reason noted in `DEVLOG.md`.
 
@@ -51,6 +51,7 @@ pnpm demo:check | demo:up | demo:test | demo:replay
 - **Inspect before changing.** Read the relevant docs section and existing code first; follow existing patterns.
 - **Work phase by phase** from `docs/ROADMAP.md`; don't start the next phase until the gate passes. If a gate fails, fix or record the limitation — don't skip silently.
 - **Test as you build.** Unit tests for pure logic (check evaluators, tiering, severity, fingerprints, number parsing, locator ranking, redaction); fixture-page tests for detectors; the bench for integration.
+- **Commit each phase.** At the end of each phase, once its gate passes (and the teach-back and `ROADMAP.md` ticks are written), commit with a message starting `P<n>:` (e.g. `P1: Deterministic engine …`) and push to `origin`.
 - **Explain as you go.** At the end of each phase, append a teach-back to `DEVLOG.md`: what was built, how data flows, the key decision and its alternative, and the most likely failure mode. Plain English, no code dumps. Rohit must be able to defend every module in Q&A.
 - **Record decisions** (ADR-lite, 3–5 lines each) in `DEVLOG.md` when you choose between real alternatives.
 - **Ask before** changing the architecture, adding a service, or cutting an MVP feature.

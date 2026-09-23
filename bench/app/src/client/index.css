@@ -1,0 +1,24 @@
+@import "tailwindcss";
+
+@theme {
+  --color-brand-50: #f0fdfa;
+  --color-brand-100: #ccfbf1;
+  --color-brand-700: #0f766e;
+  --color-brand-800: #115e59;
+  --color-brand-900: #134e4a;
+}
+
+html {
+  background: #ffffff;
+  color: #1f2937;
+}
+
+/* Visible focus ring for keyboard users everywhere. */
+:focus-visible {
+  outline: 3px solid #0f766e;
+  outline-offset: 2px;
+}
+
+dialog::backdrop {
+  background: rgb(17 24 39 / 0.5);
+}

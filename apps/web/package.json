@@ -1,0 +1,10 @@
+{
+  "name": "@witness/web",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "description": "React dashboard",
+  "scripts": {
+    "typecheck": "tsc -p tsconfig.json"
+  }
+}

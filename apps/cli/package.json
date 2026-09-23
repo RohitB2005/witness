@@ -1,0 +1,10 @@
+{
+  "name": "@witness/cli",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "description": "witness scan command-line interface",
+  "scripts": {
+    "typecheck": "tsc -p tsconfig.json"
+  }
+}

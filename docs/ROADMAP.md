@@ -6,14 +6,16 @@ Presentation: 7, 8 or 9 October 2026. Feature freeze: **Saturday 3 October**. Pr
 
 ## P0 — Foundations (Wed 23 – Thu 24 Sep)
 
-- [ ] pnpm monorepo scaffold per `ARCHITECTURE.md` §1; TypeScript strict; Vitest; ESLint + Prettier; root scripts
-- [ ] Bench app (`bench/app`) per `BENCH_SPEC.md`: all pages, seed data, flags B01–B18 and C01, decoys D01–D04, `/__bench/*` routes, production build on :5180
-- [ ] Bench's own Playwright tests: one per bug (pass clean, fail when flagged) + clean-build criteria (axe clean, no console errors, no broken links, fast APIs, no overflow)
-- [ ] Commit `bench/bugs.yaml`; record commit hash in `DEVLOG.md` ("bugs.yaml frozen at …")
-- [ ] Spike: a script that opens the bench with Playwright, takes an AI-mode aria snapshot, and has the LLM log in via one tool-calling loop (throwaway; proves the API, model access and snapshot format)
-- [ ] `.env` configured; `pnpm demo:check` stub
+- [x] pnpm monorepo scaffold per `ARCHITECTURE.md` §1; TypeScript strict; Vitest; ESLint + Prettier; root scripts
+- [x] Bench app (`bench/app`) per `BENCH_SPEC.md`: all pages, seed data, flags B01–B18 and C01, decoys D01–D04, `/__bench/*` routes, production build on :5180
+- [x] Bench's own Playwright tests: one per bug (pass clean, fail when flagged) + clean-build criteria (axe clean, no console errors, no broken links, fast APIs, no overflow)
+- [x] Commit `bench/bugs.yaml`; record commit hash in `DEVLOG.md` ("bugs.yaml frozen at …") — ff7f6a9
+- [ ] ~~Spike~~ — **moved to the start of P2** (no API key yet; Rohit, 23 Sep). See DEVLOG D13.
+- [x] `.env` present; `pnpm demo:check` stub (API key still to add — needed at the start of P2)
 
 **Gate P0:** bench clean and buggy builds both run; every bench bug test behaves; spike logs in. Teach-back written.
+
+**P0 gate — passed 23 Sep 2026 except the spike**, which was deferred to P2 by decision (results in `DEVLOG.md`).
 
 ## P1 — Deterministic engine (Fri 25 – Sat 26 Sep)
 
@@ -30,6 +32,7 @@ Presentation: 7, 8 or 9 October 2026. Feature freeze: **Saturday 3 October**. Pr
 
 ## P2 — AI exploration (Sun 27 – Mon 28 Sep)
 
+- [ ] **First (moved from P0):** add the API key, verify model IDs on the provider, then the spike: open the bench with Playwright, take an AI-mode aria snapshot, and have the LLM log in via one tool-calling loop (throwaway; proves the API, model access and snapshot format)
 - [ ] LLM gateway: providers, zod structured output, repair retry, backoff, cache (`off|rw|replay`), replay guard, cost accounting + caps, call log, redaction + test
 - [ ] Prompt-contamination test
 - [ ] Planner (app-map summary builder, prompt, schema, grounding verification)

@@ -1,0 +1,31 @@
+{
+  "name": "@witness/bench",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Harbour Clean — seeded-bug benchmark app for evaluating Witness",
+  "scripts": {
+    "dev": "tsx scripts/dev.ts",
+    "build": "vite build",
+    "serve": "tsx scripts/serve.ts",
+    "test:e2e": "playwright test",
+    "typecheck": "tsc -p tsconfig.json"
+  },
+  "dependencies": {
+    "express": "^5.2.1",
+    "react": "^19.3.0",
+    "react-dom": "^19.3.0",
+    "react-router": "^8.4.0"
+  },
+  "devDependencies": {
+    "@axe-core/playwright": "^4.13.0",
+    "@playwright/test": "^1.63.0",
+    "@tailwindcss/vite": "^4.3.3",
+    "@types/express": "^5.0.6",
+    "@types/react": "^19.3.0",
+    "@types/react-dom": "^19.3.0",
+    "@vitejs/plugin-react": "^6.1.1",
+    "tailwindcss": "^4.3.3",
+    "vite": "^8.3.0"
+  }
+}

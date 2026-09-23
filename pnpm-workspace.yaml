@@ -1,0 +1,8 @@
+packages:
+  - packages/*
+  - apps/*
+  - bench/app
+
+# pnpm blocks dependency install scripts unless allowed. esbuild's only verifies its native binary.
+allowBuilds:
+  esbuild: true
