@@ -6,7 +6,7 @@ import { mkdir, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { parseArgs } from "node:util";
 import { RunResultSchema, type RunResult } from "@witness/engine";
-import { scoreRun, summarise, type Labels, type RunScore } from "./score-lib";
+import { LabelsFileSchema, scoreRun, summarise, type Labels, type RunScore } from "./score-lib";
 import { loadTruth, REPO_ROOT } from "./truth";
 
 interface RunRef {
@@ -81,7 +81,10 @@ function renderMarkdown(
     s.findings.filter((f) => !f.match && !f.label).map((f) => ({ s, f })),
   );
   L.push("", `## Needs a label (${tentative.length + unmatched.length})`, "");
-  L.push('Add `"<fingerprint>": "tp:Bxx" | "tp_unseeded" | "fp"` to eval/labels.json.', "");
+  L.push(
+    'Add `"<fingerprint>": { "label": "tp:Bxx" | "tp_unseeded" | "fp", "reason": "<one line>" }` to eval/labels.json.',
+    "",
+  );
   for (const { s, f } of [...tentative, ...unmatched]) {
     L.push(`- ${f.fingerprint} (${s.runId}) [${f.kind}/${f.tier}] ${f.title} — ${f.why}`);
   }
@@ -116,7 +119,7 @@ async function main(): Promise<void> {
   }
   const { truth, sha256 } = loadTruth();
   const labels: Labels = existsSync(values.labels!)
-    ? JSON.parse(readFileSync(values.labels!, "utf8"))
+    ? LabelsFileSchema.parse(JSON.parse(readFileSync(values.labels!, "utf8")))
     : {};
   let benchCommit: string | undefined;
   try {

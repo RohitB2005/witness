@@ -15,5 +15,5 @@ pnpm eval:score … -v                               # list every finding and wh
 | `match.ts` | Matches one finding against the rules, exactly as the header of `bugs.yaml` describes |
 | `score-lib.ts` | Recall, precision, clean-build false positives, tier accuracy, stability; `summary.json` |
 | `score.ts` | CLI: reads runs, writes `summary.json` + `summary.md` |
-| `labels.json` | Human verdicts by finding fingerprint: `"tp:Bxx"`, `"tp_unseeded"` or `"fp"`. A label overrides the automatic match |
+| `labels.json` | Human verdicts keyed by finding fingerprint: `{ "label": "tp:Bxx" \| "tp_unseeded" \| "fp", "reason": "<one line>" }`. A label overrides the automatic match (D23); the scorer rejects a label without a reason |
 | `results/` | Scored result sets (e.g. `p1-gate/`) |

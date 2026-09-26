@@ -43,6 +43,7 @@ Presentation: 7, 8 or 9 October 2026. Feature freeze: **Saturday 3 October**. Pr
 - [ ] Explorer loop: tools, context builder, stop conditions, escalation
 - [ ] Edge-input generator + deterministic EdgeRunner (fixed safe set, double submit, login message comparison), DET-XSS, DET-HTTP4XX
 - [ ] `--pipeline ai-no-verify` producing candidates as findings (for the ablation)
+- [ ] **Requirements hook only** (`ADDENDUM_QA_COVERAGE.md` A5): `ScanConfig` and the Planner input schema accept an optional `requirements: string` (≤ 5,000 chars), and grounding supports kind `requirement` (a quote verified by string match against the supplied text). No feature work (criteria splitting, coverage table) until P3b
 
 **Gate P2:** Explorer completes ≥ 3 bench journeys in a Standard run; at least three logic bugs (from B01, B02, B03, B06, B08) appear as candidates; B05 appears via edge inputs. Teach-back written.
 
@@ -53,6 +54,7 @@ Presentation: 7, 8 or 9 October 2026. Feature freeze: **Saturday 3 October**. Pr
 ## P3 — Verification and reporting core (Wed 30 Sep – Thu 1 Oct)
 
 - [ ] Evidence validation; replayer (fresh context, preamble, locators, signatures, no LLM); 3 attempts
+- [ ] **A0 uses replay too** (Rohit, 26 Sep): once replay exists, the deterministic pipeline replays its detector candidates as well (static detectors re-run on a fresh load, FR-8), so its findings can reach Confirmed. This replaces D17's provisional "Likely at most" cap
 - [ ] Judge (fallback); skeptic; `verify/tier.ts` pure function with table-driven tests
 - [ ] Grouping + fingerprints; severity rules; readiness verdict; "what wasn't tested"
 - [ ] Reporter writer with fact check + template fallback; UX reviewer
@@ -62,12 +64,26 @@ Presentation: 7, 8 or 9 October 2026. Feature freeze: **Saturday 3 October**. Pr
 
 **Gate P3:** A2 on the clean bench: zero Confirmed findings (3 runs); every exported test from a buggy run fails with its flag on and passes with it off. Teach-back written.
 
+## P3b — QA coverage pack (after the P3 gate, before P4)
+
+Spec: `docs/ADDENDUM_QA_COVERAGE.md` (approved by Rohit, 26 Sep). Build in this order; A6 is optional.
+
+- [ ] Bench additions **first**: `bench/bugs-v2.yaml` (same schema and matching rules as `bugs.yaml`) and `bench/SCOPE.md`; flags B19–B23 (B24 if A6), decoys D05–D06; fake secrets built from fragments at runtime (no realistic literal in the repo); bench Playwright tests for B19–B24 and D05–D06 (pass clean, fail when flagged). Commit, and record the hash in `DEVLOG.md` as the second freeze. `bugs.yaml` stays untouched
+- [ ] A1 — DET-SECRETS: secrets exposed to the browser (high-confidence patterns only; publishable keys aren't findings; always redacted to first 4 + last 4; never sent to the LLM)
+- [ ] A4 — DET-DBERROR: database error signatures in responses and page text (existing apostrophe edge inputs plus one quote-heavy string; no destructive payloads); group with a 5xx from the same request
+- [ ] A3 — DET-AUTHZ: GET JSON APIs seen only while logged in, replayed with no cookies or auth headers (GET only, so allowed in production mode)
+- [ ] A5 — Acceptance criteria: Planner splits `requirements` into numbered criteria mapped to journeys and checks; `requirement` grounding counts like `ui_text`; "Not found in the app" findings; Requirements coverage in the report; verdict counts failed and not-found criteria; CLI `--requirements <file>`
+- [ ] A2 — DET-SOURCEMAP: publicly downloadable source maps (improvement, evidence-based, low)
+- [ ] A6 (optional, only if time) — prompt-injection probe for chat-like UI (≤ 3 canary probes; staging mode or `--probe-ai` only)
+
+**Gate P3b:** B19–B23 detected on the buggy bench (B24 if A6 built); D05 and D06 not flagged; zero new Confirmed findings on the clean bench over 3 runs; secrets redacted everywhere (test). Teach-back written.
+
 ## P4 — Dashboard and server (Thu 1 – Fri 2 Oct)
 
 - [ ] Express server: REST + SSE, artifact route (traversal-safe), one-scan lock, bind 127.0.0.1
-- [ ] New scan page (mode warning, credentials, hint, budget)
+- [ ] New scan page (mode warning, credentials, hint, budget; requirements textarea + `.md`/`.txt` upload — addendum A5)
 - [ ] Live run page (phases, map, plan review with auto-approve, action log with thumbnails, candidate → tier transitions, cost meter)
-- [ ] Report page (verdict banner, not-tested list, tabs, finding cards with evidence, Download test, Copy as issue, Not a bug, Discarded list)
+- [ ] Report page (verdict banner, not-tested list, tabs, finding cards with evidence, Download test, Copy as issue, Not a bug, Discarded list; **Requirements coverage** table and **Security** section — addendum)
 - [ ] History page; Evaluation page (reads latest `summary.json`)
 - [ ] Demo scripts (`DEMO_RUNBOOK.md` §1)
 - [ ] **By Thu 1 Oct:** full scan from the UI on the presentation laptop
@@ -76,7 +92,7 @@ Presentation: 7, 8 or 9 October 2026. Feature freeze: **Saturday 3 October**. Pr
 
 ## P5 — Evaluate and stabilise; FEATURE FREEZE (Sat 3 Oct)
 
-- [ ] E1–E4 on the bench; E5 SauceDemo; E6 Friction; label findings; `summary.json` + charts
+- [ ] E1–E4 on the bench; E5 SauceDemo; E6 Friction; label findings; `summary.json` + charts. Report the v1 set (B01–B18) and the v2 set (B19–B24) separately and combined; the ablation stays on v1 so earlier numbers remain comparable (addendum)
 - [ ] Fix only bugs that affect the demo or the numbers' validity
 - [ ] Offline replay tested with Wi-Fi off; screen recording made
 - [ ] README: what it is, how to run, architecture sketch, results, limitations
@@ -93,3 +109,5 @@ Presentation: 7, 8 or 9 October 2026. Feature freeze: **Saturday 3 October**. Pr
 ## Cut line if behind (cut from the top)
 
 Stretch → UX reviewer → skeptic → HTML export → dashboard polish (CLI + static HTML report can carry the demo). **Never cut:** bench, verification, eval, demo fallbacks.
+
+Within P3b (addendum): A6 → A3 cross-user stretch → A2 → A4 → A3 → A5 → A1. A1 and A5 are the last to cut: they carry the demo's security moment and the acceptance-criteria story.

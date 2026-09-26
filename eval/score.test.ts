@@ -1,10 +1,12 @@
 // Scorer tests against the real (frozen) bench/bugs.yaml. The three "worked examples" are the ones in
 // the P1 teach-back (docs/DEVLOG.md).
+import { readFileSync } from "node:fs";
+import path from "node:path";
 import { describe, expect, it } from "vitest";
 import type { Finding, RunResult } from "@witness/engine";
 import { failingField, matchFinding } from "./match";
-import { recallTier, scoreRun, stabilityJaccard, type Labels } from "./score-lib";
-import { loadTruth, RuleSchema } from "./truth";
+import { LabelsFileSchema, recallTier, scoreRun, stabilityJaccard, type Labels } from "./score-lib";
+import { loadTruth, REPO_ROOT, RuleSchema } from "./truth";
 
 const { truth } = loadTruth();
 
@@ -108,7 +110,8 @@ describe("worked examples (teach-back)", () => {
     const scored = scoreRun(run([f]), truth, {}, { clean: false });
     expect(scored.findings[0]!.outcome).toBe("unlabelled");
     expect(scored.found).toEqual({}); // not counted until a human labels it
-    const labelled = scoreRun(run([f]), truth, { fp_test: "tp:B01" }, { clean: false });
+    const labels: Labels = { fp_test: { label: "tp:B01", reason: "total shows GST added twice" } };
+    const labelled = scoreRun(run([f]), truth, labels, { clean: false });
     expect(labelled.found).toEqual({ B01: "likely" });
   });
 });
@@ -227,7 +230,10 @@ describe("scoreRun", () => {
   });
 
   it("labels override matches and count in precision", () => {
-    const labels: Labels = { fp_unknown: "fp", fp_b05: "fp" };
+    const labels: Labels = {
+      fp_unknown: { label: "fp", reason: "intended behaviour" },
+      fp_b05: { label: "fp", reason: "test override" },
+    };
     const s = scoreRun(run([b05, unknown]), truth, labels, { clean: false });
     expect(s.found).toEqual({});
     expect(s.precision.bugs.confirmedLikely).toBe(0);
@@ -261,5 +267,36 @@ describe("stabilityJaccard", () => {
     const v = stabilityJaccard(sets as string[][]);
     if (expected === null) expect(v).toBeNull();
     else expect(v).toBeCloseTo(expected as number);
+  });
+});
+
+describe("labels file", () => {
+  const ok = { label: "tp_unseeded", reason: "real, but no seeded bug covers it" };
+  it.each([
+    ["a fingerprint-keyed entry with a reason", { fp_0123456789abcdef: ok }, true],
+    [
+      "tp:Bxx and fp labels",
+      {
+        fp_0123456789abcdef: { ...ok, label: "tp:B01" },
+        fp_fedcba9876543210: { ...ok, label: "fp" },
+      },
+      true,
+    ],
+    ["the old bare-string format", { fp_0123456789abcdef: "tp_unseeded" }, false],
+    ["a missing reason", { fp_0123456789abcdef: { label: "fp" } }, false],
+    ["a blank reason", { fp_0123456789abcdef: { ...ok, reason: "   " } }, false],
+    ["a multi-line reason", { fp_0123456789abcdef: { ...ok, reason: "one\ntwo" } }, false],
+    ["a key that isn't a fingerprint", { fd_0123456789abcdef: ok }, false],
+    ["an unknown label", { fp_0123456789abcdef: { ...ok, label: "tp:B1" } }, false],
+    ["an extra field", { fp_0123456789abcdef: { ...ok, note: "x" } }, false],
+  ])("%s → valid: %s", (_name, input, valid) => {
+    expect(LabelsFileSchema.safeParse(input).success).toBe(valid);
+  });
+
+  it("the committed eval/labels.json is valid", () => {
+    const raw: unknown = JSON.parse(
+      readFileSync(path.join(REPO_ROOT, "eval", "labels.json"), "utf8"),
+    );
+    expect(LabelsFileSchema.safeParse(raw).error).toBeUndefined();
   });
 });

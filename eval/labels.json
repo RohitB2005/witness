@@ -1,5 +1,14 @@
 {
-  "fp_cf5703bdcd814b7c": "tp_unseeded",
-  "fp_031bc07487cf3c29": "tp_unseeded",
-  "fp_6cc1851db0e7ecdd": "tp_unseeded"
+  "fp_cf5703bdcd814b7c": {
+    "label": "tp_unseeded",
+    "reason": "The bench sends no CSP (P0 note). Not B15: it matched B15's keyword rule only via 'script' in its impact text."
+  },
+  "fp_031bc07487cf3c29": {
+    "label": "tp_unseeded",
+    "reason": "The bench doesn't send X-Content-Type-Options: nosniff (P0 note); a hygiene improvement no seeded bug covers."
+  },
+  "fp_6cc1851db0e7ecdd": {
+    "label": "tp_unseeded",
+    "reason": "The bench sends no frame protection (P0 note); a hygiene improvement no seeded bug covers."
+  }
 }

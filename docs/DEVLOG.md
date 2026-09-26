@@ -242,3 +242,22 @@ What the gate doesn't show: the three not-yet-reachable universal bugs (B05 need
 - **P2:** DET-HTTP4XX and DET-XSS need step context (happy vs edge), so they plug into the executor, not the crawl registry. Everything else in `detectors/registry.ts` should run on agent states unchanged.
 - **P3:** replace `provisionalTier` with `verify/tier.ts`; static detectors "reproduce" by re-running on a fresh load (FR-8), so B09/B10/B16 should reach Confirmed.
 - A Standard crawl of the bench takes ~34 s for 23 pages (axe on every state is the biggest cost), leaving most of the 8-minute budget for the AI stages.
+
+### P1 wrap-up — 26 Sep 2026
+
+**Approved by Rohit:** D16 (no "Ready" without an exercised journey), D17 (provisional tiers until replay) and D23 (a human label overrides an automatic match).
+
+**D25 — Every label carries a one-line reason.** `eval/labels.json` is now `fingerprint → { label, reason }`, validated by a zod schema in `eval/score-lib.ts`: keys must be finding fingerprints (`fp_` + 16 hex), the label must be `tp:Bxx`, `tp_unseeded` or `fp`, and the reason must be one non-empty line (≤ 200 chars). The scorer refuses a file that breaks this, and a test checks the committed file. The reason also appears in the scorer's "why" column. Why: D23 lets a human override the answer key, so every override has to be reviewable, or the labels become a quiet way to tune the numbers. Re-scoring `eval/results/p1-gate` with the new file gives identical numbers and outcomes. The committed gate summary was left as it was on 23 Sep.
+
+**D26 — The deterministic pipeline (A0) will use replay too** (Rohit's call). Once P3's replayer exists, A0 replays its detector candidates as well, so its findings can reach Confirmed. That removes D17's Likely cap for A0 in the ablation, and A0 vs A2 compares like with like. Added to ROADMAP P3.
+
+**D27 — QA coverage addendum approved; new phase P3b.** `docs/ADDENDUM_QA_COVERAGE.md` adds secrets, source maps, broken access control, leaked DB errors, acceptance criteria and an optional prompt-injection probe. It becomes P3b, after the P3 gate and before P4. `bench/bugs-v2.yaml` and `bench/SCOPE.md` are written and frozen before any of it is built. P2 gets only the hook: an optional `requirements` input and a `requirement` grounding kind. Risk: P3b sits between P3 (ends Thu 1 Oct) and the feature freeze (Sat 3 Oct), so it competes with P4 for time. The addendum's cut order (A6 first, A1 and A5 last) is in the roadmap.
+
+**P2 pre-check: model IDs (26 Sep).** Checked against OpenRouter's live model list (`GET /api/v1/models`, 458 models):
+
+| Env var | Slug | On OpenRouter | Price in/out per M tokens | Tools | Structured outputs |
+| --- | --- | --- | --- | --- | --- |
+| `WITNESS_MODEL_SMART` | `anthropic/claude-sonnet-5` | yes | $2 / $10 | yes | yes |
+| `WITNESS_MODEL_FAST` | `anthropic/claude-haiku-4.5` | yes | $1 / $5 | yes | yes |
+
+The key authenticates (`GET /api/v1/key` → 200). The account shows $10 credit and $0 used, and **no per-key spend limit** is set on OpenRouter. Witness's own per-run cap (FR-14) is therefore the only guard, so an OpenRouter-side key limit would be a sensible second layer.

@@ -1,11 +1,32 @@
 // Scoring (docs/EVALUATION.md §3). Pure functions: RunResult + ground truth + labels → numbers.
 import type { Finding, RunResult } from "@witness/engine";
+import { z } from "zod";
 import { matchFinding, type MatchResult } from "./match";
 import type { Truth } from "./truth";
 
-/** eval/labels.json: fingerprint → human verdict. A label overrides the automatic match. */
+/** eval/labels.json: fingerprint → human verdict + one-line reason. A label overrides the automatic match (D23). */
 export type Label = "tp_unseeded" | "fp" | `tp:${string}`;
-export type Labels = Record<string, Label>;
+export interface LabelEntry {
+  label: Label;
+  reason: string;
+}
+export type Labels = Record<string, LabelEntry>;
+
+export const LabelsFileSchema = z.record(
+  z.string().regex(/^fp_[0-9a-f]{16}$/, "key must be a finding fingerprint (fp_ + 16 hex chars)"),
+  z.strictObject({
+    label: z
+      .string()
+      .regex(/^(tp:B\d{2}|tp_unseeded|fp)$/, 'label must be "tp:Bxx", "tp_unseeded" or "fp"')
+      .transform((s) => s as Label),
+    reason: z
+      .string()
+      .trim()
+      .min(1, "every label needs a reason")
+      .max(200, "keep the reason to one short line")
+      .regex(/^[^\r\n]*$/, "reason must be a single line"),
+  }),
+);
 
 /** Recall uses bug tiers; improvements map evidence_based → confirmed, suggestion → needs_review (D12). */
 export type RecallTier = "confirmed" | "likely" | "needs_review";
@@ -62,19 +83,20 @@ export function scoreFinding(f: Finding, truth: Truth, labels: Labels): FindingS
     route: f.route,
   };
   const match = matchFinding(f, truth);
-  const label = labels[f.fingerprint];
-  if (label) {
+  const entry = labels[f.fingerprint];
+  if (entry) {
+    const { label, reason } = entry;
     if (label === "fp")
-      return { ...base, match, label, outcome: "fp", why: "labelled false positive" };
+      return { ...base, match, label, outcome: "fp", why: `labelled false positive: ${reason}` };
     if (label === "tp_unseeded")
-      return { ...base, match, label, outcome: "tp", why: "labelled real (not seeded)" };
+      return { ...base, match, label, outcome: "tp", why: `labelled real (not seeded): ${reason}` };
     return {
       ...base,
       match,
       label,
       outcome: "tp",
       bugId: label.slice(3),
-      why: `labelled ${label}`,
+      why: `labelled ${label}: ${reason}`,
     };
   }
   if (!match) return { ...base, outcome: "unlabelled", why: "matches no rule; needs a label" };
