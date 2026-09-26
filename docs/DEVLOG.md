@@ -434,6 +434,8 @@ Third risk: **time.** Standard runs took 422–472 s of the 480 s cap: well unde
 
 Run 4 was interrupted by the laptop sleeping mid-call: the last journey was stopped and the edge phase had no time left. It's kept in the set but not used for the gate.
 
+*Note added 27 Sep:* the bug precision figures above exclude the 37 unlabelled findings (19 fingerprints; see `summary.md`). Most of them are expected to be false positives, so precision will drop once they're labelled. See "P2 wrap-up".
+
 All runs used `--llm-cache rw`. Runs 3–5 reused run 2's plan, and some edge-generator answers, from the response cache, because those prompts hadn't changed (run 5: 5 cache hits). The Explorer's turns were live in every run. This makes runs 2–5 a fairer comparison of the Explorer changes, but it also means they share one plan.
 
 | Gate criterion | Result |
@@ -473,3 +475,32 @@ Also found by edge inputs: **B04** (a past date accepted), **B17** (double submi
   Consider capping AI-generated convention edge candidates at Needs review unless the page states the rule.
 - **P4 demo:** Standard runs take 7–8 min, over the 5-minute target, so the demo should use Quick (~2.3 min) or a cached run. Prompt caching never hit for the Explorer (`cacheReadTokens` 0), probably because the prefix is under the model's minimum cacheable length.
 - **P5 cost:** ~$0.50–0.61 per Standard run, so the ~23-run matrix is ≈ $12–14.
+
+### P2 wrap-up — 27 Sep 2026
+
+**Labelling rules (Rohit).**
+- B06's failed checks and Explorer flags are `tp:B06`. Their wording ("…is still visible") misses the keywords of B06's firm rule, so they only matched the `confirm: manual` rule.
+- The injection-canary flag is `fp`, consistent with D44. The same applies to run 3's canary flag (`fp_ab96703e98ce5bf5`), which matched B15 firmly on the keyword "inject". So **B15 was never actually found in P2**: the run-3 tick in the per-bug table is that keyword match.
+- AI-guessed input rules (decimal hours, email whitespace or case, phone format, very large hours, and the Planner's "Booking summary" guess) are `fp` when the app never promised that behaviour.
+- `tp_unseeded` only for something a real user would clearly hit.
+
+The proposed labels for the 37 findings (19 fingerprints, plus run 3's canary flag) are with Rohit for approval. `eval/labels.json` is unchanged until then.
+
+**Found while checking the evidence for those labels.** Four generic Witness defects, proposed as P3 fixes:
+1. **`fieldRejected` misses a form-level rejection.** For "1000 hours" on the quote form, the server answered 400 and the page showed an alert ("Maximum booking is 12 hours"). The check only looks at the field itself (`aria-invalid`, browser validity, its described-by message) and the success signature, so it reported "accepted". Three fingerprints.
+2. **Login-form variants drop the password.** The edge runner rightly never varies password fields, but it also leaves them out of the variant, so every "accept" variant on a login form submits with no password and can't succeed. The AI also swapped the account's email for an unknown one. Three fingerprints.
+3. **A `visible` text check can't see a `<select>`'s chosen option.** "The service's hourly rate is shown" failed while the rate was on screen in the dropdown. One fingerprint.
+4. **`ui_text` grounding accepts a quote from any recorded page.** "Booking summary" appears on the booking form, so an expectation about the confirmation page counted as grounded, at critical severity. One fingerprint, in four runs.
+
+**D46 — P3 additions from P2 misses (Rohit, 27 Sep).** Each item answers something the P2 gate runs missed or got wrong:
+- **DET-TOTALS** ← B01 was missed in all five Standard runs. The Explorer checked subtotal = rate × hours instead of the tax relation. A deterministic detector doesn't depend on the agent choosing the right check.
+- **DET-SORT** ← B02 was missed in all five. The Explorer sorted a search-filtered list whose prices all had two digits, so a text sort and a numeric sort agreed.
+- **Safe interaction sweep** (staging only) ← B11 was never found, because nothing clicked the collapsed item that throws.
+- **Reflected-input probe** ← B15 was never found (see above). The canary only went into forms the Explorer happened to submit.
+- **Cap AI-guessed input rules at Needs review** ← 14 of the 19 fingerprints are proposed as `fp`; 9 of those are AI-guessed edge-input rules. Replay won't remove them, because they reproduce.
+- **Report note when D44 applies** ← a tester should see that page text aimed at AI tools was found and ignored, not have it skipped silently.
+- **`caffeinate` for long runs** ← run 4 was lost to the laptop sleeping.
+
+The rule for all of them: generic code, with no app names, routes, labels or bug knowledge (CLAUDE.md rule 4; the contamination test covers engine source). They were motivated by the bench, which is recorded here on purpose. Each is validated on SauceDemo where it applies (totals on the checkout overview, the inventory's sort dropdown), and E5/E6 check generality.
+
+**D47 — A2 and A6 moved to stretch (Rohit, 27 Sep).** This protects the schedule: P3 now carries seven more items, and P3b sits between P3 and the feature freeze. B20 (served source maps) stays in the planned `bugs-v2.yaml` and the bench. Ground truth is written before detection is built, so an unbuilt detector shows as an honest miss in v2 recall rather than a bug quietly removed. Gate P3b is now B19 and B21–B23 (B20 only if A2 is built, B24 only if A6 is).

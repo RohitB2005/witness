@@ -47,13 +47,25 @@ Presentation: 7, 8 or 9 October 2026. Feature freeze: **Saturday 3 October**. Pr
 
 **Gate P2:** Explorer completes ≥ 3 bench journeys in a Standard run; at least three logic bugs (from B01, B02, B03, B06, B08) appear as candidates; B05 appears via edge inputs. Teach-back written.
 
-**P2 gate — passed 26 Sep 2026.** Five Standard runs on the buggy bench (run 4 interrupted by the laptop sleeping). Every other run completed 3–4 of 5 journeys and found B03, B06 and B08 as failed checks, B05 via edge inputs, plus B04 and B17 (and B18 in run 5). B01 and B02 were missed in all Standard runs; B01 was caught in the post-pin Quick smoke run. Recall at Confirmed+Likely was 50–67% (A0 alone: 33%), bug precision 75–100%. The P1 gate still holds (A0 clean: 0 bug findings). Results in `DEVLOG.md` and `eval/results/p2-gate/`.
+**P2 gate — passed 26 Sep 2026.** Five Standard runs on the buggy bench (run 4 interrupted by the laptop sleeping). Every other run completed 3–4 of 5 journeys and found B03, B06 and B08 as failed checks, B05 via edge inputs, plus B04 and B17 (and B18 in run 5). B01 and B02 were missed in all Standard runs; B01 was caught in the post-pin Quick smoke run. Recall at Confirmed+Likely was 50–67% (A0 alone: 33%), bug precision 75–100%. **These precision figures exclude the 37 unlabelled findings** (19 fingerprints) and will drop once they're labelled. The P1 gate still holds (A0 clean: 0 bug findings). Results in `DEVLOG.md` and `eval/results/p2-gate/`.
 
 ## Tue 29 Sep — light day
 
 - [ ] Run A0 and A1 once each; note results in `DEVLOG.md`
 
 ## P3 — Verification and reporting core (Wed 30 Sep – Thu 1 Oct)
+
+**Added 27 Sep from P2 misses** (Rohit; why each one exists: `DEVLOG.md` D46). Generic: no app names, routes, labels or bug knowledge in code or prompts. Validate each on SauceDemo where it applies.
+
+- [ ] DET-TOTALS: on any page with a money breakdown (subtotal, tax/GST/VAT, shipping, discount, total), check the parts add up to the total within 1 cent
+- [ ] DET-SORT: for any sort control, apply each option on the unfiltered list and check the order
+- [ ] Safe interaction sweep (staging mode only): click each collapsed accordion, disclosure or tab once, with no links or submits, and watch for page errors
+- [ ] Reflected-input probe: put the inert XSS canary into GET query parameters and GET search forms, then run DET-XSS
+- [ ] Cap AI-guessed input rules (convention grounding, not stated on the page) at Needs review
+- [ ] When Witness ignores page text aimed at AI tools (D44), say so in a short note on the report
+- [ ] Wrap long runs in `caffeinate` so the Mac can't sleep mid-run (macOS only; runs the command unchanged elsewhere)
+
+**Planned P3 scope:**
 
 - [ ] Evidence validation; replayer (fresh context, preamble, locators, signatures, no LLM); 3 attempts
 - [ ] **A0 uses replay too** (Rohit, 26 Sep): once replay exists, the deterministic pipeline replays its detector candidates as well (static detectors re-run on a fresh load, FR-8), so its findings can reach Confirmed. This replaces D17's provisional "Likely at most" cap
@@ -68,17 +80,15 @@ Presentation: 7, 8 or 9 October 2026. Feature freeze: **Saturday 3 October**. Pr
 
 ## P3b — QA coverage pack (after the P3 gate, before P4)
 
-Spec: `docs/ADDENDUM_QA_COVERAGE.md` (approved by Rohit, 26 Sep). Build in this order; A6 is optional.
+Spec: `docs/ADDENDUM_QA_COVERAGE.md` (approved by Rohit, 26 Sep). Build in this order. A2 and A6 moved to stretch on 27 Sep to protect the schedule (D47).
 
-- [ ] Bench additions **first**: `bench/bugs-v2.yaml` (same schema and matching rules as `bugs.yaml`) and `bench/SCOPE.md`; flags B19–B23 (B24 if A6), decoys D05–D06; fake secrets built from fragments at runtime (no realistic literal in the repo); bench Playwright tests for B19–B24 and D05–D06 (pass clean, fail when flagged). Commit, and record the hash in `DEVLOG.md` as the second freeze. `bugs.yaml` stays untouched
+- [ ] Bench additions **first**: `bench/bugs-v2.yaml` (same schema and matching rules as `bugs.yaml`) and `bench/SCOPE.md`; flags B19–B23 (B20 stays although A2 is now stretch, D47; B24 only if A6 is built), decoys D05–D06; fake secrets built from fragments at runtime (no realistic literal in the repo); bench Playwright tests for B19–B24 and D05–D06 (pass clean, fail when flagged). Commit, and record the hash in `DEVLOG.md` as the second freeze. `bugs.yaml` stays untouched
 - [ ] A1 — DET-SECRETS: secrets exposed to the browser (high-confidence patterns only; publishable keys aren't findings; always redacted to first 4 + last 4; never sent to the LLM)
 - [ ] A4 — DET-DBERROR: database error signatures in responses and page text (existing apostrophe edge inputs plus one quote-heavy string; no destructive payloads); group with a 5xx from the same request
 - [ ] A3 — DET-AUTHZ: GET JSON APIs seen only while logged in, replayed with no cookies or auth headers (GET only, so allowed in production mode)
 - [ ] A5 — Acceptance criteria: Planner splits `requirements` into numbered criteria mapped to journeys and checks; `requirement` grounding counts like `ui_text`; "Not found in the app" findings; Requirements coverage in the report; verdict counts failed and not-found criteria; CLI `--requirements <file>`
-- [ ] A2 — DET-SOURCEMAP: publicly downloadable source maps (improvement, evidence-based, low)
-- [ ] A6 (optional, only if time) — prompt-injection probe for chat-like UI (≤ 3 canary probes; staging mode or `--probe-ai` only)
 
-**Gate P3b:** B19–B23 detected on the buggy bench (B24 if A6 built); D05 and D06 not flagged; zero new Confirmed findings on the clean bench over 3 runs; secrets redacted everywhere (test). Teach-back written.
+**Gate P3b:** B19 and B21–B23 detected on the buggy bench (B20 only if A2 is built, B24 only if A6 is); D05 and D06 not flagged; zero new Confirmed findings on the clean bench over 3 runs; secrets redacted everywhere (test). Teach-back written.
 
 ## P4 — Dashboard and server (Thu 1 – Fri 2 Oct)
 
@@ -106,10 +116,10 @@ Spec: `docs/ADDENDUM_QA_COVERAGE.md` (approved by Rohit, 26 Sep). Build in this 
 
 - [ ] Slide deck (built from real results)
 - [ ] Three timed rehearsals; Q&A drill; runbook dry run on the laptop
-- [ ] Stretch items only if all gates are green: re-run diff, Istanbul coverage, GitHub issue export, mobile journey pass
+- [ ] Stretch items only if all gates are green: A2 DET-SOURCEMAP and A6 prompt-injection probe (moved from P3b, 27 Sep; specs in the addendum), re-run diff, Istanbul coverage, GitHub issue export, mobile journey pass
 
 ## Cut line if behind (cut from the top)
 
 Stretch → UX reviewer → skeptic → HTML export → dashboard polish (CLI + static HTML report can carry the demo). **Never cut:** bench, verification, eval, demo fallbacks.
 
-Within P3b (addendum): A6 → A3 cross-user stretch → A2 → A4 → A3 → A5 → A1. A1 and A5 are the last to cut: they carry the demo's security moment and the acceptance-criteria story.
+Within P3b (addendum): A3 cross-user stretch → A4 → A3 → A5 → A1 (A2 and A6 are already stretch). A1 and A5 are the last to cut: they carry the demo's security moment and the acceptance-criteria story.
