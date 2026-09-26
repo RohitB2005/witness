@@ -42,6 +42,27 @@ export function renderMarkdown(r: RunResult): string {
   lines.push("", "## What wasn't tested", "");
   for (const n of r.notTested.length ? r.notTested : ["Nothing noted."])
     lines.push(`- ${mdEscape(n)}`);
+  if (r.appModel) {
+    lines.push("", "## What Witness understood the app to be", "", mdEscape(r.appModel.purpose));
+  }
+  if (r.journeys.length) {
+    lines.push("", `## Journeys (${r.journeys.length})`, "");
+    const failedExp = new Set(
+      r.findings.flatMap((f) => (f.source.kind === "check" ? [f.source.expectationId] : [])),
+    );
+    for (const j of r.journeys) {
+      const happy = (j.steps ?? []).filter((s) => s.kind === "happy").length;
+      const edge = (j.steps ?? []).filter((s) => s.kind === "edge").length;
+      const failed = j.expectations.filter((e) => failedExp.has(e.id)).length;
+      const status =
+        j.status === "completed"
+          ? "completed"
+          : `${j.status}${j.incompleteReason ? ` (${j.incompleteReason})` : ""}`;
+      lines.push(
+        `- **${mdEscape(j.title)}** (${j.priority}): ${mdEscape(status)}. ${happy} step${happy === 1 ? "" : "s"}${edge ? ` + ${edge} edge-input steps` : ""}; ${j.expectations.length} expectation${j.expectations.length === 1 ? "" : "s"}, ${failed} failed.`,
+      );
+    }
+  }
 
   lines.push("", `## Bugs (${bugs.length})`, "");
   if (!bugs.length) lines.push("None found.");

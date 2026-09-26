@@ -47,6 +47,8 @@ export interface CrawlResult {
   notVisited: string[];
   capsHit: string[];
   detectorErrors: { detectorId: string; message: string }[];
+  /** AI-mode snapshot text per state id, kept in memory for the Planner and grounding checks. */
+  snapshots: Map<string, string>;
 }
 
 interface Visit {
@@ -71,6 +73,7 @@ export async function crawl(deps: CrawlDeps): Promise<CrawlResult> {
     notVisited: [],
     capsHit: [],
     detectorErrors: [],
+    snapshots: new Map(),
   };
   const visits = new Map<string, Visit>(); // canonical URL → outcome (anonymous pass)
   const stateKeys = new Set<string>();
@@ -188,6 +191,7 @@ export async function crawl(deps: CrawlDeps): Promise<CrawlResult> {
           discoveredBy: "crawl",
         };
         out.states.push(state);
+        out.snapshots.set(state.id, capture.snapshot);
         deps.sink({
           t: "page",
           state: {

@@ -1,6 +1,6 @@
 // Table-driven tests for the pure report rules: severity, verdict, fingerprints, provisional tier, grouping.
 import { describe, expect, it } from "vitest";
-import type { Candidate, CandidateSource, Finding } from "../types";
+import type { Candidate, CandidateSource, Expectation, Finding } from "../types";
 import { buildFindings, provisionalTier, reproSteps } from "./findings";
 import { fingerprint } from "./fingerprint";
 import { severityFor, type SeverityInput } from "./severity";
@@ -196,12 +196,38 @@ function candidate(over: Partial<Candidate>): Candidate {
   };
 }
 
-describe("provisionalTier (P1, until replay exists)", () => {
+describe("provisionalTier (until replay exists in P3; D17, D29)", () => {
+  const ex = (grounding: Expectation["grounding"]): Expectation => ({
+    id: "ex_1",
+    journeyId: "jr_1",
+    statement: "s",
+    check: { type: "noNewErrors" },
+    grounding,
+    impact: "money",
+  });
+  const uiText = ex({ kind: "ui_text", quote: "Total", verified: true });
+  const unverified = ex({ kind: "ui_text", quote: "Total", verified: false });
+  const convention = ex({ kind: "convention", rationale: "r" });
+  const requirement = ex({ kind: "requirement", quote: "q", verified: true });
+  const judgement = { kind: "judgement", confidence: 0.5 } as const;
   it.each([
-    [{ kind: "bug", source: det("DET-HTTP5XX") }, "likely"],
-    [{ kind: "improvement", source: det("DET-A11Y") }, "evidence_based"],
-    [{ kind: "bug", source: check }, "needs_review"],
-  ] as const)("%o → %s", (c, tier) => expect(provisionalTier(c).tier).toBe(tier));
+    // pipeline, candidate, expectation → tier
+    ["full", { kind: "bug", source: det("DET-HTTP5XX") }, undefined, "likely"],
+    ["full", { kind: "improvement", source: det("DET-A11Y") }, undefined, "evidence_based"],
+    ["full", { kind: "bug", source: check }, uiText, "likely"],
+    ["full", { kind: "bug", source: check }, convention, "likely"],
+    ["full", { kind: "bug", source: judgement }, undefined, "needs_review"],
+    ["deterministic", { kind: "bug", source: det("DET-BROKENIMG") }, undefined, "likely"],
+    ["ai-no-verify", { kind: "bug", source: det("DET-HTTP5XX") }, undefined, "confirmed"],
+    ["ai-no-verify", { kind: "bug", source: check }, uiText, "confirmed"],
+    ["ai-no-verify", { kind: "bug", source: check }, requirement, "confirmed"],
+    ["ai-no-verify", { kind: "bug", source: check }, unverified, "likely"],
+    ["ai-no-verify", { kind: "bug", source: check }, convention, "likely"],
+    ["ai-no-verify", { kind: "bug", source: judgement }, undefined, "likely"],
+    ["ai-no-verify", { kind: "improvement", source: det("DET-PERF") }, undefined, "evidence_based"],
+  ] as const)("%s: %o with %o → %s", (pipeline, c, expectation, tier) =>
+    expect(provisionalTier(c, { pipeline, expectation }).tier).toBe(tier),
+  );
 });
 
 describe("buildFindings", () => {

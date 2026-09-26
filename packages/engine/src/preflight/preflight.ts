@@ -209,7 +209,7 @@ async function logIn(
   return fail();
 }
 
-async function findUsernameField(scope: ReturnType<Page["locator"]>) {
+export async function findUsernameField(scope: ReturnType<Page["locator"]>) {
   const selectors = [
     "input[autocomplete=username]:visible",
     "input[type=email]:visible",

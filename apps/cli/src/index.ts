@@ -6,12 +6,17 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { parseArgs } from "node:util";
 import {
+  BUDGETS,
   ConfigError,
   JsonRunStore,
+  LlmConfigError,
   SecretVault,
+  createModels,
+  llmSettingsFromEnv,
   renderMarkdown,
   resolveScanConfig,
   runScan,
+  type Models,
   type RunResult,
   type ScanInput,
   type WitnessEvent,
@@ -104,7 +109,31 @@ async function main(argv: string[]): Promise<number> {
   console.log(`Witness — scanning ${config.url} (${config.mode} mode, ${config.budget} budget)`);
   if (config.mode === "production")
     console.log("Production mode: write requests are blocked except the login.");
-  const result = await runScan(config, { store, vault, sink: printer() });
+  // LLM models for the AI stages (the deterministic pipeline doesn't need any).
+  let models: Models | undefined;
+  let modelsUnavailable: string | undefined;
+  let maxCostUsd: number | undefined;
+  if (config.pipeline !== "deterministic") {
+    try {
+      const settings = llmSettingsFromEnv(process.env, path.join(REPO_ROOT, ".witness-cache"));
+      models = createModels(settings);
+      maxCostUsd = settings.maxCostUsd;
+      console.log(
+        `AI: planner/edge ${settings.smartModel}, explorer ${settings.fastModel}; cache ${config.llmCache}; spend cap US$${Math.min(BUDGETS[config.budget].llmUsd, maxCostUsd ?? Infinity).toFixed(2)}`,
+      );
+    } catch (err) {
+      modelsUnavailable = err instanceof LlmConfigError ? err.message : String(err);
+    }
+  }
+  const result = await runScan(config, {
+    store,
+    vault,
+    sink: printer(),
+    models,
+    modelsUnavailable,
+    maxCostUsd,
+    llmCacheDir: path.join(REPO_ROOT, ".witness-cache"),
+  });
 
   const runDir = store.runDir(result.runId);
   const written: string[] = [];
@@ -146,6 +175,22 @@ function printer(): (e: WitnessEvent) => void {
           `  page  ${e.state.routePattern}  ${e.state.title ? `"${e.state.title}"` : ""}`,
         );
         break;
+      case "plan":
+        for (const j of e.journeys) {
+          console.log(`  plan  [${j.priority}] ${j.title} (${j.expectations.length} expectations)`);
+        }
+        break;
+      case "journey":
+        if (e.status !== "running") console.log(`  journey ${e.journeyId}: ${e.status}`);
+        break;
+      case "step":
+        console.log(
+          `    ${e.step.ok ? "·" : "✗"} ${e.step.kind === "edge" ? "[edge] " : ""}${e.step.description}`,
+        );
+        break;
+      case "candidate":
+        console.log(`    ! candidate: ${e.candidate.summary}`);
+        break;
       case "detector":
         console.log(`    ! ${e.detectorId}: ${e.summary}`);
         break;
@@ -167,9 +212,11 @@ function printSummary(r: RunResult, written: string[]): void {
     r.verdict.level
   ];
   console.log(`\n${label} — ${r.verdict.reason}`);
+  const done = r.journeys.filter((j) => j.status === "completed").length;
   console.log(
-    `${r.stats.pages} pages · ${bugs.length} bugs · ${imps.length} improvements · ${(r.stats.durationMs / 1000).toFixed(0)} s`,
+    `${r.stats.pages} pages · ${r.journeys.length ? `${done}/${r.journeys.length} journeys completed · ` : ""}${bugs.length} bugs · ${imps.length} improvements · ${(r.stats.durationMs / 1000).toFixed(0)} s · ${r.stats.llmCalls} LLM calls, US$${r.stats.costUsd.toFixed(3)}`,
   );
+  if (r.aiStagesSkipped) console.log(`Note: ${r.aiStagesSkipped}`);
   for (const f of bugs) console.log(`  [${f.severity}/${f.tier}] ${f.title}`);
   for (const w of written) console.log(`Report: ${path.relative(process.cwd(), w)}`);
 }

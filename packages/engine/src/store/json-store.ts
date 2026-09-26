@@ -47,6 +47,10 @@ export class JsonRunStore implements RunStore {
     return this.#append(path.join(this.runDir(runId), "events.ndjson"), JSON.stringify(event));
   }
 
+  appendLlmCall(runId: string, entry: Record<string, unknown>): Promise<void> {
+    return this.#append(path.join(this.runDir(runId), "llm-calls.ndjson"), JSON.stringify(entry));
+  }
+
   async putEvidence(runId: string, evidence: Evidence): Promise<void> {
     const valid = EvidenceSchema.parse(evidence);
     this.#evidenceFor(runId).set(valid.id, valid);

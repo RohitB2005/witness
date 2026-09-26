@@ -34,18 +34,20 @@ Presentation: 7, 8 or 9 October 2026. Feature freeze: **Saturday 3 October**. Pr
 
 ## P2 — AI exploration (Sun 27 – Mon 28 Sep)
 
-- [ ] **First (moved from P0):** add the API key, verify model IDs on the provider, then the spike: open the bench with Playwright, take an AI-mode aria snapshot, and have the LLM log in via one tool-calling loop (throwaway; proves the API, model access and snapshot format)
-- [ ] LLM gateway: providers, zod structured output, repair retry, backoff, cache (`off|rw|replay`), replay guard, cost accounting + caps, call log, redaction + test
-- [ ] Prompt-contamination test
-- [ ] Planner (app-map summary builder, prompt, schema, grounding verification)
-- [ ] Oracle engine: check language, evaluators, number parsing — full unit tests (*alternative candidate for Rohit to write*)
-- [ ] Executor: ref → stable locator, uniqueness check, safety policy, waits, step recording, secret placeholders
-- [ ] Explorer loop: tools, context builder, stop conditions, escalation
-- [ ] Edge-input generator + deterministic EdgeRunner (fixed safe set, double submit, login message comparison), DET-XSS, DET-HTTP4XX
-- [ ] `--pipeline ai-no-verify` producing candidates as findings (for the ablation)
-- [ ] **Requirements hook only** (`ADDENDUM_QA_COVERAGE.md` A5): `ScanConfig` and the Planner input schema accept an optional `requirements: string` (≤ 5,000 chars), and grounding supports kind `requirement` (a quote verified by string match against the supplied text). No feature work (criteria splitting, coverage table) until P3b
+- [x] **First (moved from P0):** add the API key, verify model IDs on the provider, then the spike: open the bench with Playwright, take an AI-mode aria snapshot, and have the LLM log in via one tool-calling loop (throwaway; proves the API, model access and snapshot format)
+- [x] LLM gateway: providers, zod structured output, repair retry, backoff, cache (`off|rw|replay`), replay guard, cost accounting + caps, call log, redaction + test
+- [x] Prompt-contamination test
+- [x] Planner (app-map summary builder, prompt, schema, grounding verification)
+- [x] Oracle engine: check language, evaluators, number parsing — full unit tests (written by Claude at Rohit's request, 26 Sep; worked examples in the P2 teach-back)
+- [x] Executor: ref → stable locator, uniqueness check, safety policy, waits, step recording, secret placeholders
+- [x] Explorer loop: tools, context builder, stop conditions, escalation
+- [x] Edge-input generator + deterministic EdgeRunner (fixed safe set, double submit, login message comparison), DET-XSS, DET-HTTP4XX
+- [x] `--pipeline ai-no-verify` producing candidates as findings (for the ablation)
+- [x] **Requirements hook only** (`ADDENDUM_QA_COVERAGE.md` A5): `ScanConfig` and the Planner input schema accept an optional `requirements: string` (≤ 5,000 chars), and grounding supports kind `requirement` (a quote verified by string match against the supplied text). No feature work (criteria splitting, coverage table) until P3b
 
 **Gate P2:** Explorer completes ≥ 3 bench journeys in a Standard run; at least three logic bugs (from B01, B02, B03, B06, B08) appear as candidates; B05 appears via edge inputs. Teach-back written.
+
+**P2 gate — passed 26 Sep 2026.** Five Standard runs on the buggy bench (run 4 interrupted by the laptop sleeping). Every other run completed 3–4 of 5 journeys and found B03, B06 and B08 as failed checks, B05 via edge inputs, plus B04 and B17 (and B18 in run 5). B01 and B02 were missed in all Standard runs; B01 was caught in the post-pin Quick smoke run. Recall at Confirmed+Likely was 50–67% (A0 alone: 33%), bug precision 75–100%. The P1 gate still holds (A0 clean: 0 bug findings). Results in `DEVLOG.md` and `eval/results/p2-gate/`.
 
 ## Tue 29 Sep — light day
 

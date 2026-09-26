@@ -28,7 +28,8 @@ export async function startFixtureServer(routes: FixtureRoutes): Promise<Fixture
     const path = new URL(req.url ?? "/", "http://x").pathname;
     requests.push(`${req.method} ${path}`);
     const entry = routes[`${req.method} ${path}`] ?? routes[path];
-    const route = typeof entry === "function" ? entry(req) : entry;
+    let route: FixtureRoute | undefined;
+    const chunks: Buffer[] = [];
     const respond = () => {
       if (!route) {
         res.writeHead(404, { "content-type": "text/html" });
@@ -45,8 +46,14 @@ export async function startFixtureServer(routes: FixtureRoutes): Promise<Fixture
       });
       res.end(route.body ?? "");
     };
-    req.resume();
-    req.on("end", () => (route?.delayMs ? setTimeout(respond, route.delayMs) : respond()));
+    req.on("data", (c: Buffer) => chunks.push(c));
+    req.on("end", () => {
+      // Function routes see the request body as `req.body` (text).
+      (req as IncomingMessage & { body?: string }).body = Buffer.concat(chunks).toString("utf8");
+      route = typeof entry === "function" ? entry(req) : entry;
+      if (route?.delayMs) setTimeout(respond, route.delayMs);
+      else respond();
+    });
   });
   await new Promise<void>((resolve) => server.listen(0, "127.0.0.1", resolve));
   const { port } = server.address() as AddressInfo;

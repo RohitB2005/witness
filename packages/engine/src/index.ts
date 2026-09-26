@@ -17,7 +17,9 @@ import { EvidenceWriter } from "./record/evidence";
 import { buildFindings } from "./report/findings";
 import { readinessVerdict } from "./report/verdict";
 import type { RunStore } from "./store/run-store";
-import type { Candidate, RunResult, ScanConfig } from "./types";
+import type { Candidate, Journey, RunResult, ScanConfig } from "./types";
+import { runAiStages, type AiStagesOutput } from "./ai-stages";
+import type { Models } from "./llm/settings";
 
 export * from "./types";
 export * from "./events";
@@ -32,7 +34,11 @@ export { renderMarkdown } from "./report/markdown";
 export { readinessVerdict } from "./report/verdict";
 export { newRunId, RUN_ID_PATTERN } from "./ids";
 
-export const ENGINE_PHASE = "P1-deterministic" as const;
+export { llmSettingsFromEnv, createModels, LlmConfigError } from "./llm/settings";
+export type { LlmSettings, Models } from "./llm/settings";
+export { CheckSchema as StoredCheckSchema, CHECK_LANGUAGE_DOC } from "./oracle/language";
+
+export const ENGINE_PHASE = "P2-ai-exploration" as const;
 
 export interface RunScanDeps {
   store: RunStore;
@@ -41,6 +47,14 @@ export interface RunScanDeps {
   runId?: string;
   /** Inject a browser (tests); otherwise one is launched and closed by the scan. */
   browser?: Browser;
+  /** LLM models for the AI stages. Without them, AI pipelines degrade to deterministic (NFR-3). */
+  models?: Models;
+  /** Why models are missing (e.g. no API key), for the report. */
+  modelsUnavailable?: string;
+  /** Response cache folder (default: .witness-cache in the working directory). */
+  llmCacheDir?: string;
+  /** WITNESS_MAX_COST_USD: the run's cap is the lower of this and the budget preset's. */
+  maxCostUsd?: number;
 }
 
 export async function runScan(config: ScanConfig, deps: RunScanDeps): Promise<RunResult> {
@@ -155,52 +169,102 @@ export async function runScan(config: ScanConfig, deps: RunScanDeps): Promise<Ru
       candidates.push(toCandidate(draft, siteState));
     }
 
-    // ---- AI stages: not built yet (P2). Degrade to deterministic findings, and say so (NFR-3).
-    let aiStagesSkipped: string | undefined;
-    if (config.pipeline !== "deterministic") {
-      aiStagesSkipped =
-        "The AI stages (plan and explore) aren't built yet, so this run used the deterministic pipeline only.";
-      log(sink, "warn", aiStagesSkipped);
-    }
-
-    // ---- Report
-    phase("report");
-    const findings = buildFindings(candidates, {
-      accountLabel: credentials ? `the account ${credentials.username}` : undefined,
-      mobileViewport: config.mobileViewport,
-    });
     for (const c of candidates) {
       sink({
         t: "candidate",
         candidate: { id: c.id, category: c.category, summary: c.summary, route: c.route },
       });
     }
+
+    // ---- AI stages: plan → explore → edge inputs. Any failure degrades to deterministic findings (NFR-3).
+    let aiStagesSkipped: string | undefined;
+    let ai: AiStagesOutput | undefined;
+    if (config.pipeline !== "deterministic") {
+      if (!deps.models) {
+        aiStagesSkipped = `The AI stages were skipped: ${deps.modelsUnavailable ?? "no LLM is configured"}. This report has the deterministic findings only.`;
+        log(sink, "warn", aiStagesSkipped);
+      } else {
+        try {
+          ai = await runAiStages({
+            config,
+            budget,
+            started,
+            runId,
+            browser,
+            policy,
+            evidence,
+            store: deps.store,
+            vault: deps.vault,
+            sink,
+            pre,
+            crawled,
+            crawlCandidates: candidates,
+            models: deps.models,
+            cacheDir: deps.llmCacheDir ?? ".witness-cache",
+            costCapUsd: Math.min(budget.llmUsd, deps.maxCostUsd ?? Infinity),
+          });
+          candidates.push(...ai.candidates);
+          aiStagesSkipped = ai.aiStagesSkipped;
+        } catch (err) {
+          // A secret-leak or replay-guard error is a bug: fail loudly rather than degrade quietly.
+          if (
+            err instanceof Error &&
+            (err.name === "SecretLeakError" || err.name === "ReplayGuardError")
+          )
+            throw err;
+          aiStagesSkipped = `The AI stages stopped with an error (${err instanceof Error ? err.message.split("\n")[0] : String(err)}). This report has the deterministic findings only.`;
+          log(sink, "warn", aiStagesSkipped);
+        }
+      }
+    }
+    const journeys = ai?.journeys ?? [];
+
+    // ---- Report
+    phase("report");
+    const findings = buildFindings(candidates, {
+      accountLabel: credentials ? `the account ${credentials.username}` : undefined,
+      mobileViewport: config.mobileViewport,
+      pipeline: config.pipeline,
+      journeys,
+    });
     for (const f of findings) {
       sink({
         t: "finding",
         finding: { id: f.id, title: f.title, tier: f.tier, severity: f.severity, kind: f.kind },
       });
     }
+    const capsHit = [...new Set([...crawled.capsHit, ...(ai?.capsHit ?? [])])];
     const notTested = whatWasntTested({
       loginDetected: pre.loginDetected,
       loggedIn: !!pre.session,
       notVisited: crawled.notVisited,
-      capsHit: crawled.capsHit,
+      capsHit,
       pageBudget: budget.pages,
+      journeys,
+      aiStagesSkipped,
     });
+    const journeysAttempted = journeys.some((j) => (j.steps?.length ?? 0) > 0);
     const result: RunResult = {
       ...base,
-      states: crawled.states,
+      journeys,
+      states: [...crawled.states, ...(ai?.addedStates ?? [])],
       finishedAt: new Date().toISOString(),
-      verdict: readinessVerdict({ findings, journeys: [], journeysAttempted: false }),
+      verdict: readinessVerdict({ findings, journeys, journeysAttempted }),
       notTested,
       findings,
       stats: stats({
         pages: crawled.states.length,
+        steps: ai?.steps ?? 0,
+        llmCalls: ai?.llm.calls ?? 0,
+        inputTokens: ai?.llm.inputTokens ?? 0,
+        outputTokens: ai?.llm.outputTokens ?? 0,
+        costUsd: ai?.llm.costUsd ?? 0,
         candidates: candidates.length,
-        capsHit: crawled.capsHit,
+        capsHit,
       }),
       aiStagesSkipped,
+      aiMetrics: ai?.metrics,
+      appModel: ai?.appModel,
     };
     await deps.store.saveResult(result);
     phase("done");
@@ -231,10 +295,26 @@ export function whatWasntTested(i: {
   notVisited: string[];
   capsHit: string[];
   pageBudget: number;
+  journeys?: Journey[];
+  aiStagesSkipped?: string;
 }): string[] {
-  const out = [
-    "User journeys (filling forms, buttons, multi-step flows): only page loads were checked in this run.",
-  ];
+  const out: string[] = [];
+  const journeys = i.journeys ?? [];
+  if (!journeys.some((j) => (j.steps?.length ?? 0) > 0)) {
+    out.push(
+      "User journeys (filling forms, buttons, multi-step flows): only page loads were checked in this run.",
+    );
+  }
+  for (const j of journeys) {
+    if (j.status === "completed") continue;
+    const what = j.status === "skipped" ? "wasn't run" : "wasn't completed";
+    out.push(
+      `Journey "${j.title}" (${j.priority}) ${what}${j.incompleteReason ? `: ${j.incompleteReason}` : "."}`,
+    );
+  }
+  if (i.aiStagesSkipped && journeys.length) out.push(i.aiStagesSkipped);
+  if (i.capsHit.includes("llm-spend"))
+    out.push("The AI spend cap was reached, so some AI work was not done.");
   if (i.loginDetected && !i.loggedIn) {
     out.push("Pages behind the login: no credentials were given.");
   }

@@ -81,10 +81,12 @@ export async function captureState(
   mark: RecorderMark,
   writer: EvidenceWriter,
   stateId: string,
+  opts: { timing?: boolean } = {},
 ): Promise<StateCapture> {
   const slice = recorder.since(mark);
   const snapshot = await ariaSnapshot(page);
-  const timing = await readTiming(page);
+  // Navigation timing + LCP (waits up to 250 ms) only matter for page loads, not for every agent step.
+  const timing = opts.timing === false ? {} : await readTiming(page);
   const title = await page.title().catch(() => "");
   const snapshotId = newId("ev");
   const snapshotPath = await writer.store.putArtifact(writer.runId, `${snapshotId}.yaml`, snapshot);

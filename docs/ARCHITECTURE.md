@@ -122,13 +122,14 @@ type Locator =
 
 type Action =
   | { type: "goto"; path: string }
-  | { type: "click"; target: Locator }
+  | { type: "click"; target: Locator; clickCount?: 2 } // 2 = double-click (edge inputs)
   | { type: "fill"; target: Locator; value: string } // value may be "{{secret:password}}"
   | { type: "select"; target: Locator; option: string }
   | { type: "press"; key: string }
   | { type: "reload" }
   | { type: "scroll"; direction: "down" | "up" }
-  | { type: "wait"; ms: number };
+  | { type: "wait"; ms: number }
+  | { type: "check"; check: Check; expectationId?: string }; // asserts/captures, re-evaluated on replay (DEVLOG D30)
 
 interface Step {
   id: string;                  // "sp_..."
@@ -152,8 +153,12 @@ interface Expectation {
   check: Check;                // see AI_AGENT_SPEC.md §6
   grounding:
     | { kind: "ui_text"; quote: string; verified: boolean; evidenceId?: string }
-    | { kind: "convention"; rationale: string };
+    | { kind: "convention"; rationale: string }
+    | { kind: "requirement"; quote: string; verified: boolean }; // ADDENDUM A5 (hook added in P2)
   impact: "money" | "data-loss" | "blocks-completion" | "wrong-info" | "cosmetic";
+  category?: "functional" | "state" | "validation" | "ux";
+  when?: string;               // plain-language moment to evaluate it (for the Explorer)
+  origin?: "plan" | "agent" | "edge";
 }
 
 interface Journey {

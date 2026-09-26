@@ -28,10 +28,34 @@ export class SecretVault {
     return text.replace(PLACEHOLDER, (_m, name: string) => this.get(name));
   }
 
-  /** True if any secret value appears in `text`. */
+  /** True if any secret value (plain, URL-encoded or JSON-escaped) appears in `text`. */
   leaks(text: string): boolean {
-    for (const value of this.#secrets.values()) if (text.includes(value)) return true;
+    for (const value of this.#secrets.values()) {
+      if (text.includes(value)) return true;
+      if (text.includes(encodeURIComponent(value))) return true;
+      if (text.includes(JSON.stringify(value).slice(1, -1))) return true;
+    }
     return false;
+  }
+
+  /**
+   * Replaces every secret value (plain, URL-encoded or JSON-escaped) with its `{{secret:name}}` placeholder.
+   * The LLM gateway runs this over every outgoing prompt: page snapshots show what was typed into password
+   * fields in plain text (DEVLOG P2 spike), so the model must only ever see the placeholder.
+   */
+  toPlaceholders(text: string): string {
+    let out = text;
+    const entries = [...this.#secrets.entries()].sort((a, b) => b[1].length - a[1].length);
+    for (const [name, value] of entries) {
+      for (const form of new Set([
+        value,
+        encodeURIComponent(value),
+        JSON.stringify(value).slice(1, -1),
+      ])) {
+        out = out.split(form).join(`{{secret:${name}}}`);
+      }
+    }
+    return out;
   }
 
   /** Replaces every secret value (and its URL-encoded form) in `text`. */

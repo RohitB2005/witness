@@ -1,6 +1,10 @@
 // Core engine types (ARCHITECTURE.md §3). Every type that crosses a boundary (files on disk, API, LLM)
 // is a zod schema; TS types are derived with z.infer.
 import { z } from "zod";
+import { CheckSchema, LocatorSchema } from "./oracle/language";
+
+export { LocatorSchema, CheckSchema } from "./oracle/language";
+export type { Locator, Check, AgentCheck, NumExpr, TextExpr } from "./oracle/language";
 
 export const ScanModeSchema = z.enum(["staging", "production"]);
 export type ScanMode = z.infer<typeof ScanModeSchema>;
@@ -62,55 +66,28 @@ export const PageStateSchema = z.object({
 export type PageState = z.infer<typeof PageStateSchema>;
 
 // ---------------------------------------------------------------------------------------------
-// Locators, actions, steps (recorded by the executor from P2; declared now so RunResult is complete)
-
-type LocatorBase =
-  | { by: "role"; role: string; name?: string; exact?: boolean }
-  | { by: "label"; text: string; exact?: boolean }
-  | { by: "placeholder"; text: string }
-  | { by: "testId"; id: string }
-  | { by: "text"; text: string; exact?: boolean }
-  | { by: "css"; selector: string };
-export type Locator = LocatorBase & { within?: Locator; nth?: number };
-
-const locatorModifiers = {
-  within: z.lazy((): z.ZodType<Locator> => LocatorSchema).optional(),
-  nth: z.number().int().nonnegative().optional(),
-};
-export const LocatorSchema: z.ZodType<Locator> = z.union([
-  z.object({
-    by: z.literal("role"),
-    role: z.string(),
-    name: z.string().optional(),
-    exact: z.boolean().optional(),
-    ...locatorModifiers,
-  }),
-  z.object({
-    by: z.literal("label"),
-    text: z.string(),
-    exact: z.boolean().optional(),
-    ...locatorModifiers,
-  }),
-  z.object({ by: z.literal("placeholder"), text: z.string(), ...locatorModifiers }),
-  z.object({ by: z.literal("testId"), id: z.string(), ...locatorModifiers }),
-  z.object({
-    by: z.literal("text"),
-    text: z.string(),
-    exact: z.boolean().optional(),
-    ...locatorModifiers,
-  }),
-  z.object({ by: z.literal("css"), selector: z.string(), ...locatorModifiers }),
-]);
+// Actions and steps (recorded by the executor)
 
 export const ActionSchema = z.discriminatedUnion("type", [
   z.object({ type: z.literal("goto"), path: z.string() }),
-  z.object({ type: z.literal("click"), target: LocatorSchema }),
+  z.object({
+    type: z.literal("click"),
+    target: LocatorSchema,
+    /** 2 = double-click (the edge runner's double-submit variant). */
+    clickCount: z.number().int().min(1).max(2).optional(),
+  }),
   z.object({ type: z.literal("fill"), target: LocatorSchema, value: z.string() }),
   z.object({ type: z.literal("select"), target: LocatorSchema, option: z.string() }),
   z.object({ type: z.literal("press"), key: z.string() }),
   z.object({ type: z.literal("reload") }),
   z.object({ type: z.literal("scroll"), direction: z.enum(["down", "up"]) }),
   z.object({ type: z.literal("wait"), ms: z.number().int().nonnegative() }),
+  /** Evaluate a check (assert or capture) at this point; replay re-evaluates it in the same place. */
+  z.object({
+    type: z.literal("check"),
+    check: CheckSchema,
+    expectationId: z.string().optional(),
+  }),
 ]);
 export type Action = z.infer<typeof ActionSchema>;
 
@@ -127,27 +104,66 @@ export const StepSchema = z.object({
   urlAfter: z.string(),
   ok: z.boolean(),
   error: z.string().optional(),
+  /** What the action touched, read from the DOM at record time (edge inputs need the field type). */
+  target: z
+    .object({
+      role: z.string().optional(),
+      name: z.string().optional(),
+      tag: z.string().optional(),
+      inputType: z.string().optional(),
+      required: z.boolean().optional(),
+      /** Identifies the enclosing form (same key → same form), when there is one. */
+      formKey: z.string().optional(),
+      isSubmit: z.boolean().optional(),
+    })
+    .optional(),
+  /** The expectation this step asserted or captured, if any. */
+  expectationId: z.string().optional(),
 });
 export type Step = z.infer<typeof StepSchema>;
 
 // ---------------------------------------------------------------------------------------------
-// Journeys and expectations (produced by the Planner from P2). `check` is typed by the oracle in P2.
+// Journeys and expectations (produced by the Planner; the Explorer and edge runner add their own)
+
+export const GroundingSchema = z.discriminatedUnion("kind", [
+  /** A literal quote from a recorded page; `verified` = code found it (case/whitespace-insensitive). */
+  z.object({
+    kind: z.literal("ui_text"),
+    quote: z.string(),
+    verified: z.boolean(),
+    evidenceId: z.string().optional(),
+  }),
+  z.object({ kind: z.literal("convention"), rationale: z.string() }),
+  /**
+   * A quote from the user-supplied requirements text (ADDENDUM A5; P2 adds the hook only). Verified by
+   * string match against that text; counts like ui_text for tiering.
+   */
+  z.object({ kind: z.literal("requirement"), quote: z.string(), verified: z.boolean() }),
+]);
+export type Grounding = z.infer<typeof GroundingSchema>;
+
+export const ExpectationImpactSchema = z.enum([
+  "money",
+  "data-loss",
+  "blocks-completion",
+  "wrong-info",
+  "cosmetic",
+]);
+/** Finding categories an expectation can fail as (a subset of FindingCategory). */
+export const ExpectationCategorySchema = z.enum(["functional", "state", "validation", "ux"]);
 
 export const ExpectationSchema = z.object({
   id: z.string().regex(/^ex_/),
   journeyId: z.string(),
   statement: z.string(),
-  check: z.unknown(),
-  grounding: z.discriminatedUnion("kind", [
-    z.object({
-      kind: z.literal("ui_text"),
-      quote: z.string(),
-      verified: z.boolean(),
-      evidenceId: z.string().optional(),
-    }),
-    z.object({ kind: z.literal("convention"), rationale: z.string() }),
-  ]),
-  impact: z.enum(["money", "data-loss", "blocks-completion", "wrong-info", "cosmetic"]),
+  check: CheckSchema,
+  grounding: GroundingSchema,
+  impact: ExpectationImpactSchema,
+  category: ExpectationCategorySchema.optional(),
+  /** Plain-language moment to evaluate it, for the Explorer. */
+  when: z.string().optional(),
+  /** Who wrote it: the Planner, the Explorer mid-journey, or the edge-input runner. */
+  origin: z.enum(["plan", "agent", "edge"]).optional(),
 });
 export type Expectation = z.infer<typeof ExpectationSchema>;
 
@@ -170,6 +186,10 @@ export const JourneySchema = z.object({
   expectations: z.array(ExpectationSchema),
   status: JourneyStatusSchema,
   incompleteReason: z.string().optional(),
+  /** Forms the Planner wants edge inputs tried on. */
+  edgeTargets: z.array(z.object({ formRoute: z.string(), formName: z.string() })).optional(),
+  /** Steps the Explorer recorded (happy path first, then edge variants). */
+  steps: z.array(StepSchema).optional(),
 });
 export type Journey = z.infer<typeof JourneySchema>;
 
@@ -342,6 +362,8 @@ export const ScanConfigSchema = z.object({
   budget: BudgetPresetSchema,
   credentials: CredentialsSchema.optional(),
   hint: z.string().max(200).optional(),
+  /** Acceptance criteria / agreed scope, pasted or uploaded (ADDENDUM A5 hook; used by the Planner). */
+  requirements: z.string().max(5000).optional(),
   pipeline: PipelineSchema,
   llmCache: LlmCacheSchema,
   viewport: ViewportSchema,
@@ -383,6 +405,17 @@ export const RunResultSchema = z.object({
     capsHit: z.array(z.string()),
   }),
   aiStagesSkipped: z.string().optional(),
+  /** What the AI stages did, for the reliability measures in AI_AGENT_SPEC.md §8 (counts and ratios). */
+  aiMetrics: z.record(z.string(), z.number()).optional(),
+  /** The Planner's reading of the app (purpose, domain), shown in the report. */
+  appModel: z
+    .object({
+      purpose: z.string(),
+      domain: z.string(),
+      entities: z.array(z.string()),
+      notes: z.string().optional(),
+    })
+    .optional(),
   error: z.string().optional(), // set when the scan stopped early (e.g. preflight failed)
 });
 export type RunResult = z.infer<typeof RunResultSchema>;

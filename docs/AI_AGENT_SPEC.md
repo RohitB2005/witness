@@ -7,7 +7,8 @@
 - **SDK:** Vercel AI SDK with zod schemas (structured output + tool calling), provider switch between OpenRouter and Anthropic via env. Check the installed `ai` package version's docs before writing calls — function names and options have changed between major versions.
 - **Two model tiers** from env: `WITNESS_MODEL_SMART` (planning, edge inputs, judge, skeptic, reporter, UX review) and `WITNESS_MODEL_FAST` (Explorer steps). Escalate the Explorer to the smart model for one step after two consecutive failed or invalid steps.
 - **Structured output:** every call has a zod schema. On validation failure: one repair attempt (send the validation error back), then fail that call gracefully (the stage degrades; the run continues).
-- **Retries:** exponential backoff on 429/5xx (max 3); per-call timeout 60 s.
+- **Retries:** exponential backoff on 429/5xx (max 3); per-call timeout 60 s (Planner 120 s, Explorer 30 s: DEVLOG D31, D45).
+- **Reasoning effort** is set per call and defaults to none; the Planner uses `low` (DEVLOG D31).
 - **Temperature:** 0 (or the provider minimum) for all roles except the edge-input generator (0.4).
 - **Cache:** key = sha256 of `{ model, role, system, messages, tools, schemaName }`. Modes: `off`, `rw` (read-through, write on miss), `replay` (read-only; a miss throws `CacheMissError` — used for the offline demo and deterministic eval reruns). Stored in `.witness-cache/<role>/<hash>.json`.
 - **Replay guard:** the verifier's replay context sets a flag; any LLM call inside it throws. Replays must never use the LLM.
@@ -169,6 +170,7 @@ type Check =
   | { type: "equalsCaptured"; name: string; value: NumExpr | TextExpr; tolerance?: number }
   | { type: "fieldRejected"; field: Loc }   // aria-invalid=true, or a visible error associated with the field, or no success signature after submit
   | { type: "noNewErrors" }                 // no page error / 5xx / console.error since the journey's previous assert
+  | { type: "maxRequests"; method: string; pathPattern: string; max: number } // ≤ max successful same-origin requests since the step began (P2, DEVLOG D30)
   | { type: "all"; checks: Check[] };
 ```
 

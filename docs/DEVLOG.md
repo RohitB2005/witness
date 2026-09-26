@@ -261,3 +261,215 @@ What the gate doesn't show: the three not-yet-reachable universal bugs (B05 need
 | `WITNESS_MODEL_FAST` | `anthropic/claude-haiku-4.5` | yes | $1 / $5 | yes | yes |
 
 The key authenticates (`GET /api/v1/key` → 200). The account shows $10 credit and $0 used, and **no per-key spend limit** is set on OpenRouter. Witness's own per-run cap (FR-14) is therefore the only guard, so an OpenRouter-side key limit would be a sensible second layer.
+
+### P2 decisions (26 Sep 2026)
+
+**D28 — OpenRouter only for now** (Rohit, 26 Sep). `llm/settings.ts` builds the two models; the gateway only sees AI SDK `LanguageModel` objects, so the direct Anthropic provider is one factory function later. Dependencies: `ai` 7.x and `@openrouter/ai-sdk-provider` 3.x (below).
+
+**D29 — Provisional tiers for AI candidates until replay (P3).** Pipeline `full` (and `full-no-skeptic`): a failed check is **Likely** ("not yet replayed"), whatever its grounding; an Explorer flag (`flag_candidate`, a judgement) is **Needs review**; detector bugs stay Likely (D17). Pipeline `ai-no-verify` (ablation A1) reports what an unverified AI tester would claim: a detector hit or a check grounded in verified on-screen/requirements text is **Confirmed**, anything else Likely — no replay, no skeptic. Alternative for A1: call every candidate Confirmed. Rejected: grounding is part of the AI design, not of verification, so A1 vs A2 should isolate replay + skeptic.
+
+**D30 — Three small additions to the step/check language.** (1) Asserts and captures are recorded as steps (`action: { type: "check" }`), so a replay re-evaluates them in the same place with the same captured values. (2) `click.clickCount: 2` for the double-submit variant. (3) A `maxRequests` check (at most N successful same-origin requests with this method + path since the step began), so "double submit creates two records" is a replayable check instead of an ad-hoc count. Alternative: a special detector. Rejected: it wouldn't replay or export as a test.
+
+**D31 — Reasoning effort is set per call; default off.** Problem hit (below): through OpenRouter, Sonnet 5 reasons by default. The Planner uses effort `low` and a 120 s timeout (the spec's 60 s applies to every other call); every other role uses `none`. Alternative: accept default reasoning. Rejected: ~6k hidden tokens per plan, 70 s and 3× the cost, for no visible gain in the plan.
+
+**D32 — The Planner writes each check as a JSON string.** Structured outputs follow the schema the model is shown: an open-object `check` field came back as `{}` in a probe, and the full recursive check schema is large and nested. So the model sees `check: string`, and code parses it and validates it with the real zod `CheckSchema`. Invalid checks are dropped per expectation, and invalid journeys per journey (a fallback schema), so one bad check doesn't sink the plan.
+
+**D33 — The Explorer's check fields are open objects in the tool schema, and the check language is described once in its system prompt** (~500 tokens, as TypeScript types). Tool calls aren't schema-constrained, so this keeps every Explorer call small while code still validates each check with the strict schema (and repairs once).
+
+**D34 — Ref → stable locator reads role and name from a fresh page-level AI snapshot.** Found while testing: an element-level `ariaSnapshot()` invalidates every `aria-ref` on the page, while a new page-level AI snapshot keeps refs stable per element. Locator preference: to act, role+name → label → placeholder → test id → text → css; to read a value, test id first, and never a locator built from text that contains digits (the value changes when the bug is fixed). A list target becomes `{ role: item role, within: <the list's locator> }`. Each candidate must match exactly one element — the same element handle as the ref.
+
+**D35 — What `read` means.** The first non-percentage amount in the element's own text (an input's value; a dropdown's visible option label). If the element is a label with no amount ("Total (incl. 10% tax)"), the first amount that follows the label's text in the nearest enclosing row, up to 3 levels up. Deterministic, documented, unit-tested; it lets the Planner and Explorer point at a label and still read the right number.
+
+**D36 — Edge inputs are planned from recorded forms and run without the LLM.** Forms are recovered from the happy-path steps (fills + submit + the path that led there); a probe opens each form once and adds the fields the Explorer didn't type into (pre-filled ones). Variants: always-first fixed set (XSS canary, apostrophe name, double submit), then up to 3 AI proposals (temperature 0.4), then the rest of the fixed set, capped at 8 per form (quick: 4). Two variants run in parallel, each in a fresh context. Production mode skips forms whose submit writes (it would be blocked, so nothing to observe). The login-message comparison runs as a small synthetic "edge" journey.
+
+**D37 — Journeys reuse the preflight session (cookies in memory) instead of re-logging in.** Faster and doesn't touch the login endpoint repeatedly. Cost: P3's replayer must log in itself (the preamble), because a replay must not depend on a session captured earlier.
+
+**D38 — Time split within the wall-clock budget.** Exploring stops starting turns at 68% of the budget; edge inputs run until 35 s before the end (the report needs the rest); the edge generator is only called with ≥ 40 s left. Anything not reached goes to "What wasn't tested".
+
+**D39 — A decided expectation is frozen.** Found in a bench run: the Explorer re-asserted a failed expectation with a different check, so the stored check no longer matched the one that failed (replay would test the wrong thing). Now only an unchecked or unevaluable expectation accepts a new check; to check something else, the agent adds a new expectation.
+
+**D40 — Two readings of one planned expectation.** The Planner's check runs first, and a failure there stands: a weaker replacement can't mask it. Otherwise the Explorer's own check, if it gave one, decides; if that can't be evaluated, a planned pass stands. Found over three bench runs, both ways round:
+- run 1: the Explorer replaced a good planned `ordered` check with one that passes trivially;
+- run 3: the planned check ("some `$` is visible") was the weak one, and the Explorer's precise relation was being discarded.
+
+Alternative: always trust the Planner (smart model). Rejected because a planned check written before the result page exists is often only a placeholder (D32's "don't guess formulas").
+
+**D41 — For `equalsCaptured`, a value that has disappeared is a failure, not "can't evaluate".** The same locator found the value at capture time; its absence now is the change being tested (e.g. a search in different letter case returns nothing). Other missing targets are still errors.
+
+**D42 — Edge-input bases must be real successes.** A submit that stayed on the page and showed an error-like message (the Explorer testing bad input on purpose) isn't used as a happy path. A success signature never uses error-like or transient progress text ("Calculating…", "Saving…"). Found in run 2: a signature built on a transient "Calculating…" made every "accept" variant on that form fail, and it matched decoy D03 by keyword.
+
+**D43 — Labelled amounts: a deterministic hint plus a one-turn escalation.** Each turn lists lines that pair a label with an amount, including a `<dl>`/grid label on one line with its value on the next ("Subtotal: $135.00"); dropdown options are skipped. The first time a state shows such amounts, that turn uses the smart model: writing the relation a label states ("Total (incl. 15% GST)") is where the small model was weakest. Generic by construction (no app words); it was motivated by bench runs, which is recorded here on purpose.
+
+**D44 — Page text aimed at automated tools is noted, not flagged.** The Explorer flagged the injection canary's sentence as a "security issue". Per the universal rules, it now ignores such text and mentions it in its finish note. A finding about the page's wording isn't a bug in the app.
+
+**Honesty note on iteration.** D39–D44 came from reading four Standard runs on the bench. Each change is generic (no app names, routes or bug knowledge; the contamination tests pass), but iterating on the bench can still overfit the Explorer's behaviour. E5 (SauceDemo) and E6 (Friction) exist to check that, and the ablation numbers in P5 will come from fresh runs.
+
+**D45 — One failed Explorer call is a bad turn, not an outage.** A provider error or timeout on one turn counts as a bad turn; two in a row end exploration ("AI unavailable"), and the spend cap or a replay-cache miss ends it at once. Explorer calls time out after 30 s (a normal turn takes 2–4 s). Over-long free text in tool calls (notes, summaries, "why") is trimmed in code instead of being rejected, because a repair call costs ~2.5 s and ~$0.006 for nothing.
+
+### Dependencies added in P2
+
+| Package | Where | Why |
+| --- | --- | --- |
+| ai 7.0.x (Vercel AI SDK) | engine | Tool calling, structured output, provider switch, and a mock model for tests (in the plan, D7) |
+| @openrouter/ai-sdk-provider 3.1.x | engine | OpenRouter models for the AI SDK, with the provider's real per-call cost (D28) |
+
+### P2 spike (26 Sep 2026, moved from P0 by D13)
+
+- **Model IDs** checked against OpenRouter's live list (P1 wrap-up entry): both exist, with tool calling and structured outputs.
+- **Login loop.** A throwaway script opened the production bench and gave Haiku 4.5 an AI-mode snapshot with three tools (click, fill, finish). It logged in with `{{secret:password}}` in **6 turns**:
+  - ~1.7–2k input tokens per turn, 1.8–3.8 s per call;
+  - $0.014 in total.
+
+  The snapshot format (`[ref=e23]`, roles and names) worked as the only view of the page.
+- **Structured output.** Sonnet 5 produced JSON that our zod schema then correctly rejected (an array too long), which is exactly what the repair step is for.
+- **Finding: aria snapshots include typed password values** (see "Problems hit"). This alone justified doing the spike.
+
+### P2 — 26 Sep 2026
+
+**Built.**
+- `llm/`: the **gateway**, the only door to a model. It handles redaction and the leak check, a replay guard, the spend cap, a response cache (`off|rw|replay`), retries with backoff, per-call timeout and reasoning effort, our own zod validation with one repair, and a call log (`llm-calls.ndjson`). There are three generic prompts (Planner, Explorer, edge inputs) and a contamination test.
+- `oracle/`: the **check language** (zod), number parsing, and the deterministic **evaluator**. The evaluator has three outcomes (pass, fail, error) and a plain-language message for each.
+- `plan/`: the **app-map summary**, built from the crawl's snapshots, and the **Planner**, which is one call followed by code-side validation.
+- `explore/`: the **executor** (safety, ref → stable locator, secrets, waits, steps, detectors on every step), the **Explorer loop** (tools, context, stop conditions, escalation) and the **edge-input runner** (forms from recorded steps, a field probe, fixed + AI variants, DET-XSS, double submit, login-message comparison).
+- New detectors: DET-HTTP4XX on happy steps, and DET-XSS through the canary.
+- Pipelines: `ai-no-verify` and `full` (provisional tiers, D29). The requirements hook (`requirements` in the config and Planner input; `requirement` grounding).
+- Tests: 178 new (379 in all, from 201).
+
+**How data flows.**
+1. After the crawl, the **app-map summary** turns ~23 snapshots into about 3–8k characters: per page, the headings, fields (with dropdown options), buttons, links and "notable" text (amounts, totals, sort/save/search words). Site navigation is listed once, and same-layout pages are grouped.
+2. The **Planner** (Sonnet 5, low reasoning) returns an app model and up to 5 journeys, each with expectations. An expectation is a statement, a check written as JSON, grounding, impact, category, and *when* to check it. Code then keeps only what it can verify:
+   - checks must parse;
+   - start routes must exist;
+   - `ui_text` quotes must literally appear on a recorded page, or they become "convention";
+   - journeys beyond the budget are dropped, core first.
+3. Each journey runs in a **fresh browser** with the logged-in cookies from preflight. Every turn, the **Explorer** (Haiku 4.5) gets text only:
+   - the goal and the expectations with their status;
+   - the last 8 steps and any new errors;
+   - evidence IDs and a hint listing labelled amounts;
+   - the page snapshot, wrapped as untrusted.
+
+   It calls exactly one tool. After two bad turns, one turn escalates to Sonnet.
+4. The **executor** carries out the call. It converts the ref into a locator that matches exactly that element, refuses destructive controls and off-site targets, and types secrets from the vault. It waits for the page to settle, records the step with evidence, and runs the log detectors, plus the page detectors the first time a state is seen.
+   An `assert` makes the **evaluator** run the check on the live page. A failure becomes a **candidate** carrying the steps that led to it.
+5. The **edge-input runner** finds each submitted form in the recorded steps and probes it for all its fields. It asks Sonnet for up to 3 context-aware inputs, adds the fixed safe set, and replays each variant in a fresh browser **without the LLM** (the guard enforces it). Code judges the outcome: 5xx, page errors, the canary element, whether the field was rejected, whether the success signature appeared, and request counts.
+6. The **report** groups candidates into findings. Severity now uses journey context (a crash during a core journey is critical). Tiers are provisional until P3 (D29). Repro steps are the recorded step descriptions, never LLM text.
+
+**How a check is evaluated (for Q&A).** A check is JSON. The model wrote it, but only code runs it, in the same way on every run. Three rules first:
+- **Validation:** the JSON must match the zod schema of the check language. Unknown check types, extra fields, bad regexes and refs in stored checks are all rejected.
+- **Locators:** each locator becomes a Playwright locator, and the evaluator waits up to 1.5 s for a visible match.
+- **Outcomes:** a missing element or a missing number is an *error*, not a failure. The Explorer is told and can point the check at the right element; an error never becomes a finding.
+
+*Worked example 1: the GST total.* After calculating a quote, the page shows `Subtotal $135.00` and `Total (incl. 15% GST) $178.54`. The Explorer points at the two amounts by ref, and the executor stores them as stable locators. The check:
+```json
+{ "type": "numericRelation",
+  "left":  { "read": <the total's amount> },
+  "op": "eq",
+  "right": { "op": "mul", "a": { "read": <the subtotal's amount> }, "b": { "const": 1.15 } } }
+```
+It is grounded in the on-screen label `Total (incl. 15% GST)`, and code verifies that the quote is really on the page. Evaluation:
+1. **Read the left side.** Take the element's text and find the first amount that isn't a percentage, so `15%` in a label is skipped. `$178.54` → 178.54, marked as money because it has a currency sign.
+2. **Read the right side.** `$135.00` → 135.00; × 1.15 = 155.25.
+3. **Choose the tolerance.** Money defaults to ±0.01.
+4. **Compare.** |178.54 − 155.25| = 23.29 > 0.01, so the check **fails**.
+5. **Explain.** The message is built from the numbers: "…total is 178.54; …subtotal ($135.00) × 1.15 is 155.25. Expected 178.54 = 155.25 (±0.01), but 178.54 ≠ 155.25."
+
+The result is stored as a `check_result` evidence item and recorded as a step. It becomes a candidate with source `check/numericRelation` and signature `check_failed`. On a correct app, 135.00 × 1.15 = 155.25 = total, so the same check passes. That's why it can later be replayed, and exported as a test.
+
+To be precise about what's proven: the evaluator is covered by fixture-page tests with exactly this relation (`oracle/evaluate.test.ts`, using 10% tax). In the P2 gate runs, though, the Explorer never wrote this check. It checked `subtotal = 45 × 3` instead, which is true, so **B01 was missed**. The limit is the agent's choice of check, not the evaluator.
+
+*Worked example 2: the price sort.* After choosing "Price: low to high", the check is:
+```json
+{ "type": "ordered", "items": { "by": "role", "role": "listitem", "within": <the services list> },
+  "read": "number", "direction": "asc" }
+```
+It is grounded in the option label `Price: low to high`. Evaluation:
+1. **Find the items.** Take every visible list item in that list. Fewer than 2 would be an *error*.
+2. **Read each item.** Take the first amount in each item's text: "Carpet shampoo $8 per hour" → 8.
+3. **Compare neighbours.** Check each adjacent pair in order. The first pair out of order fails the check, e.g. "item 2 (20) comes after item 1 (100)", with the whole order listed.
+
+Sorting the prices as text gives `$100, $20, $45, $50, $55, $60, $75, $8`, so the check fails at item 2. Sorted numerically, it passes.
+
+The "items" locator came from the Explorer pointing at the list. The executor turned that ref into "every list item inside this list", so the check replays even when the list's contents change.
+
+In the gate runs this check did run. The Planner wrote it with `items: text "per hour"`, and code kept it over the Explorer's weaker replacement (D40). But the Explorer sorted a *search-filtered* list of 5 services priced $45–$75. Those prices all have two digits, so a text sort and a numeric sort agree, and the check correctly **passed**: B02 was missed. The prompt now says to sort the full list, and the evaluator's "fewer than 2 items" message says the same, but in run 5 the Explorer still searched first.
+
+**Key decision + alternative.** The LLM writes *checks*, not verdicts, and code evaluates them (D2 in practice). Alternative: let the Explorer judge pass/fail from what it sees. Rejected because the verdict would not be reproducible or exportable, and the bench run shows why: the Explorer's own wording of a finding is sometimes wrong, while the evaluator's message is built from numbers read off the page.
+
+**Most likely failure mode.** It's already visible in the gate runs: the Explorer not asserting the precise rule, or not setting up the scenario that shows the bug. For example, it confirms "a price is shown" but never checks the tax relation, or it sorts a filtered list. Mitigations in place:
+- the Planner's "when" hints;
+- the deterministic labelled-amounts hint in every turn;
+- escalation to Sonnet after bad turns and on the first view of labelled amounts;
+- "planned check first" (D40);
+- the prompt rules.
+
+These mitigations got B03, B06 and B08 from Explorer *flags* (Needs review) in run 1 up to deterministic check failures (Likely) in runs 2–5. They did not get B01 or B02.
+
+Second failure mode: **false positives from wrong expectations.** Examples are the Planner guessing that a "Booking summary" appears after confirming, and AI edge-input guesses like "a decimal number of hours should be accepted". Replay (P3) won't remove these, because they reproduce. P3's skeptic ("argue the expectation was wrong") is the designed defence, and these runs give it concrete test cases.
+
+Third risk: **time.** Standard runs took 422–472 s of the 480 s cap: well under NFR-1's 8 minutes, but over the 5-minute demo target. The demo needs the Quick budget or a cached run.
+
+**Problems hit.**
+- **Playwright aria snapshots include what was typed into a password field**, in plain text and in both snapshot modes (found by the spike). Any snapshot taken after logging in would have carried the password into the next prompt. The gateway now turns every vault value into `{{secret:name}}` (plain, URL-encoded and JSON-escaped forms), then refuses to send a payload that still contains one (`llm/redaction.test.ts`, built on a real snapshot). Disk was already safe: the run store redacts every write.
+- **Sonnet 5 reasons by default through OpenRouter.** The first Quick run's Planner call hit the 60 s timeout; a probe showed 6,012 hidden reasoning tokens out of 6,142 output tokens, 70 s and $0.068. With effort `low`, it takes 17 s and $0.022, and its output is valid first time (D31). The aborted call was billed by the provider but can't be counted (no usage came back); that's a small, documented gap in cost accounting.
+- **Structured outputs follow the schema literally.** An open-object field came back as `{}`, so the Planner's checks go over the wire as JSON strings (D32).
+- **An element-level `ariaSnapshot()` invalidates every ref on the page** (D34). Found by a failing executor test, not in production.
+- **A `<select>` read as its internal value ("s1"), not its label.** This produced a false "rate doesn't match" failure in the second Quick run. Fixed, with a regression test.
+- **The Explorer (Haiku 4.5) writes weak checks.** Across Standard runs it replaced a good `ordered` check with one that always passes, asserted "invalid login is rejected" without trying an invalid login, captured a value *before* editing it, and sorted a search-filtered list. Fixes: D39–D44 and prompt rules. Remaining weakness: B01 and B02 were still missed in every Standard run (see results), and the Planner can guess result-page text (a critical false positive: "a 'Booking summary' is shown after confirming", when the page says "Booking confirmed"). P3's skeptic is designed for that second class: "the expectation was wrong".
+- **Haiku doesn't know today's date** and booked for 2025. Each turn now states today's local date.
+- **The fixture server resolved function routes before reading the request body**, so body-dependent test routes couldn't work. It now reads the body first.
+- **Run 4 was interrupted by the laptop sleeping** (one model call "took" 200 s). Its numbers are recorded below but it isn't counted towards the gate.
+- **pnpm 12's supply-chain guard blocked the newest AI SDK.** `ai@7.0.116` and two of its packages were only ~12 hours old, inside pnpm's minimum-release-age window. `pnpm add` quietly wrote an exemption list into `pnpm-workspace.yaml`. I removed the exemptions and pinned `ai` to **7.0.113** (3 days old), which passes the guard (SECURITY T13). The five gate runs used 7.0.116; after the pin, all 379 tests pass and a real Quick scan ran end to end (below).
+
+**Gate P2 results (26 Sep 2026, macOS, production bench on :5180 with `BENCH_BUGS=all`, Standard budget, logged in as the test account, models Sonnet 5 + Haiku 4.5).** All runs are in `eval/results/p2-gate/` (runs.jsonl + summary.json/.md). No run was dropped.
+
+| Run | Code | Time | Planned journeys completed | LLM calls | Cost | Recall C+L | Bug precision C+L | Decoys |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| 1 `…040918_ykwq` | first full version | 447 s | 3/5 | 97 | $0.61 | 50% | 75% | D03 |
+| 2 `…042245_y1z1` | + D39, D40 (first form), D42 (refused submits) | 459 s | 4/5 | 88 | $0.56 | 61% | 89% | D03 |
+| 3 `…043405_1k8m` | + D43, transient text | 452 s | 4/5 | 90 | $0.52 | 56% | 100% | none |
+| 4 `…044517_0m6x` | + D40 (final), D41, D44 | 472 s | 3/5 | 85 | $0.50 | 44% | 100% | none |
+| 5 `…051200_38ne` | + D45 (final code) | 422 s | 3/5 (+ login check) | 92 | $0.51 | 67% | 100% | none |
+| A0 `…051940_8f4c` | deterministic, buggy | 35 s | – | 0 | $0 | 33% | 100% | none |
+| A0 `…052025_dbtu` | deterministic, **clean** | 32 s | – | 0 | $0 | – | 0 bug findings | none |
+
+Run 4 was interrupted by the laptop sleeping mid-call: the last journey was stopped and the edge phase had no time left. It's kept in the set but not used for the gate.
+
+All runs used `--llm-cache rw`. Runs 3–5 reused run 2's plan, and some edge-generator answers, from the response cache, because those prompts hadn't changed (run 5: 5 cache hits). The Explorer's turns were live in every run. This makes runs 2–5 a fairer comparison of the Explorer changes, but it also means they share one plan.
+
+| Gate criterion | Result |
+| --- | --- |
+| Explorer completes ≥ 3 bench journeys in a Standard run | **Pass.** 3–4 of 5 planned journeys in every run (run 5: 3 of 5, plus the login-message check) |
+| ≥ 3 of B01, B02, B03, B06, B08 appear as candidates | **Pass.** Run 5 has B03 (`equalsCaptured`, uppercase search returns nothing), B06 (`notVisible`, the cancelled booking is still listed) and B08 (`equalsCaptured`, name reverts after reload) as failed checks, plus Explorer flags for B03 and B06. The same three appear in runs 2 and 3; in run 1 as flags and checks. **B01 and B02 were missed in all five Standard runs** (see the teach-back). B01 was then caught in the post-pin Quick smoke run (`…082522_ifha`: total 238.05 ≠ subtotal + GST 207.00) |
+| B05 appears via edge inputs | **Pass.** DET-HTTP5XX `POST /api/bookings → 500` from the apostrophe-name variant in runs 1, 2, 3 and 5 (run 4 had no edge phase), plus the smoke run. The pre-filled "Full name" field was found by the form probe (D36) |
+| Teach-back written | Yes (above) |
+
+Also found by edge inputs: **B04** (a past date accepted), **B17** (double submit creates two bookings; `maxRequests`), and in run 5 **B18** (login messages reveal whether an account exists).
+
+**Scorer notes (for Rohit to label).**
+- B06's check failures read "…is still visible", but its firm rule wants "still present" or "remains". They match only the `confirm: manual` rule, so B06 shows as "not found" until labelled.
+- Run 3's B15 "match" is a keyword hit on the Explorer flagging the injection-canary sentence ("inject"). It isn't the XSS bug; label it `fp`. D44 now stops that flag.
+- `eval/results/p2-gate/summary.md` lists 37 findings needing a label. I haven't labelled any: labels are a human verdict (D25).
+
+**Other checks.**
+- `pnpm test`: 379 passed (engine 312, bench 40, eval 27).
+- `pnpm typecheck`, `pnpm lint`, `prettier --check .`: clean.
+- The P1 gate still holds: A0 buggy finds B09, B10, B12, B13, B14 and B16; A0 clean has 0 bug findings.
+- Contamination tests pass for the prompts and all engine source.
+- Secrets: the test password doesn't appear in `runs/`, `.witness-cache/` or any prompt (redaction test, plus a grep of the run folders).
+- Spend on the OpenRouter account: **$3.03** for all of P2 (spike, probes, 3 Quick and 5 Standard runs).
+
+**Post-pin smoke run** (`run_20260926-082522_ifha`, Quick, `ai@7.0.113`): 139 s, 31 calls, $0.23. It found B01, B05, B17 and B18 as candidates, and B09, B10 and B16 from the crawl, with no decoys.
+
+### Notes for later phases (from P2)
+
+- **P3 replayer:** it must log in itself (D37) and replay `check` steps with their captures. Edge-variant steps are stored on their journey (kind `edge`), and the candidate's `stepIds` give the order.
+- **P3, locators the agent writes directly:** the smoke run's B01 check reads values with `{ by: "text", text: "$238.05" }`. That's stable only until the bug is fixed, so the exported test would error instead of passing. Agent-written read locators whose text contains digits should be converted to a stable one when stored (test id → label → css), as refs already are (D34).
+- **P3, grounding quotes:** the agent quoted the labelled-amounts hint ("Subtotal: $180.00 …") rather than the page's own label, so code downgraded it to convention. Tell it to quote only the label, and consider verifying `ui_text` quotes against the page's visible text as well as the snapshot.
+- **P3 skeptic, test cases from these runs:**
+  - a Planner-guessed result text ("Booking summary" after confirming);
+  - AI edge guesses on the "accept" side (decimal hours, mixed-case email, very large hours);
+  - an expectation asserted before its moment ("without required fields → rejected" asserted after a full, valid submit).
+
+  Consider capping AI-generated convention edge candidates at Needs review unless the page states the rule.
+- **P4 demo:** Standard runs take 7–8 min, over the 5-minute target, so the demo should use Quick (~2.3 min) or a cached run. Prompt caching never hit for the Explorer (`cacheReadTokens` 0), probably because the prefix is under the model's minimum cacheable length.
+- **P5 cost:** ~$0.50–0.61 per Standard run, so the ~23-run matrix is ≈ $12–14.

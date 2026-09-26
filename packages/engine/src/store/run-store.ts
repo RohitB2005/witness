@@ -21,6 +21,8 @@ export interface RunStore {
   createRun(runId: string, meta: { url: string; startedAt: string }): Promise<void>;
   appendEvent(runId: string, event: WitnessEvent): Promise<void>;
   putEvidence(runId: string, evidence: Evidence): Promise<void>;
+  /** Appends one line to llm-calls.ndjson (NFR-6). */
+  appendLlmCall(runId: string, entry: Record<string, unknown>): Promise<void>;
   getEvidence(runId: string, evidenceId: string): Promise<Evidence | undefined>;
   hasEvidence(runId: string, evidenceId: string): Promise<boolean>;
   /** Writes an artifact file; returns its path relative to the run folder. */
