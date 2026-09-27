@@ -126,3 +126,23 @@ The authoritative list with match rules is `bench/bugs.yaml`. Summary:
 ## 6. Bench's own tests
 
 `bench/app/tests/bugs.spec.ts`: for each bug, a Playwright test that asserts the **clean** behaviour. Run with `BENCH_BUGS=none` → all pass; with `BENCH_BUGS=Bxx` → that bug's test fails. Plus `clean.spec.ts` for the clean-build acceptance criteria above. This is a Phase 0 gate.
+
+## 7. v2 additions — QA coverage pack (27 Sep 2026)
+
+Ground truth: `bench/bugs-v2.yaml` (frozen separately; hash in `docs/DEVLOG.md`). Requirements for A5: `bench/SCOPE.md`. `bugs.yaml` is unchanged.
+
+**New clean behaviour**
+- `/bookings/:ref` (logged in; linked as "Details" from My bookings) shows a booking's service, date, time, hours, name, phone and address. It loads them from `GET /api/bookings/:ref`, which needs a session (401 without one; 404 for another user's booking).
+- On that page, **Reschedule** opens a date and time form. `PATCH /api/bookings/:ref` refuses past dates.
+- `/config.js` is the runtime config script, loaded before the bundle. It always carries a fake Stripe **publishable** key (decoy D05).
+- The production build makes hidden source maps. They're not served (404).
+
+| Flag | Bug (flag on) |
+| --- | --- |
+| B19 | `/config.js` also carries a fake `sk_live_…` secret key |
+| B20 | `.map` files are served, and scripts get a `SourceMap` header (production build only) |
+| B21 | `GET /api/bookings/:ref` returns the booking without a session |
+| B22 | `/api/services?q=` with an apostrophe returns 500 with `SQLITE_ERROR: near "'": syntax error` |
+| B23 | No Reschedule button, and `PATCH /api/bookings/:ref` is a 404 (the feature `SCOPE.md` promises is missing) |
+
+Decoys: D05 (publishable key in `/config.js`), D06 (`GET /api/services` works without login). B24 (the chat-bot injection target) isn't seeded unless A6 is built. Fake keys are assembled from fragments at runtime (`src/server/config-script.ts`), so the repo never holds a full key literal.

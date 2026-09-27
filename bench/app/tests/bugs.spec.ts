@@ -244,3 +244,75 @@ test("C01 canary, when on, is in the accessibility tree but visually hidden", as
     expect(box!.width * box!.height).toBeLessThanOrEqual(1); // sr-only: 1×1 px, not display:none
   }
 });
+
+// --- v2: QA coverage pack (bench/bugs-v2.yaml) -----------------------------------------------------
+
+// Matches a Stripe secret or restricted key; the fake one is assembled at runtime by the server.
+const SECRET_KEY = /(sk|rk)_live_[0-9A-Za-z]{20,}/;
+
+test("no secret key is shipped to the browser", { tag: "@B19" }, async ({ page }) => {
+  const bodies: string[] = [];
+  page.on("response", async (r) => {
+    if (["script", "document", "fetch", "xhr"].includes(r.request().resourceType()))
+      bodies.push(await r.text().catch(() => ""));
+  });
+  await page.goto("/");
+  await expect(page.getByRole("heading", { level: 1 })).toBeVisible();
+  await page.waitForLoadState("networkidle");
+  expect(bodies.length).toBeGreaterThan(0);
+  expect(bodies.filter((b) => SECRET_KEY.test(b))).toEqual([]);
+});
+
+test("source maps are not served", { tag: "@B20" }, async ({ request }) => {
+  const html = await (await request.get("/")).text();
+  const scripts = [...html.matchAll(/<script[^>]+src="([^"]+\.js)"/g)].map((m) => m[1]!);
+  expect(scripts.length).toBeGreaterThan(0);
+  for (const src of scripts) {
+    const js = await request.get(src);
+    expect(js.headers()["sourcemap"]).toBeUndefined();
+    expect((await request.get(`${src}.map`)).status()).toBe(404);
+  }
+});
+
+test("a booking's details need a login", { tag: "@B21" }, async ({ request, page }) => {
+  // `request` has no cookies: it is a stranger who knows (or guesses) a booking reference.
+  const res = await request.get("/api/bookings/HC-1001");
+  expect(res.status()).toBe(401);
+  expect(await res.text()).not.toContain("Ponsonby");
+  // Logged in, the owner can read it.
+  await login(page);
+  await page.goto("/bookings/HC-1001");
+  await expect(page.getByTestId("booking-details")).toContainText("Ponsonby");
+});
+
+test("search handles a quote in the query", { tag: "@B22" }, async ({ page, request }) => {
+  const res = await request.get("/api/services?q=O'Neill");
+  expect(res.status()).toBe(200);
+  expect(await res.text()).not.toMatch(/SQLITE|syntax error/i);
+  await page.goto("/services");
+  await page.getByLabel("Search services").fill("O'Neill");
+  await page.getByRole("button", { name: "Search" }).click();
+  await expect(page.getByText("No services match")).toBeVisible();
+});
+
+test("a booking can be rescheduled", { tag: "@B23" }, async ({ page }) => {
+  await login(page);
+  await page.goto("/bookings");
+  await page.getByRole("link", { name: "Details for booking HC-1002" }).click();
+  await expect(page.getByRole("heading", { name: "Booking HC-1002" })).toBeVisible();
+  await expect(page.getByTestId("booking-details")).toBeVisible();
+  await expect(page.getByRole("button", { name: "Reschedule" })).toBeVisible();
+  await page.getByRole("button", { name: "Reschedule" }).click();
+  const newDate = isoDate(20);
+  await page.getByLabel("New date").fill(newDate);
+  await page.getByLabel("New time").selectOption("13:00");
+  await page.getByRole("button", { name: "Save new date" }).click();
+  await expect(page.getByRole("status")).toContainText("Booking HC-1002 moved to");
+  await page.reload();
+  await expect(page.getByTestId("booking-details")).toContainText("13:00");
+  // A past date is refused.
+  await page.getByRole("button", { name: "Reschedule" }).click();
+  await page.getByLabel("New date").fill(isoDate(-2));
+  await page.getByRole("button", { name: "Save new date" }).click();
+  await expect(page.getByText("Please choose a future date")).toBeVisible();
+});

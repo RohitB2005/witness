@@ -16,7 +16,7 @@ describe("parseBugList", () => {
 
   it("expands 'all' to every flag including the canary", () => {
     expect(parseBugList("all")).toEqual([...BUG_IDS]);
-    expect(parseBugList("ALL")).toHaveLength(19);
+    expect(parseBugList("ALL")).toHaveLength(24);
   });
 
   it("rejects unknown IDs instead of silently running clean", () => {

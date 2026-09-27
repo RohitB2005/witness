@@ -148,6 +148,7 @@ const STATIC_ROUTES = new Set([
 export function isKnownRoute(pathname: string, serviceIds: readonly string[]): boolean {
   const path = pathname.length > 1 ? pathname.replace(/\/+$/, "") : pathname;
   if (STATIC_ROUTES.has(path)) return true;
+  if (/^\/bookings\/HC-\d+$/.test(path)) return true; // the page itself says if the booking is missing
   const match = /^\/services\/([^/]+)$/.exec(path);
   if (match === null) return false;
   try {

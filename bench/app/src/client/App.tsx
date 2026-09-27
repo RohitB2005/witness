@@ -3,6 +3,7 @@ import { Layout } from "./components/Layout";
 import { RequireAuth } from "./components/ui";
 import { BookPage } from "./pages/Book";
 import { BookConfirmationPage } from "./pages/BookConfirmation";
+import { BookingDetailPage } from "./pages/BookingDetail";
 import { BookingsPage } from "./pages/Bookings";
 import { ContactPage } from "./pages/Contact";
 import { FaqPage } from "./pages/Faq";
@@ -32,6 +33,14 @@ export function App() {
           element={
             <RequireAuth>
               <BookingsPage />
+            </RequireAuth>
+          }
+        />
+        <Route
+          path="/bookings/:ref"
+          element={
+            <RequireAuth>
+              <BookingDetailPage />
             </RequireAuth>
           }
         />

@@ -1,5 +1,6 @@
 // Every seeded defect in Harbour Clean is guarded by isBugOn("Bxx"), so `grep isBugOn` lists them all.
-// Ground truth for what each flag does lives in bench/bugs.yaml (frozen) and bench/BENCH_SPEC.md §4.
+// Ground truth for what each flag does lives in bench/bugs.yaml (frozen), bench/bugs-v2.yaml (B19+,
+// frozen separately) and bench/BENCH_SPEC.md §4.
 //
 // This module is shared: the server and the browser each hold their own copy of the active set.
 // The server sets it from BENCH_BUGS at start-up and from POST /__bench/bugs; the browser loads it
@@ -25,6 +26,12 @@ export const BUG_IDS = [
   "B17",
   "B18",
   "C01",
+  // v2 (bench/bugs-v2.yaml): QA coverage pack. B24 is only added if its probe (A6) is built.
+  "B19",
+  "B20",
+  "B21",
+  "B22",
+  "B23",
 ] as const;
 
 export type BugId = (typeof BUG_IDS)[number];

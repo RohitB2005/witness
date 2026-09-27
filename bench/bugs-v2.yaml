@@ -1,0 +1,126 @@
+# Ground truth for the Harbour Clean benchmark, v2: the QA coverage pack (docs/ADDENDUM_QA_COVERAGE.md).
+# Read by eval/score.ts with `--bugs bench/bugs-v2.yaml`. FROZEN once committed (second freeze; the commit
+# hash is in docs/DEVLOG.md). bench/bugs.yaml (v1, B01–B18) is untouched and scored separately.
+#
+# Same schema and matching semantics as bench/bugs.yaml (see its header): a finding matches a bug if ANY rule
+# under `match.any` matches; within a rule EVERY field present must match; `confirm: manual` rules are
+# tentative and need a human label; first match in file order wins; a bug counts once, at its best tier.
+#
+# Scope notes:
+# - B20 is seeded although its detector (A2, DET-SOURCEMAP) moved to stretch (DEVLOG D47): ground truth is
+#   written before detection is built, so an unbuilt detector shows as an honest miss.
+# - B24 (the prompt-injection probe's target, A6) is not seeded: A6 is stretch and the bench has no chat UI.
+#   It is added here only if A6 is built.
+# - B23 needs the scan to be given bench/SCOPE.md as its requirements (`--requirements bench/SCOPE.md`).
+# - The fake keys (B19, D05) are assembled at runtime by bench/app/src/server/config-script.ts; no full key
+#   literal is in the repo.
+
+version: 1
+app: harbour-clean
+test_account:
+  email: demo@harbourclean.test
+  password_env: BENCH_TEST_PASSWORD
+
+bugs:
+  - id: B19
+    title: 'A server secret key is shipped to the browser'
+    category: security
+    severity_expected: critical
+    expected_tier: Confirmed        # a high-confidence key pattern in a served script, re-fetched on replay
+    detection_layer: universal
+    difficulty: easy
+    flag: B19
+    route: /
+    trigger: 'Load any page; the runtime config script /config.js is fetched.'
+    expected_behaviour: 'Only the publishable key (pk_live_…) is in the browser.'
+    actual_behaviour: 'The config script also contains a secret key (sk_live_…).'
+    match:
+      any:
+        - { source: DET-SECRETS, keywords_any: ["sk_l", "secret key", "stripe"] }
+        - { category: security, keywords_any: ["secret key", "sk_live", "sk_l"] }
+
+  - id: B20
+    title: 'Source maps for the production bundle are served'
+    category: security
+    severity_expected: low
+    expected_tier: Confirmed        # improvement, evidence-based (A2)
+    detection_layer: universal
+    difficulty: easy
+    flag: B20
+    route: /
+    trigger: 'Fetch the main script; it carries a SourceMap header; fetch the map.'
+    expected_behaviour: 'Maps are not served (404), and no SourceMap header.'
+    actual_behaviour: 'The .map file is served with the original sources.'
+    match:
+      any:
+        - { source: DET-SOURCEMAP }
+        - { keywords_any: ["source map", "sourcemap", "source code is publicly"] }
+
+  - id: B21
+    title: 'Booking details API returns personal data without logging in'
+    category: security
+    severity_expected: critical
+    expected_tier: Confirmed        # replayed with no cookies; the same record comes back
+    detection_layer: universal
+    difficulty: medium
+    flag: B21
+    route: /bookings/:ref
+    trigger: 'GET /api/bookings/HC-1001 with no session cookie.'
+    expected_behaviour: '401 Please log in to continue.'
+    actual_behaviour: '200 with the booking, including name, phone and address.'
+    match:
+      any:
+        - { source: DET-AUTHZ, request_path: "^/api/bookings/[^/]+$" }
+        - { category: security, keywords_any: ["without logging in", "without login", "unauthenticated", "no session"], confirm: manual }
+
+  - id: B22
+    title: 'Search leaks a database error when the query contains a quote'
+    category: security
+    severity_expected: high
+    expected_tier: Confirmed        # the error text is in the response body; deterministic on replay
+    detection_layer: universal
+    difficulty: medium
+    flag: B22
+    route: /services
+    trigger: "Search for O'Neill (any query with an apostrophe)."
+    expected_behaviour: '200 with no results.'
+    actual_behaviour: '500 with body SQLITE_ERROR: near "''": syntax error.'
+    match:
+      any:
+        - { source: DET-DBERROR, request_path: "^/api/services" }
+        - { category: security, keywords_any: ["database error", "sql"], route: "^/services" }
+        - { source: DET-HTTP5XX, request_path: "^/api/services", method: GET, confirm: manual }
+
+  - id: B23
+    title: 'Rescheduling a booking, promised in the scope, does not exist'
+    category: functional
+    severity_expected: high
+    expected_tier: Likely           # "Not found in the app" is capped at Likely (addendum A5)
+    detection_layer: grounded       # grounded in the requirements text, not on screen
+    difficulty: medium
+    flag: B23
+    route: /bookings
+    trigger: 'Scan with --requirements bench/SCOPE.md; look for a way to reschedule a booking.'
+    expected_behaviour: 'A Reschedule button on the booking details page changes the date and time.'
+    actual_behaviour: 'There is no way to reschedule; the PATCH endpoint returns 404.'
+    match:
+      any:
+        - { source: REQ-NOTFOUND, keywords_any: ["reschedul"] }
+        - { keywords_any: ["reschedul"], confirm: manual }
+
+decoys:
+  - id: D05
+    title: 'A Stripe publishable key is in the config script'
+    route: /
+    false_claim: 'An API key is exposed in the frontend.'
+    match:
+      any:
+        - { keywords_any: ["pk_live", "pk_l", "publishable"] }
+  - id: D06
+    title: 'The service catalogue API works without logging in'
+    route: /services
+    false_claim: 'An API returns data without authentication.'
+    match:
+      any:
+        - { request_path: "^/api/services" , category: security, keywords_any: ["without logging in", "without login", "unauthenticated", "no session"] }
+        - { source: DET-AUTHZ, request_path: "^/api/services" }

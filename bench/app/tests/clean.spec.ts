@@ -115,7 +115,7 @@ const PUBLIC_PAGES = [
   "/privacy",
 ];
 
-const ACCOUNT_PAGES = ["/", "/bookings", "/profile", "/book"];
+const ACCOUNT_PAGES = ["/", "/bookings", "/bookings/HC-1001", "/profile", "/book"];
 
 test("every public page is clean", async ({ page, request }) => {
   const problems = watch(page);
@@ -196,6 +196,15 @@ test("interactive states are clean", async ({ page }) => {
   await expect(page.getByRole("dialog")).toBeVisible();
   await expectAxeClean(page, "cancel dialog");
   await page.getByRole("dialog").getByRole("button", { name: "Keep booking" }).click();
+  // Booking details: reschedule form open, then rescheduled
+  await page.goto("/bookings/HC-1001");
+  await page.getByRole("button", { name: "Reschedule" }).click();
+  await expectAxeClean(page, "reschedule form");
+  await expectNoOverflow(page, "reschedule form");
+  await page.getByLabel("New time").selectOption("14:00");
+  await page.getByRole("button", { name: "Save new date" }).click();
+  await expect(page.getByText("Booking HC-1001 moved to")).toBeVisible();
+  await expectAxeClean(page, "booking rescheduled");
   await page.goto("/profile");
   await expect(page.getByLabel("Phone")).not.toHaveValue("");
   await page.getByRole("button", { name: "Save" }).click();

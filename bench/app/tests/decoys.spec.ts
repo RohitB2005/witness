@@ -39,3 +39,17 @@ test("D04: fewer than 2 hours shows 'Minimum booking is 2 hours'", async ({ page
   await expect(page.getByText("Minimum booking is 2 hours")).toBeVisible();
   await expect(page.getByTestId("quote-total")).toHaveCount(0);
 });
+
+// v2 decoys (bench/bugs-v2.yaml).
+
+test("D05: the config script carries a publishable key (public by design)", async ({ request }) => {
+  const res = await request.get("/config.js");
+  expect(res.status()).toBe(200);
+  expect(await res.text()).toMatch(/pk_live_[0-9A-Za-z]{20,}/);
+});
+
+test("D06: the service catalogue API works without logging in", async ({ request }) => {
+  const res = await request.get("/api/services");
+  expect(res.status()).toBe(200);
+  expect(((await res.json()) as { services: unknown[] }).services).toHaveLength(8);
+});

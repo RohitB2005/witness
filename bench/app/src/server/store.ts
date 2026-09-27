@@ -188,6 +188,10 @@ export class Store {
       );
   }
 
+  findBooking(ref: string): StoredBooking | undefined {
+    return this.bookings.find((b) => b.ref === ref);
+  }
+
   deleteBooking(ref: string): void {
     this.bookings = this.bookings.filter((b) => b.ref !== ref);
   }

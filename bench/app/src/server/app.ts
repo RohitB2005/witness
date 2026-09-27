@@ -1,5 +1,5 @@
 // Harbour Clean API (+ static frontend in production). Seeded bugs are the isBugOn(...) branches.
-import { readFileSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import path from "node:path";
 import express from "express";
 import type { NextFunction, Request, Response } from "express";
@@ -32,6 +32,7 @@ import {
   type Store,
   type User,
 } from "./store";
+import { configScript } from "./config-script";
 
 const SESSION_COOKIE = "hc_session";
 
@@ -134,11 +135,22 @@ export function createApp({ store, staticDir }: AppOptions): express.Express {
     res.json({ ok: true });
   });
 
+  // --- Runtime config (loaded by index.html; B19 and decoy D05 live here) -------------------------
+
+  app.get("/config.js", (_req, res) => {
+    res.type("text/javascript").set("Cache-Control", "no-store").send(configScript());
+  });
+
   // --- Services and quotes ---------------------------------------------------------------------
 
   app.get("/api/services", (req, res) => {
     const q = str(req.query.q).trim();
     const sort = str(req.query.sort) || "recommended";
+    if (isBugOn("B22") && q.includes("'")) {
+      // B22: simulates a query built by string concatenation, with the driver's error sent to the client
+      res.status(500).json({ error: `SQLITE_ERROR: near "'": syntax error` });
+      return;
+    }
     let list = [...SERVICES];
     if (q !== "") {
       list = isBugOn("B03")
@@ -292,6 +304,31 @@ export function createApp({ store, staticDir }: AppOptions): express.Express {
     res.status(201).json({ booking: toPublicBooking(booking) });
   });
 
+  app.get("/api/bookings/:ref", (req, res) => {
+    const user = currentUser(req);
+    // B21: no session check, so anyone with a reference can read the booking's personal details
+    if (!user && !isBugOn("B21")) throw new HttpError(401, "Please log in to continue.");
+    const booking = store.findBooking(req.params.ref);
+    if (!booking || (user && booking.userId !== user.id))
+      throw new HttpError(404, "Booking not found");
+    res.json({ booking: toPublicBooking(booking) });
+  });
+
+  app.patch("/api/bookings/:ref", (req, res, next) => {
+    if (isBugOn("B23")) return next(); // B23: rescheduling doesn't exist (falls through to the API 404)
+    const user = requireUser(req);
+    const booking = store.findBooking(req.params.ref);
+    if (!booking || booking.userId !== user.id) throw new HttpError(404, "Booking not found");
+    const date = str(req.body?.date);
+    if (!isValidIsoDate(date)) throw new HttpError(400, "Please choose a date.", "date");
+    if (isPastDate(date)) throw new HttpError(400, "Please choose a future date", "date");
+    const time = str(req.body?.time);
+    if (!TIME_SLOTS.includes(time)) throw new HttpError(400, "Please choose a time.", "time");
+    booking.date = date;
+    booking.time = time;
+    res.json({ booking: toPublicBooking(booking) });
+  });
+
   app.delete("/api/bookings/:ref", (req, res) => {
     const user = requireUser(req);
     const list = store.bookingsFor(user.id);
@@ -345,7 +382,24 @@ export function createApp({ store, staticDir }: AppOptions): express.Express {
 
   if (staticDir) {
     const indexHtml = readFileSync(path.join(staticDir, "index.html"), "utf8");
-    app.use(express.static(staticDir, { index: false }));
+    app.use((req, res, next) => {
+      // B20: source maps are built for every release but should never be served
+      if (req.path.endsWith(".map") && !isBugOn("B20")) {
+        res.status(404).type("text/plain").send("Not found");
+        return;
+      }
+      next();
+    });
+    app.use(
+      express.static(staticDir, {
+        index: false,
+        setHeaders: (res, filePath) => {
+          if (isBugOn("B20") && filePath.endsWith(".js") && existsSync(`${filePath}.map`)) {
+            res.setHeader("SourceMap", `${path.basename(filePath)}.map`);
+          }
+        },
+      }),
+    );
     app.use((req, res, next) => {
       if (req.method !== "GET" && req.method !== "HEAD") return next();
       if (req.path.startsWith("/__bench")) return next();

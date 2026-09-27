@@ -120,9 +120,14 @@ export function BookingsPage() {
                   {formatDate(b.date)} at {b.time} · {b.hours} hours
                 </p>
               </div>
-              <button type="button" className={buttonSecondary} onClick={() => setPending(b)}>
-                Cancel<span className="sr-only"> booking {b.ref}</span>
-              </button>
+              <div className="flex flex-wrap items-center gap-3">
+                <Link to={`/bookings/${encodeURIComponent(b.ref)}`} className="underline">
+                  Details<span className="sr-only"> for booking {b.ref}</span>
+                </Link>
+                <button type="button" className={buttonSecondary} onClick={() => setPending(b)}>
+                  Cancel<span className="sr-only"> booking {b.ref}</span>
+                </button>
+              </div>
             </li>
           ))}
         </ul>
