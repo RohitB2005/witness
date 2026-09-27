@@ -107,7 +107,7 @@ Run on every recorded state (crawl and agent steps). IDs are stable (used by the
 | Discarded | reproduced 0/3, **or** evidence validation failed, **or** suppressed. Kept in a collapsed list with the reason |
 
 - Static detectors that don't depend on interaction (axe, broken link, security headers, overflow) are "reproduced" by re-running the detector once on a fresh load.
-- AC: bench clean build produces zero Confirmed findings across three runs.
+- AC: bench clean build produces zero Confirmed findings across three runs. (27 Sep: two runs, to fit the LLM budget; DEVLOG D48.)
 
 ### FR-9 Severity and readiness (deterministic rules over LLM-classified inputs)
 - Severity:

@@ -504,3 +504,18 @@ The proposed labels for the 37 findings (19 fingerprints, plus run 3's canary fl
 The rule for all of them: generic code, with no app names, routes, labels or bug knowledge (CLAUDE.md rule 4; the contamination test covers engine source). They were motivated by the bench, which is recorded here on purpose. Each is validated on SauceDemo where it applies (totals on the checkout overview, the inventory's sort dropdown), and E5/E6 check generality.
 
 **D47 — A2 and A6 moved to stretch (Rohit, 27 Sep).** This protects the schedule: P3 now carries seven more items, and P3b sits between P3 and the feature freeze. B20 (served source maps) stays in the planned `bugs-v2.yaml` and the bench. Ground truth is written before detection is built, so an unbuilt detector shows as an honest miss in v2 recall rather than a bug quietly removed. Gate P3b is now B19 and B21–B23 (B20 only if A2 is built, B24 only if A6 is).
+
+**Labels applied (Rohit approved, 27 Sep).** All 19 proposed labels plus run 3's canary flag (`fp_ab96703e98ce5bf5`) are in `eval/labels.json`, including `fp` for the "sort breaks search" flag. Re-scored into `eval/results/p2-gate/labelled/`; the original `summary.md` is left as the gate record. With labels: recall C+L **50–72%** (B06 and B08 now count), bug precision C+L **53–86%** (was 75–100% before labelling), 0 unlabelled, and B15 not found in any run.
+
+**D48 — LLM budget is a hard limit (Rohit, 27 Sep).** Everything left (P3, P3b, P4, evaluation, demo) must fit in about **US$16.74**: the $6.74 left on the account plus at most one $10 top-up. Consequences:
+- Develop and debug on the Quick budget with the response cache on (`--llm-cache rw`).
+- Gates use the minimum runs: the clean-bench gates (P3, P3b) use 2 runs, not 3.
+- No separate ablation runs. A1 and A3 are derived from the A2 runs (D51).
+- P5 matrix: A0 as needed (free), A2 buggy ×3, A2 clean ×2, SauceDemo ×2, Friction ×1; the injection comparison ×1 only if budget allows.
+- Spend is logged here after each gate. Claude warns Rohit before anything that would take total spend past **$15**, and says when the balance drops below **$2** (the moment to add the $10). "Total spend" is read as the OpenRouter account's total usage: **$3.26 on 27 Sep** (balance $6.74).
+
+**D49 — Replay stops early (Rohit, 27 Sep).** Two attempts; a third only when the first two disagree. With 2/2 or 0/2 a third attempt can't change the tier (≥ 2/3 either way, or at most 1/3), so it's skipped and the report says "reproduced 2 of 2" or "0 of 2". This saves about a third of replay time and cost. FR-8 still reads "three attempts"; this is the recorded deviation.
+
+**D50 — Journeys stay sequential; Standard gets fewer journeys (Rohit, 27 Sep).** Alternative: two journeys at once, each in its own browser. Rejected because they'd share one test account's data (one journey cancels a booking while another lists them), which produces exactly the false positives verification exists to remove. Instead, the Standard preset's journey count is reduced until a run with replay fits in 8 minutes; the number is set in P3 from a measured run.
+
+**D51 — Derived ablation.** A1 (`ai-no-verify`) and A3 (`full-no-skeptic`) are scored from each A2 run's recorded stage tiers instead of separate runs (`EVALUATION.md` §2). Better control (same exploration, only verification differs) and no extra cost. What it can't show: a standalone A1 run would spend verification's time on more exploring.

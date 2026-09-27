@@ -76,7 +76,7 @@ Presentation: 7, 8 or 9 October 2026. Feature freeze: **Saturday 3 October**. Pr
 - [ ] HTML (self-contained, escaped) + Markdown + JSON exporters
 - [ ] Suppressions
 
-**Gate P3:** A2 on the clean bench: zero Confirmed findings (3 runs); every exported test from a buggy run fails with its flag on and passes with it off. Teach-back written.
+**Gate P3:** A2 on the clean bench: zero Confirmed findings (2 runs: budget, D48); every exported test from a buggy run fails with its flag on and passes with it off. Teach-back written.
 
 ## P3b — QA coverage pack (after the P3 gate, before P4)
 
@@ -88,7 +88,7 @@ Spec: `docs/ADDENDUM_QA_COVERAGE.md` (approved by Rohit, 26 Sep). Build in this 
 - [ ] A3 — DET-AUTHZ: GET JSON APIs seen only while logged in, replayed with no cookies or auth headers (GET only, so allowed in production mode)
 - [ ] A5 — Acceptance criteria: Planner splits `requirements` into numbered criteria mapped to journeys and checks; `requirement` grounding counts like `ui_text`; "Not found in the app" findings; Requirements coverage in the report; verdict counts failed and not-found criteria; CLI `--requirements <file>`
 
-**Gate P3b:** B19 and B21–B23 detected on the buggy bench (B20 only if A2 is built, B24 only if A6 is); D05 and D06 not flagged; zero new Confirmed findings on the clean bench over 3 runs; secrets redacted everywhere (test). Teach-back written.
+**Gate P3b:** B19 and B21–B23 detected on the buggy bench (B20 only if A2 is built, B24 only if A6 is); D05 and D06 not flagged; zero new Confirmed findings on the clean bench over 2 runs (D48); secrets redacted everywhere (test). Teach-back written.
 
 ## P4 — Dashboard and server (Thu 1 – Fri 2 Oct)
 
@@ -104,7 +104,7 @@ Spec: `docs/ADDENDUM_QA_COVERAGE.md` (approved by Rohit, 26 Sep). Build in this 
 
 ## P5 — Evaluate and stabilise; FEATURE FREEZE (Sat 3 Oct)
 
-- [ ] E1–E4 on the bench; E5 SauceDemo; E6 Friction; label findings; `summary.json` + charts. Report the v1 set (B01–B18) and the v2 set (B19–B24) separately and combined; the ablation stays on v1 so earlier numbers remain comparable (addendum)
+- [ ] Cut matrix (budget, D48): A0 as needed (free), A2 buggy ×3, A2 clean ×2, SauceDemo ×2 (one per account), Friction ×1; the injection comparison ×1 only if budget allows. A1 and A3 are derived from the A2 runs (`EVALUATION.md` §2). Label findings; `summary.json` + charts. Report the v1 set (B01–B18) and the v2 set (B19–B24) separately and combined; the ablation stays on v1 so earlier numbers remain comparable (addendum)
 - [ ] Fix only bugs that affect the demo or the numbers' validity
 - [ ] Offline replay tested with Wi-Fi off; screen recording made
 - [ ] README: what it is, how to run, architecture sketch, results, limitations

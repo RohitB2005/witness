@@ -18,13 +18,17 @@ All runs use the bench **production build** (`pnpm bench:build && pnpm bench:ser
 
 | ID | Experiment | Configurations | Runs |
 | --- | --- | --- | --- |
-| E1 | Ablation on the buggy build (`BENCH_BUGS=all`) | A0 `deterministic`, A1 `ai-no-verify`, A2 `full`, A3 `full-no-skeptic` | 3 each |
-| E2 | Clean build (`BENCH_BUGS=none`; decoys always present) | A1, A2 | 3 each |
+| E1 | Ablation on the buggy build (`BENCH_BUGS=all`) | A0 `deterministic` (as needed, no LLM cost); A2 `full` ×3; **A1 and A3 derived from the same A2 runs** (below) | A2 ×3 |
+| E2 | Clean build (`BENCH_BUGS=none`; decoys always present) | A2 (A1 derived from the same runs) | 2 |
 | E3 | Exported-test validity | Every test exported in E1/A2: run with its matched bug's flag on (must fail) and off (must pass) via `POST /__bench/bugs` | once per test |
-| E4 | Injection robustness | A2 with `BENCH_BUGS=all` vs `all,C01` | 2 each |
-| E5 | External validity: SauceDemo | A2, `problem_user` and `error_user` accounts, staging mode (it's a public site built for test practice) | 1–2 each |
+| E4 | Injection robustness (**only if budget allows**) | A2 with `BENCH_BUGS=all,C01`, compared with an E1 run | 1 |
+| E5 | External validity: SauceDemo | A2, `problem_user` and `error_user` accounts, staging mode (it's a public site built for test practice) | 1 each |
 | E6 | Real-world run: your Friction app | A2, production (read-only) mode; manual triage of every finding | 1 |
 | E7 | Human baseline (optional) | A classmate tests the bench for 20 minutes without seeing `bugs.yaml`; record bugs found and time | 1 |
+
+**Budget (Rohit, 27 Sep; DEVLOG D48).** Everything after P2 (P3 to the demo) must fit in about US$16.74 of LLM spend. So the matrix above is the minimum that answers the questions in §1, and there are no separate A1 or A3 runs.
+
+**Derived ablation.** Every `full` run records, for each finding, the tier it would have had at each stage of the pipeline. A1 is the tier from the `ai-no-verify` rule (DEVLOG D29) applied to the same candidates before any verification. A3 is the tier after evidence validation and replay but before the skeptic. A2 is the final tier. Findings that verification discarded stay in the run (with their stage tiers), so the scorer can score A1 and A3 from them. This holds exploration constant, so A1 vs A2 isolates what verification removes, with no run-to-run noise from exploring. What it doesn't measure: a standalone `ai-no-verify` run would spend verification's share of the time budget on more exploring. The `ai-no-verify` and `full-no-skeptic` pipelines still exist for spot checks.
 
 **Commands** (implemented in `eval/`):
 

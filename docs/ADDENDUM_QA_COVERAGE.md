@@ -110,7 +110,7 @@ Write `bench/bugs-v2.yaml` (same schema and matching rules as `bugs.yaml`) and `
 - **P4:** requirements input on *New scan*; a **Requirements coverage** table and a **Security** section on the report.
 - **Evaluation:** report the v1 set (B01–B18) and the v2 set (B19–B24) separately and combined. The ablation stays on v1 so earlier numbers remain comparable.
 - **Cut order if behind:** A6 → A3 cross-user stretch → A2 → A4 → A3 → A5 → A1. A1 and A5 are the last to cut: they carry the demo's security moment and the acceptance-criteria story.
-- **Update 27 Sep (Rohit):** A2 and A6 moved to stretch to protect the schedule. The P3b gate becomes B19 and B21–B23 (B20 only if A2 is built, B24 only if A6 is). Details in `ROADMAP.md` and DEVLOG D47.
+- **Update 27 Sep (Rohit):** A2 and A6 moved to stretch to protect the schedule. The P3b gate becomes B19 and B21–B23 (B20 only if A2 is built, B24 only if A6 is), and the clean-bench check uses 2 runs to fit the LLM budget (D48). Details in `ROADMAP.md` and DEVLOG D47–D48.
 
 ## Still out of scope (say so plainly in the talk)
 

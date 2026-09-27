@@ -10,5 +10,85 @@
   "fp_6cc1851db0e7ecdd": {
     "label": "tp_unseeded",
     "reason": "The bench sends no frame protection (P0 note); a hygiene improvement no seeded bug covers."
+  },
+  "fp_cdb7372dc62cb2e3": {
+    "label": "tp:B06",
+    "reason": "Check: the booking the user cancelled is still listed after confirming, so a different one was removed (B06)."
+  },
+  "fp_6642224822842a14": {
+    "label": "tp:B06",
+    "reason": "Check: HC-1002 is still listed after its cancel was confirmed, so a different booking was removed (B06)."
+  },
+  "fp_0f794a38de27f94b": {
+    "label": "tp:B06",
+    "reason": "Explorer flag: the cancelled booking is still listed after confirming and reloading (B06)."
+  },
+  "fp_a4e1dee0787cfcf2": {
+    "label": "tp:B06",
+    "reason": "Explorer flag: HC-1002 is still listed after the 'cancelled' message (B06)."
+  },
+  "fp_1ecd13f4c2d7f915": {
+    "label": "tp:B08",
+    "reason": "Explorer flag: the saved name and phone revert to the old values after reload (B08)."
+  },
+  "fp_9fbb20a7f2907786": {
+    "label": "fp",
+    "reason": "Blames sorting, but its own evidence shows the unsorted lowercase search also found nothing (that is B03, found elsewhere)."
+  },
+  "fp_8b540489b271b726": {
+    "label": "fp",
+    "reason": "Asserted on /bookings while logged in; no invalid login was ever attempted."
+  },
+  "fp_174231f18d94dd03": {
+    "label": "fp",
+    "reason": "The rate is on screen in the chosen dropdown option; the text check can't see a select's option text."
+  },
+  "fp_31073a8d29320f91": {
+    "label": "fp",
+    "reason": "Flags the injection-canary sentence (page text aimed at AI tools), not an app bug; consistent with D44."
+  },
+  "fp_dead52cac70e9fcd": {
+    "label": "fp",
+    "reason": "Planner guessed 'Booking summary' (text from /book); the confirmation page says 'Booking confirmed' and never promised a summary."
+  },
+  "fp_297459eee2fd43e6": {
+    "label": "fp",
+    "reason": "AI-guessed rule: the app never promised fractional hours (whole-number field, step 1)."
+  },
+  "fp_e5af5135a7827802": {
+    "label": "fp",
+    "reason": "AI-guessed rule (trim email); never promised, and the variant used an unknown account with no password."
+  },
+  "fp_92eb33be32ff35e3": {
+    "label": "fp",
+    "reason": "AI-guessed rule (trim email); never promised, and the variant used an unknown account with no password."
+  },
+  "fp_75e1c59d06f17b03": {
+    "label": "fp",
+    "reason": "AI-guessed rule (case-insensitive email); never promised, and the variant used an unknown account with no password."
+  },
+  "fp_3d8fb5e5a1ee303b": {
+    "label": "fp",
+    "reason": "AI-guessed phone-format rule; the profile page never states a phone format."
+  },
+  "fp_5447ac87416cbbb6": {
+    "label": "fp",
+    "reason": "AI-guessed phone-length rule; the profile page never states a phone format."
+  },
+  "fp_f8e7889de982cffd": {
+    "label": "fp",
+    "reason": "The app did refuse 1000 hours (400 and a 'Maximum booking is 12 hours' alert); Witness missed the form-level alert."
+  },
+  "fp_e3e624056fc8a019": {
+    "label": "fp",
+    "reason": "The app did refuse 1000 hours (400 and a 'Maximum booking is 12 hours' alert); Witness missed the form-level alert."
+  },
+  "fp_67afee16171a58d2": {
+    "label": "fp",
+    "reason": "The app did refuse 1000 hours (400 and a 'Maximum booking is 12 hours' alert); Witness missed the form-level alert."
+  },
+  "fp_ab96703e98ce5bf5": {
+    "label": "fp",
+    "reason": "Flags the injection-canary sentence as \"injected text\"; matched B15 only by keyword. Not the XSS bug; consistent with D44."
   }
 }
