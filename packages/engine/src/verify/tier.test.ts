@@ -32,6 +32,28 @@ it("a static finding (no steps) is reproduced by one fresh re-run (FR-8)", () =>
 describe("decideTier", () => {
   const cases: [string, Partial<TierInput>, string][] = [
     ["universal detector, reproduced", {}, "confirmed"],
+    [
+      "detector finding a person must decide (e.g. a Google key), reproduced",
+      { review: "often public" },
+      "needs_review",
+    ],
+    [
+      "requirement not found in the app (A5): Likely at most, never replayed",
+      {
+        source: { kind: "requirement", id: "REQ-NOTFOUND", criterionId: "AC1" },
+        replay: { attempts: 0, reproduced: 0 },
+      },
+      "likely",
+    ],
+    [
+      "requirement not found, skeptic benign",
+      {
+        source: { kind: "requirement", id: "REQ-NOTFOUND", criterionId: "AC1" },
+        replay: { attempts: 0, reproduced: 0 },
+        skeptic: "benign_likely",
+      },
+      "needs_review",
+    ],
     ["universal detector, not reproduced", { replay: { attempts: 2, reproduced: 0 } }, "discarded"],
     [
       "universal detector, intermittent",

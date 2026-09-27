@@ -1,4 +1,5 @@
 // pnpm eval:score <run.json | runs/<id> | results-dir-with-runs.jsonl>... [--clean] [--labels file] [--out dir]
+//   [--bugs bench/bugs-v2.yaml]   score against another ground-truth file (v2: the QA coverage pack)
 // Matches each run's findings against bench/bugs.yaml and writes summary.json + summary.md.
 import { execFileSync } from "node:child_process";
 import { existsSync, readFileSync, statSync } from "node:fs";
@@ -7,7 +8,7 @@ import path from "node:path";
 import { parseArgs } from "node:util";
 import { RunResultSchema, type RunResult } from "@witness/engine";
 import { LabelsFileSchema, scoreRun, summarise, type Labels, type RunScore } from "./score-lib";
-import { loadTruth, REPO_ROOT } from "./truth";
+import { BUGS_YAML, loadTruth, REPO_ROOT } from "./truth";
 
 interface RunRef {
   file: string;
@@ -115,15 +116,17 @@ async function main(): Promise<void> {
       labels: { type: "string", default: path.join(REPO_ROOT, "eval", "labels.json") },
       out: { type: "string" },
       verbose: { type: "boolean", short: "v", default: false },
+      bugs: { type: "string", default: BUGS_YAML },
     },
   });
   if (!positionals.length) {
     console.error(
-      "Usage: pnpm eval:score <run.json | runs/<id> | results-dir>... [--clean] [--labels file] [--out dir] [-v]",
+      "Usage: pnpm eval:score <run.json | runs/<id> | results-dir>... [--clean] [--labels file] [--out dir] [--bugs file] [-v]",
     );
     process.exit(2);
   }
-  const { truth, sha256 } = loadTruth();
+  const bugsFile = path.resolve(values.bugs!);
+  const { truth, sha256 } = loadTruth(bugsFile);
   const labels: Labels = existsSync(values.labels!)
     ? LabelsFileSchema.parse(JSON.parse(readFileSync(values.labels!, "utf8")))
     : {};
@@ -147,7 +150,10 @@ async function main(): Promise<void> {
     return [scoreRun(result, truth, labels, { clean }), ...derived];
   });
   const summary = summarise(scores, truth, { bugsYamlHash: sha256, benchCommit });
-  const md = renderMarkdown(scores, summary, values.verbose!);
+  const md = renderMarkdown(scores, summary, values.verbose!).replace(
+    "bugs.yaml sha256",
+    `${path.basename(bugsFile)} sha256`,
+  );
   console.log(md);
   if (values.out) {
     const out = path.resolve(values.out);

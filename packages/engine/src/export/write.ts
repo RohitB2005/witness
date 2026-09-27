@@ -1,6 +1,7 @@
 // Writes a finished run's exports into its folder (and optionally another folder): report.md, report.json,
 // a self-contained report.html, and tests/ with one Playwright spec per exportable bug (FR-10, FR-11).
-// Everything written passes through `redact` (vault values → placeholders), as every store write does.
+// Everything written passes through `redact` (vault values → placeholders), as every store write does, and
+// secret-key patterns are always redacted (ADDENDUM A1).
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { renderHtml } from "../report/html";
@@ -8,6 +9,7 @@ import { renderMarkdown } from "../report/markdown";
 import type { RunStore } from "../store/run-store";
 import type { RunResult } from "../types";
 import { exportTests } from "./playwright";
+import { redactSecrets } from "../detectors/secrets";
 
 export type ExportFormat = "md" | "json" | "html";
 
@@ -32,7 +34,7 @@ export async function writeRunExports(
   const put = async (dir: string, name: string, content: string) => {
     const file = path.join(dir, name);
     await mkdir(path.dirname(file), { recursive: true });
-    await writeFile(file, opts.redact(content));
+    await writeFile(file, redactSecrets(opts.redact(content)));
     written.push(file);
   };
 

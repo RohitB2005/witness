@@ -3,13 +3,15 @@
 // the AI stages (plan, explore) and verification arrive in P2/P3.
 import type { Browser } from "playwright";
 import { BUDGETS, TIME_SPLIT } from "./config/budgets";
-import { launchBrowser } from "./browser/context";
+import { launchBrowser, observeContexts } from "./browser/context";
 import { SafetyPolicy } from "./browser/policy";
 import type { SecretVault } from "./browser/vault";
 import { crawl } from "./crawl/crawler";
 import { brokenLinkCandidate, isBrokenStatus } from "./detectors/brokenlink";
 import { toCandidate } from "./detectors/registry";
 import { secHeaderCandidates } from "./detectors/secheaders";
+import { securityCandidates } from "./detectors/security";
+import { ResponseObserver } from "./record/responses";
 import { fanOut, log, type EventSink, type Phase } from "./events";
 import { newRunId } from "./ids";
 import { preflight } from "./preflight/preflight";
@@ -26,6 +28,7 @@ import { StateRegistry } from "./explore/states";
 import { verify, type VerifyOutput } from "./verify";
 import { runProbes, type ProbeResult } from "./probes";
 import { injectionNotes } from "./report/notes";
+import { criteriaCoverage, notFoundCandidates, type NotFoundResult } from "./report/requirements";
 
 export * from "./types";
 export * from "./events";
@@ -109,6 +112,9 @@ export async function runScan(config: ScanConfig, deps: RunScanDeps): Promise<Ru
   });
 
   const browser = deps.browser ?? (await launchBrowser());
+  // Sees every response of the run (not replays) for the security detectors (ADDENDUM A1, A3, A4).
+  const observer = new ResponseObserver(origin, evidence);
+  const unobserve = observeContexts(browser, observer);
   try {
     // ---- Preflight
     phase("preflight");
@@ -267,6 +273,55 @@ export async function runScan(config: ScanConfig, deps: RunScanDeps): Promise<Ru
     }
     const probes = await probing;
     if (probes) candidates.push(...probes.candidates);
+
+    // ---- Security detectors over everything the run saw: secrets, DB errors, private data without login.
+    const security = await securityCandidates({
+      observer,
+      browser,
+      policy,
+      evidence,
+      viewport: config.viewport,
+      states: crawled.states,
+      snapshots: crawled.snapshots,
+      deadline: started + budget.wallClockMs - TIME_SPLIT.reportReserveMs,
+    }).catch((err: unknown) => {
+      log(sink, "warn", `The security checks failed: ${String(err).split("\n")[0]}`);
+      return undefined;
+    });
+    unobserve();
+
+    // ---- Requirements the app doesn't seem to have (ADDENDUM A5): every recorded page is searched.
+    let notFound: NotFoundResult | undefined;
+    if (ai?.criteria?.length) {
+      const pages = [
+        ...crawled.states.map((s) => ({
+          url: s.url,
+          route: s.routePattern,
+          text: crawled.snapshots.get(s.id) ?? "",
+        })),
+        ...registry.added.map((s) => ({
+          url: s.url,
+          route: s.routePattern,
+          text: registry.texts.get(s.id) ?? "",
+        })),
+      ];
+      notFound = await notFoundCandidates({
+        criteria: ai.criteria,
+        pages,
+        startUrl: pre.startUrl,
+        session: pre.session ? "authenticated" : "anonymous",
+        evidence,
+      });
+      candidates.push(...notFound.candidates);
+    }
+    if (security) {
+      candidates.push(...security.candidates);
+      for (const c of security.candidates)
+        sink({
+          t: "candidate",
+          candidate: { id: c.id, category: c.category, summary: c.summary, route: c.route },
+        });
+    }
     const journeys = [...(ai?.journeys ?? []), ...(probes?.journeys ?? [])];
     const allStates = [...crawled.states, ...registry.added];
 
@@ -321,6 +376,15 @@ export async function runScan(config: ScanConfig, deps: RunScanDeps): Promise<Ru
       verdicts: verification?.verdicts,
     };
     const findings = buildFindings(candidates, buildCtx);
+    const criteria = ai?.criteria
+      ? criteriaCoverage({
+          criteria: ai.criteria,
+          journeys,
+          candidates,
+          findings,
+          mentioned: notFound?.mentioned ?? new Map(),
+        })
+      : undefined;
     const gateway = ai?.gateway;
     const reportDeadline = started + budget.wallClockMs - 3_000;
     let writer: WriterMetrics | undefined;
@@ -370,6 +434,15 @@ export async function runScan(config: ScanConfig, deps: RunScanDeps): Promise<Ru
       aiStagesSkipped,
     });
     notTested.push(...(probes?.notTested ?? []));
+    if (config.requirements?.trim() && !criteria)
+      notTested.push(
+        "The requirements weren't checked: the AI stages that split them into criteria didn't run.",
+      );
+    const untested = criteria?.filter((c) => c.status === "not_tested").length ?? 0;
+    if (untested)
+      notTested.push(
+        `${untested} acceptance criteri${untested === 1 ? "on was" : "a were"} not tested (see Requirements coverage).`,
+      );
     const notReplayed = verification?.funnel["verify.notReplayed"] ?? 0;
     if (notReplayed && config.pipeline !== "ai-no-verify")
       notTested.push(
@@ -383,7 +456,7 @@ export async function runScan(config: ScanConfig, deps: RunScanDeps): Promise<Ru
       journeys,
       states: allStates,
       finishedAt: new Date().toISOString(),
-      verdict: readinessVerdict({ findings, journeys, journeysAttempted }),
+      verdict: readinessVerdict({ findings, journeys, journeysAttempted, criteria }),
       notTested,
       findings,
       stats: stats({
@@ -406,15 +479,24 @@ export async function runScan(config: ScanConfig, deps: RunScanDeps): Promise<Ru
         })),
       ),
       aiMetrics:
-        ai?.metrics || verification || probes
+        ai?.metrics || verification || probes || security
           ? {
               ...(ai?.metrics ?? {}),
               ...(probes?.metrics ?? {}),
+              ...(security?.metrics ?? {}),
               ...(verification?.funnel ?? {}),
               ...reportMetrics,
             }
           : undefined,
       appModel: ai?.appModel,
+      ...(criteria
+        ? {
+            requirements: {
+              criteria,
+              droppedCriteria: Number(ai?.metrics["plan.criteriaDroppedQuote"] ?? 0),
+            },
+          }
+        : {}),
     };
     await deps.store.saveResult(result);
     phase("done");
@@ -435,6 +517,7 @@ export async function runScan(config: ScanConfig, deps: RunScanDeps): Promise<Ru
     await deps.store.saveResult(result).catch(() => undefined);
     return result;
   } finally {
+    unobserve();
     if (!deps.browser) await browser.close().catch(() => undefined);
   }
 }

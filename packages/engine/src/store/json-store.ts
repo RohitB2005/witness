@@ -7,6 +7,7 @@ import type { WitnessEvent } from "../events";
 import { RUN_ID_PATTERN } from "../ids";
 import { EvidenceSchema, RunResultSchema, type Evidence, type RunResult } from "../types";
 import type { RunStore, RunSummary, Suppression } from "./run-store";
+import { redactSecrets } from "../detectors/secrets";
 
 const ARTIFACT_NAME = /^[a-zA-Z0-9_.-]+$/;
 
@@ -28,7 +29,9 @@ export class JsonRunStore implements RunStore {
   constructor(opts: JsonRunStoreOptions) {
     this.#runsDir = path.resolve(opts.runsDir);
     this.#dataDir = path.resolve(opts.dataDir ?? path.join(this.#runsDir, "..", "data"));
-    this.#redact = opts.redact ?? ((t) => t);
+    // Detected secret keys are redacted on every write, whatever the caller passes (ADDENDUM A1).
+    const redact = opts.redact ?? ((t: string) => t);
+    this.#redact = (t) => redactSecrets(redact(t));
   }
 
   runDir(runId: string): string {

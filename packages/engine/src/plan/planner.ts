@@ -4,7 +4,9 @@
 // - startRoute must exist in the map (or the journey is dropped);
 // - every ui_text quote must literally appear (case/whitespace-insensitive) in a recorded snapshot, and
 //   every requirement quote in the requirements text; otherwise it becomes "convention" (unverified);
-// - journeys beyond the budget are dropped, core first.
+// - journeys beyond the budget are dropped, core first;
+// - with requirements (ADDENDUM A5): every acceptance criterion's quote must appear in the requirements text,
+//   or the criterion is dropped; expectations and journeys may only link to criteria that survived.
 import { z } from "zod";
 import { newId } from "../ids";
 import { toJsonSchema, type LlmGateway } from "../llm/gateway";
@@ -44,9 +46,11 @@ function journeySchema(check: z.ZodType) {
           impact: ExpectationImpactSchema,
           category: ExpectationCategorySchema.optional(),
           when: z.string().max(200).optional(),
+          criterion: z.number().int().positive().optional(),
         }),
       )
       .max(6),
+    criteria: z.array(z.number().int().positive()).max(15).optional(),
     edgeTargets: z
       .array(z.object({ formRoute: z.string(), formName: z.string() }))
       .max(4)
@@ -62,12 +66,24 @@ const AppModelOut = z.object({
   notes: z.string().max(600).optional(),
 });
 
-function planSchema(journey: z.ZodType, maxJourneys: number) {
-  return z.object({
+/** An acceptance criterion as the Planner proposes it (only when requirements were given). */
+const CriterionOut = z.object({
+  number: z.number().int().positive(),
+  text: z.string().min(3).max(300),
+  quote: z.string().min(3).max(400),
+  importance: z.enum(["core", "secondary"]),
+  foundInApp: z.boolean(),
+  lookFor: z.array(z.string().min(2).max(40)).max(5),
+});
+export type PlannedCriterion = z.infer<typeof CriterionOut>;
+
+function planSchema(journey: z.ZodType, maxJourneys: number, withCriteria = false) {
+  const base = z.object({
     appModel: AppModelOut,
     journeys: z.array(journey).min(1).max(Math.max(8, maxJourneys)),
     notes: z.string().max(800).optional(),
   });
+  return withCriteria ? base.extend({ criteria: z.array(CriterionOut).max(15) }) : base;
 }
 /** A check may arrive as a JSON string (what the model is asked for) or as an object (tests, repairs). */
 function parseJsonString(v: unknown): unknown {
@@ -80,7 +96,12 @@ function parseJsonString(v: unknown): unknown {
 }
 
 /** What validatePlan receives: journeys are checked one by one, so one bad journey doesn't sink the plan. */
-type RawPlan = { appModel: z.infer<typeof AppModelOut>; journeys: unknown[]; notes?: string };
+type RawPlan = {
+  appModel: z.infer<typeof AppModelOut>;
+  journeys: unknown[];
+  notes?: string;
+  criteria?: PlannedCriterion[];
+};
 
 export interface PlanInput {
   pages: MapPage[];
@@ -104,6 +125,18 @@ export interface PlanMetrics {
   groundingVerified: number;
   planRepaired: number;
   planPartial: number;
+  criteriaProposed: number;
+  criteriaDroppedQuote: number;
+}
+
+/** A criterion that survived validation (its quote is in the requirements). */
+export interface ValidCriterion {
+  id: string;
+  text: string;
+  quote: string;
+  importance: "core" | "secondary";
+  plannedNotFound: boolean;
+  lookFor: string[];
 }
 
 export type PlanResult =
@@ -111,6 +144,7 @@ export type PlanResult =
       ok: true;
       appModel: NonNullable<RunResult["appModel"]>;
       journeys: Journey[];
+      criteria: ValidCriterion[];
       metrics: PlanMetrics;
       notes?: string;
     }
@@ -118,10 +152,11 @@ export type PlanResult =
 
 export async function planJourneys(gateway: LlmGateway, input: PlanInput): Promise<PlanResult> {
   const map = buildAppMapSummary(input.pages);
+  const withCriteria = !!input.requirements?.trim();
   const res = await gateway.structured({
     role: "planner",
     tier: "smart",
-    instructions: plannerInstructions(input.maxJourneys),
+    instructions: plannerInstructions(input.maxJourneys, withCriteria),
     prompt: plannerPrompt({
       map,
       hint: input.hint,
@@ -131,8 +166,9 @@ export async function planJourneys(gateway: LlmGateway, input: PlanInput): Promi
     schema: planSchema(
       journeySchema(z.preprocess(parseJsonString, CheckSchema)),
       input.maxJourneys,
+      withCriteria,
     ) as z.ZodType<RawPlan>,
-    fallbackSchema: planSchema(z.unknown(), input.maxJourneys) as z.ZodType<RawPlan>,
+    fallbackSchema: planSchema(z.unknown(), input.maxJourneys, withCriteria) as z.ZodType<RawPlan>,
     // The model writes each check as a JSON string: an open object field in a structured-output schema
     // comes back empty (DEVLOG P2 problems), and the recursive check schema is too large to send.
     llmSchema: toJsonSchema(
@@ -143,6 +179,7 @@ export async function planJourneys(gateway: LlmGateway, input: PlanInput): Promi
             .describe('The check as JSON in the check language, e.g. {"type":"visible",...}'),
         ),
         input.maxJourneys,
+        withCriteria,
       ),
     ),
     schemaName: "plan",
@@ -164,6 +201,7 @@ export function validatePlan(
 ): {
   appModel: NonNullable<RunResult["appModel"]>;
   journeys: Journey[];
+  criteria: ValidCriterion[];
   metrics: PlanMetrics;
   notes?: string;
 } {
@@ -179,7 +217,33 @@ export function validatePlan(
     groundingVerified: 0,
     planRepaired: 0,
     planPartial: 0,
+    criteriaProposed: plan.criteria?.length ?? 0,
+    criteriaDroppedQuote: 0,
   };
+  // Acceptance criteria: code keeps only those whose quote is really in the requirements.
+  const criteria: ValidCriterion[] = [];
+  const criterionIds = new Map<number, string>();
+  for (const c of plan.criteria ?? []) {
+    const quote = c.quote.trim();
+    if (
+      !input.requirements ||
+      !containsLoose(input.requirements, quote) ||
+      criterionIds.has(c.number)
+    ) {
+      metrics.criteriaDroppedQuote++;
+      continue;
+    }
+    const id = `AC${c.number}`;
+    criterionIds.set(c.number, id);
+    criteria.push({
+      id,
+      text: c.text.trim(),
+      quote,
+      importance: c.importance,
+      plannedNotFound: !c.foundInApp,
+      lookFor: c.lookFor.map((w) => w.trim()).filter(Boolean),
+    });
+  }
   const journeys: Journey[] = [];
   const looseJourney = journeySchema(z.unknown());
   for (const raw of plan.journeys) {
@@ -222,6 +286,9 @@ export function validatePlan(
         category: e.category,
         when: e.when,
         origin: "plan",
+        ...(e.criterion !== undefined && criterionIds.has(e.criterion)
+          ? { criterionId: criterionIds.get(e.criterion) }
+          : {}),
       });
     }
     journeys.push({
@@ -234,6 +301,20 @@ export function validatePlan(
       expectations,
       status: "proposed",
       edgeTargets: j.edgeTargets ?? [],
+      ...(criterionIds.size
+        ? {
+            criterionIds: [
+              ...new Set(
+                [
+                  ...(j.criteria ?? []),
+                  ...j.expectations.flatMap((e) => (e.criterion ? [e.criterion] : [])),
+                ]
+                  .filter((n) => criterionIds.has(n))
+                  .map((n) => criterionIds.get(n)!),
+              ),
+            ],
+          }
+        : {}),
     });
   }
   // Budget: keep core journeys first (stable within each priority).
@@ -244,7 +325,7 @@ export function validatePlan(
   const kept = ranked.slice(0, input.maxJourneys);
   metrics.journeysDroppedBudget = ranked.length - kept.length;
   metrics.journeysKept = kept.length;
-  return { appModel: plan.appModel, journeys: kept, metrics, notes: plan.notes };
+  return { appModel: plan.appModel, journeys: kept, criteria, metrics, notes: plan.notes };
 }
 
 /**

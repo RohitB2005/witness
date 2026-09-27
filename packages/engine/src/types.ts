@@ -171,6 +171,8 @@ export const ExpectationSchema = z.object({
   origin: z.enum(["plan", "agent", "edge", "probe"]).optional(),
   /** An input rule an AI proposed (edge-input generator) rather than Witness's fixed set (D46 cap). */
   aiGuessed: z.boolean().optional(),
+  /** The acceptance criterion this expectation tests (ADDENDUM A5), e.g. "AC3". */
+  criterionId: z.string().optional(),
 });
 export type Expectation = z.infer<typeof ExpectationSchema>;
 
@@ -202,8 +204,36 @@ export const JourneySchema = z.object({
    * login-message comparison), not a user journey: it never counts as "a journey was exercised" (D16).
    */
   automatic: z.boolean().optional(),
+  /** Acceptance criteria this journey covers (ADDENDUM A5). */
+  criterionIds: z.array(z.string()).optional(),
 });
 export type Journey = z.infer<typeof JourneySchema>;
+
+// ---------------------------------------------------------------------------------------------
+// Acceptance criteria (ADDENDUM A5): the requirements split into numbered criteria by the Planner, each
+// quote verified by code; status decided by code from what the run recorded.
+
+export const CriterionStatusSchema = z.enum(["verified", "failed", "not_found", "not_tested"]);
+export type CriterionStatus = z.infer<typeof CriterionStatusSchema>;
+
+export const CriterionSchema = z.object({
+  id: z.string().regex(/^AC\d+$/),
+  /** The criterion in the Planner's words. */
+  text: z.string(),
+  /** The exact text from the requirements (verified by string match). */
+  quote: z.string(),
+  importance: z.enum(["core", "secondary"]),
+  /** The Planner found nothing in the app for it; `lookFor` are the words code searched every page for. */
+  plannedNotFound: z.boolean(),
+  lookFor: z.array(z.string()),
+  status: CriterionStatusSchema,
+  /** One plain sentence: why this status. */
+  reason: z.string(),
+  expectationIds: z.array(z.string()),
+  journeyIds: z.array(z.string()),
+  findingIds: z.array(z.string()),
+});
+export type Criterion = z.infer<typeof CriterionSchema>;
 
 // ---------------------------------------------------------------------------------------------
 // Candidates and findings
@@ -237,6 +267,9 @@ export const DetectorIdSchema = z.enum([
   "DET-SECHEADERS",
   "DET-TOTALS",
   "DET-SORT",
+  "DET-SECRETS",
+  "DET-DBERROR",
+  "DET-AUTHZ",
 ]);
 export type DetectorId = z.infer<typeof DetectorIdSchema>;
 
@@ -249,6 +282,12 @@ export const CandidateSourceSchema = z.discriminatedUnion("kind", [
     confidence: z.number().min(0).max(1),
   }),
   z.object({ kind: z.literal("ux-review") }),
+  /** An acceptance criterion from the requirements with nothing matching it in the app (ADDENDUM A5). */
+  z.object({
+    kind: z.literal("requirement"),
+    id: z.literal("REQ-NOTFOUND"),
+    criterionId: z.string(),
+  }),
 ]);
 export type CandidateSource = z.infer<typeof CandidateSourceSchema>;
 
@@ -263,6 +302,7 @@ export const SignatureSchema = z.discriminatedUnion("kind", [
   z.object({ kind: z.literal("page_error"), messagePrefix: z.string() }),
   z.object({ kind: z.literal("detector"), detectorId: DetectorIdSchema, key: z.string() }),
   z.object({ kind: z.literal("judgement"), expectationId: z.string() }),
+  z.object({ kind: z.literal("requirement"), criterionId: z.string() }),
 ]);
 export type Signature = z.infer<typeof SignatureSchema>;
 
@@ -311,6 +351,11 @@ export const CandidateSchema = z.object({
   signature: SignatureSchema,
   /** What makes two candidates "the same problem" when grouping (e.g. the same failing request on two pages). */
   groupKey: z.string(),
+  /**
+   * A deterministic finding that still needs a person to decide (e.g. a key that is often meant to be
+   * public): reported at Needs review at most, with this reason.
+   */
+  review: z.string().optional(),
   /** Detector-supplied severity hint (e.g. axe impact); final severity is decided by report/severity.ts. */
   severityHint: z.enum(["critical", "high", "medium", "low"]).optional(),
   signals: SignalsSchema,
@@ -484,6 +529,14 @@ export const RunResultSchema = z.object({
   loginPath: z.string().optional(),
   /** Short plain-language notes for the report (e.g. page text aimed at AI tools that was ignored, D44). */
   notes: z.array(z.string()).optional(),
+  /** Requirements coverage (ADDENDUM A5): present when the scan was given requirements. */
+  requirements: z
+    .object({
+      criteria: z.array(CriterionSchema),
+      /** Criteria the Planner proposed whose quote wasn't in the requirements (dropped). */
+      droppedCriteria: z.number().int(),
+    })
+    .optional(),
   /** The Planner's reading of the app (purpose, domain), shown in the report. */
   appModel: z
     .object({

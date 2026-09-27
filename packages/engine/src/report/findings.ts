@@ -65,9 +65,15 @@ function lookups(ctx: BuildContext): Lookups {
   return l;
 }
 
+/** A more specific detector leads a group it shares (a DB error explains the 5xx it came with). */
+function leads(c: Candidate): number {
+  return c.source.kind === "detector" && c.source.id === "DET-DBERROR" ? 1 : 0;
+}
+
 /**
  * Candidates with the same group key are one problem. Each group is sorted so its first candidate (the
  * representative, which is replayed and reported) is the lexically first route: stable across crawl orders.
+ * A more specific detector goes first whatever its route (`leads`).
  */
 export function groupCandidates(candidates: Candidate[]): Candidate[][] {
   const groups = new Map<string, Candidate[]>();
@@ -77,15 +83,20 @@ export function groupCandidates(candidates: Candidate[]): Candidate[][] {
     else groups.set(c.groupKey, [c]);
   }
   return [...groups.values()].map((g) =>
-    g.sort((a, b) => a.route.localeCompare(b.route) || a.url.localeCompare(b.url)),
+    g.sort(
+      (a, b) => leads(b) - leads(a) || a.route.localeCompare(b.route) || a.url.localeCompare(b.url),
+    ),
   );
 }
 
 /** The facts about a representative candidate that the tier rules use (before verification adds its own). */
-export function tierFacts(c: Candidate): Pick<TierInput, "kind" | "source" | "grounding"> {
+export function tierFacts(
+  c: Candidate,
+): Pick<TierInput, "kind" | "source" | "grounding" | "review"> {
   return {
     kind: c.kind,
     source: c.source,
+    ...(c.review ? { review: c.review } : {}),
     grounding: c.grounding
       ? {
           kind: c.grounding.kind,
@@ -136,10 +147,7 @@ export function buildFindings(candidates: Candidate[], ctx: BuildContext): Findi
       group.map((c) => ({ route: c.route, url: c.url, evidenceIds: c.evidenceIds })),
       (i) => i.url,
     );
-    const sourceId =
-      first.source.kind === "detector" || first.source.kind === "check"
-        ? first.source.id
-        : first.source.kind;
+    const sourceId = "id" in first.source ? first.source.id : first.source.kind;
     const req = first.signals.request;
     findings.push({
       id: newId("fd"),
@@ -235,9 +243,23 @@ export function reproSteps(
     }
     return steps;
   }
-  steps.push(`Open ${c.url}`);
   const src = c.source.kind === "detector" ? c.source.id : undefined;
   const req = c.signals.request;
+  if (c.source.kind === "requirement") {
+    steps.push(
+      "Read the requirement quoted above, then look through the app for it: no page Witness visited mentions it.",
+    );
+    return steps;
+  }
+  if (src === "DET-AUTHZ") {
+    steps.push(
+      "Open a private browser window, so you're not logged in.",
+      `Open ${c.url}`,
+      "The data is shown instead of a login prompt or an error.",
+    );
+    return steps;
+  }
+  steps.push(`Open ${c.url}`);
   switch (src) {
     case "DET-HTTP5XX":
     case "DET-REQFAIL":
@@ -264,6 +286,19 @@ export function reproSteps(
       break;
     case "DET-OVERFLOW":
       steps.push("Scroll sideways: part of the page is off-screen.");
+      break;
+    case "DET-SECRETS":
+      if (req)
+        steps.push(
+          `Look at ${req.path}, which the page downloads (browser dev tools → Network → Response): it contains the key shown (redacted) above.`,
+        );
+      break;
+    case "DET-DBERROR":
+      if (req)
+        steps.push(
+          `Watch the response to ${req.method} ${req.path} (browser dev tools → Network → Response): it contains the database error.`,
+        );
+      else steps.push("Read the page: it shows the database error.");
       break;
     case "DET-SECHEADERS":
       steps.push("Inspect the page's response headers and cookies (browser dev tools → Network).");

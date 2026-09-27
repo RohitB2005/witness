@@ -25,6 +25,26 @@ describe("severityFor (FR-9)", () => {
     ["page error while crawling", { kind: "bug", source: det("DET-PAGEERROR") }, "high"],
     ["XSS anywhere", { kind: "bug", source: det("DET-XSS") }, "high"],
     [
+      "secret key (hint critical)",
+      { kind: "bug", source: det("DET-SECRETS"), severityHint: "critical" },
+      "critical",
+    ],
+    ["database error, no hint", { kind: "bug", source: det("DET-DBERROR") }, "high"],
+    [
+      "private data without login, no personal fields",
+      { kind: "bug", source: det("DET-AUTHZ"), severityHint: "high" },
+      "high",
+    ],
+    [
+      "requirement not found (criterion weight)",
+      {
+        kind: "bug",
+        source: { kind: "requirement", id: "REQ-NOTFOUND", criterionId: "AC3" },
+        severityHint: "medium",
+      },
+      "medium",
+    ],
+    [
       "money check in core",
       { kind: "bug", source: check, journeyPriority: "core", checkImpact: "money" },
       "critical",

@@ -9,6 +9,8 @@ export class StateRegistry {
   readonly #byKey = new Map<string, PageState>();
   /** States first discovered by the agent (appended to the run's state list). */
   readonly added: PageState[] = [];
+  /** Snapshot text of each added state, in memory (the requirements "not found" search reads it). */
+  readonly texts = new Map<string, string>();
 
   constructor(initial: PageState[] = []) {
     for (const s of initial) this.#byKey.set(key(s.routePattern, s.structureHash, s.session), s);
@@ -47,6 +49,7 @@ export class StateRegistry {
     };
     this.#byKey.set(k, state);
     this.added.push(state);
+    this.texts.set(state.id, input.snapshot);
     return { state, isNew: true };
   }
 }

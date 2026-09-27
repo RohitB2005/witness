@@ -772,3 +772,100 @@ No bench words in either prompt (the example for "repeat" is "creating a second 
 - **B20** builds hidden source maps (no `sourceMappingURL` comment). With the flag on, the server serves the maps and adds a `SourceMap` header.
 - **B21 and B23 needed a new page.** The booking details page (`/bookings/:ref`, linked from My bookings) is what calls `GET /api/bookings/:ref`, and it is where rescheduling lives when B23 is off. Because the logged-in crawl reaches it, DET-AUTHZ can find B21 without the AI.
 - **B22** triggers on `'` only. The XSS canary contains `"` and no `'`, so B15 and B22 don't mask each other when both are on.
+
+**D66 — One run-level response observer feeds the three security detectors.** `record/responses.ts` attaches to every browser context the scan opens, through a registration in `browser/context.ts`. Crawl, journeys, edge inputs and probes are therefore covered without threading a new dependency through each stage. Replays and preflight opt out: replays repeat what was already seen, and preflight's context changes session mid-way when it logs in. Bodies (documents, scripts, JSON; up to 2 MB) are scanned in memory and dropped; only redacted matches, and the first logged-in JSON body per endpoint (for DET-AUTHZ's comparison), are kept, in memory. Alternative: have each stage's `PageRecorder` read bodies. Rejected: seven call sites, and the probes' and edge runner's contexts would be easy to miss. The detectors run once, after exploring and before verification, and verification re-fetches each finding (DET-AUTHZ with no cookies).
+
+**D67 — DET-AUTHZ only tries endpoints that look private, and compares paths, not queries.** An endpoint is tried without a login only if it answered 200 while logged in, never answered 2xx logged out, and was called from a page that can't be reached logged out, or its data has contact fields (email, phone, address). "Same records" means the same key paths and at least half the values equal; an empty list never counts. **Found in the Quick smoke run:** keying endpoints by path *and* query keys made the public `/api/services?q&sort` (only the logged-in Explorer used those keys) look private, and it was reported: decoy D06's exact claim. Query keys don't change who may read an endpoint, so both the endpoint and the calling page are now compared by path. Fixture regression test added. Generic by construction.
+
+**D68 — Reference numbers are IDs in route patterns.** A path segment with a short letter prefix and 3+ digits (`ORD-1042`, `INV2024`) now becomes `:id`, like numbers and UUIDs. Without it, each booking page was its own route (three DET-AUTHZ findings for one bug) and the crawl spent pages on duplicates. `v2`, `s1` and `page-2` stay words (tests).
+
+**D69 — A database error and its 500 are one finding, led by the DB error.** DET-DBERROR uses DET-HTTP5XX's group key (method + path, no query) when the status is 5xx, and grouping puts the more specific detector first (`leads` in `report/findings.ts`). **Also found in the smoke run:** the first version keyed on path + query, so the 500 showed separately as "search crashes the page". A DB error seen in the response to a *write* request (an edge input) isn't re-sent on its own by replay, so it stays Needs review ("not replayed") rather than being discarded.
+
+**D70 — Acceptance criteria: the Planner reads, code decides.** The Planner splits the requirements into numbered criteria, each with a verbatim quote (dropped if it isn't in the requirements), and links expectations and journeys to them. Every status is computed from the run: Verified (a linked check was evaluated and none failed), Failed (a linked check failed at Confirmed/Likely), Not found, Not tested (with the reason). "Not found in the app" needs two things: the Planner saw nothing for it, *and* no recorded page (crawl, journeys, probes) mentions the words it would use. It's a new source kind (`requirement`, `REQ-NOTFOUND`) capped at Likely, because an absence can't be replayed. **In the smoke run** the Planner called three existing features missing (My bookings, cancel, profile); the page search found their words and made them "Not tested" instead of false findings. I clarified in the prompt that `foundInApp` means "the app appears to have it", not "I'll test it". The criteria section is only added to the Planner prompt when requirements are given, so runs without them are unchanged.
+
+**D71 — Secret keys are redacted in three places, whoever wrote the text.** `redactSecrets` (the same high-confidence patterns, first 4 + last 4) runs inside the JSON store on every text write (always, whatever redact function the caller passes), in the exporter, and in the gateway on every prompt, next to the vault placeholders. Findings only ever carry the redacted form plus a 12-character hash to match replays. Google `AIza…` keys are reported at Needs review (a `review` cap on the candidate; `verify/tier.ts`), and Firebase web configs, Supabase anon keys and publishable keys aren't findings.
+
+**D72 — P3b gate runs use `--llm-cache off`.** With the cache on, the second clean run would reuse the first one's plan and edge answers (P2 noted this), and two runs would really be one. It costs a few cents more.
+
+**Scoring notes (for P5, not changed now).** `pnpm eval:score --bugs bench/bugs-v2.yaml` scores against v2. The scorer's source ID now covers any source with an `id` (`REQ-NOTFOUND`). Two things for P5's combined scoring: (1) scoring one file shows the other file's true positives as unlabelled, so precision is only meaningful combined; (2) v1's frozen B15 keyword rule (`category: security`, "inject") also matches DET-DBERROR's title "possible SQL injection". B15 is found through DET-XSS anyway, so v1 recall doesn't change, but v1 precision counts that finding as a B15 true positive. Neither frozen file was edited.
+
+**D73 — Found in the clean gate run: a logged-out context that logs in is no longer "logged out".** Some journeys start logged out and sign in partway through. Their context was labelled anonymous, so private API calls after the login counted as "answered without a login", and DET-AUTHZ skipped those endpoints as public: 0 tried in clean run 1, only 1 in the buggy runs. Now a context stops counting as logged-out evidence from its first same-origin write request, marked when the request starts, because a login's redirect may never surface as a response. Crawl and probe contexts never write, so nothing else changes. Regression test in `test/security-scan.test.ts`. Clean run 2 ran with this fix: 3 endpoints tried, all refused, no finding. This only ever makes more endpoints eligible, so any new risk is a false positive, which is exactly what clean run 2 and the A0 clean run measure. The buggy runs, made before the fix, found B21 anyway.
+
+**D74 — A requirement missing from the app is never exported as a test.** Found by E3 on the v2 findings: the "Not found" finding became a spec with no assertion, which passes on any build. An absence has nothing to assert, so it's now skipped with that reason (unit test).
+
+### P3b — 27 Sep 2026
+
+**Gate P3b — passed.** Production bench on :5180, Standard budget, logged in as the test account, `--llm-cache off` (D72). Results: `eval/results/p3b-gate/` (`runs.jsonl`; `v1/` and `v2/` summaries).
+
+| Gate item | Result |
+| --- | --- |
+| B19, B21, B22 detected (buggy) | All three **Confirmed** in both buggy runs and in A0 (`…125512_jhx0`, no LLM). B21's finding is critical (personal fields); the key is shown as `sk_l…CRET` |
+| B23 detected (buggy, `--requirements bench/SCOPE.md`) | **Likely**: "No way found to reschedule an existing booking" (`…130217_vg4y`). AC9 is Not found; the page search looked for "Reschedule", "Change date", "Edit booking" across 24 pages |
+| B20 | Not built (A2 is stretch, D47): an honest miss in v2 recall |
+| D05, D06 not flagged | Not flagged in any run (the smoke run's D06-style false positive was fixed first, D67) |
+| Zero new Confirmed on the clean bench, 2 runs | `…131858_a21a` and `…133005_qn8k`: **0 Confirmed, 0 Likely bugs** (1 and 3 at Needs review). A0 clean: 0 bugs |
+| Clean criteria only Verified or Not tested (Rohit's addition) | Run 1: Verified 5, Not tested 6. Run 2: Verified 4, Not tested 7. **None Failed or Not found**; AC9 (reschedule) is Verified on the clean build in run 1 |
+| Secrets redacted everywhere | Test `test/security-scan.test.ts` walks every file a run and its exports write; plus a real check: the bench's full fake key appears in **no file** of the four buggy runs (reports, run.json, evidence, LLM call logs, tests) or the response cache. Gateway test: a key in page content reaches the model as `sk_l…EKEY` |
+| New booking details page passes the clean audit | `pnpm bench:test`: 61 passed; the audit covers `/bookings/HC-1001`, the reschedule form and the rescheduled state |
+
+**E3 on the v2 findings** (`pnpm eval:tests … --bugs bench/bugs-v2.yaml`): the exported tests for B19, B21 and B22 each fail with only their flag on and pass with it off (3/3). B23's spec was the D74 defect, now fixed.
+
+**Recall** (C = Confirmed; C+L = Confirmed or Likely):
+
+| Run | v1 recall C / C+L | v2 recall C / C+L | Journeys | Time | Cost |
+| --- | --- | --- | --- | --- | --- |
+| Buggy + requirements `…130217_vg4y` | 72% / **83%** | 60% / **80%** | 1 of 3 | 489 s | $0.42 |
+| Buggy, no requirements `…131110_waqv` (option b) | 67% / 72% | 60% / 60% (B23 needs requirements) | 2 of 3 | 419 s | $0.41 |
+| A0 buggy `…125512_jhx0` | 50% / 50% | 60% / 60% | – | 78 s | $0 |
+| P3 confirmation run (for comparison) | 61% / 72% | – | 2 of 3 | 470 s | $0.28 |
+
+Bug precision is 100% on every buggy row, but that's before labelling. Scoring one truth file shows the other file's true positives as unlabelled (see the scoring notes above).
+
+**What the guidance change (D64) did, measured without requirements** (`…131110_waqv`, option b):
+- **B06 and B08 are now Confirmed; both were missed in the P3 confirmation run.** The cancel check was `all: [notVisible of the removed booking, visible of another]`, and the profile check changed the name, saved, reloaded and compared. These are exactly the two habits.
+- **Coverage:** the first journey now combines browsing, search and sort.
+- **B03 is still missed.** The search check it wrote was only "results are visible", which can't see case sensitivity. Recorded, not tuned.
+- **Finish when done:** the booking journey didn't make a second booking, but it did run out of its time share (49 steps).
+- v1 C+L equals P3's (72%): the B06/B08 gains were offset by B04 and B05 not being found this run (the booking journey ran out of its time share). One run each, so this is direction, not a measured effect size.
+
+With requirements, v1 rises to 83% C+L: the SCOPE.md criteria pulled the past-date and apostrophe checks (B04, B05) into the plan.
+
+**Proposed labels (for Rohit; `eval/labels.json` is unchanged):**
+- `tp:B06`: `fp_a4abe8cbebd37e3b`, `fp_8c961abfcbec67da`, `fp_6b42bd7cd3ba2655` (a second cancel finding next to the Confirmed one; the duplicate problem from P3's notes).
+- `tp:B08`: `fp_8e5d8914cb66379e`, `fp_164ec372b85c1608`.
+- `fp`: the AI-guessed input rules at Needs review (`fp_e38a34ecea756a5f` half hours; phone format `fp_e9638a3d5b6b4bdd`, `fp_755e1d5164900d54`, `fp_316a32c2cba4ab42`, `fp_3aa7507552778b32`); the contact form "doesn't confirm" (`fp_cd9227181d688f8a`, `fp_ec3facead619473a`: the clean bench shows "Thanks — we'll reply within one working day", so the check was wrong); and the D44 canary suggestion `fp_20404a92a3d47f6e`.
+- **Also for Rohit:** the UX suggestion "Quote page has no way to proceed to booking" matched decoy D03 by keyword in clean run 2. It isn't D03's claim (the spinner), just a keyword collision. Suggest `fp` (it's arguably true: there's no "Book this" from the quote), or `tp_unseeded`.
+- The v2 true positives (B19, B21, B22, B23) match v2's firm rules and need no label. For P5's combined score they'll need `tp:B19`-style labels, or a combined truth file.
+- The other UX suggestions (price-unit wording, date hint, login redirect note, "When" field) need a look at the clean bench before labelling; I haven't checked them.
+
+**Spend (D48).** OpenRouter total usage **$6.81** (after P3: $5.24). P3b cost **$1.57**: the Quick smoke run $0.16, two buggy Standard runs $0.83, two clean Standard runs $0.58. **Balance $3.19**, above the $2 line. At about $0.35 per Standard run, that's roughly nine runs, and the P5 matrix alone plans eight (A2 buggy ×3, clean ×2, SauceDemo ×2, Friction ×1), so the $10 top-up will likely be needed before P5.
+
+**Teach-back — P3b, the QA coverage pack.**
+
+*What was built.* Three security detectors and an acceptance-criteria check, on a bench extended to test them.
+- **DET-SECRETS** finds secret keys in anything the browser downloads.
+- **DET-DBERROR** finds database error messages in responses and pages.
+- **DET-AUTHZ** finds APIs that hand out private data without a login.
+- **Requirements coverage** takes a scope document, splits it into acceptance criteria, and reports each one as Verified, Failed, Not found or Not tested.
+
+*How data flows.* One observer watches every browser the scan opens (not replays) and looks at each same-origin response once.
+- **Secrets and DB errors.** Text bodies are scanned in memory for key patterns and database error messages. Only redacted matches are kept; the bodies are thrown away.
+- **Private APIs.** The observer notes which GET endpoints answered without a login, and keeps, in memory, the first logged-in JSON answer from each endpoint.
+- **After exploring**, three things happen:
+  - the secret and DB-error matches become candidates;
+  - each logged-in-only endpoint called from a private page is requested again from a browser with no cookies, and if the same records come back, that's a finding;
+  - the Planner's "not found" criteria are checked by searching every recorded page for the words the feature would use.
+- **Verification** re-fetches each security finding exactly the way it was found. A not-found criterion is Likely at most, because an absence can't be replayed.
+- **Coverage** is decided in code: a criterion links to expectations, and their results (passed, failed, never reached) decide its status.
+
+*The key decision, and its alternative.* The key decision is: the AI reads, code decides.
+- **The alternative** was to let the Planner mark criteria met or missing directly. That's faster, and it's the obvious design.
+- **Why not.** In the smoke run the Planner called three existing features missing. The code check found their words on real pages and turned those three into "Not tested" instead of false bugs.
+- **Same pattern for security.** A regex decides what a secret is, and a real no-cookie request decides whether data is private.
+
+*The most likely failure mode.* DET-AUTHZ's idea of "logged out".
+- **Found in this phase.** A journey that logs in partway through made private endpoints look public (D73).
+- **Still true.** An app that gives every visitor a cookie still works, because logged-out evidence comes from contexts that never logged in. But an app whose private pages share one route with its public pages (a dashboard at `/` that changes after login) will only be checked when the data has contact fields.
+- **"Not found".** The Planner can pick words the app doesn't use for a feature it does have. The finding is then a Likely false bug that a person has to dismiss.
+
+*Say plainly in the talk.* A2 (served source maps) and A6 (prompt injection) aren't built. B20 is an honest miss. The bench's security bugs are easy for the detectors by design; the evidence that they generalise will be SauceDemo and Friction in P5.

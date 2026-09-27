@@ -54,6 +54,25 @@ describe("redaction", () => {
     expect(sent).toContain("{{secret:password}}");
   });
 
+  it("a secret key found in page content reaches the model redacted (ADDENDUM A1)", async () => {
+    const key = ["sk", "live", "WITNESSTESTFAKE0000DONOTUSEKEY"].join("_"); // built, never a literal
+    const t = await testGateway([], [{ tool: "finish", input: { note: "ok" } }], {
+      vault: vault(),
+    });
+    const r = await t.gateway.toolCall({
+      role: "explorer",
+      tier: "fast",
+      instructions: "Drive the browser.",
+      prompt: pageContent(`- generic: "config ${key}"`, "http://app.test/"),
+      promptPrefix: `site map mentions ${key}`,
+      tools: { finish: { description: "End", schema: z.object({ note: z.string() }) } },
+    });
+    expect(r.ok).toBe(true);
+    const sent = t.fast.prompts.join("\n");
+    expect(sent).not.toContain(key);
+    expect(sent).toContain("sk_l…EKEY");
+  });
+
   it("throws (and sends nothing) if a vault value would still leave in the payload", async () => {
     const t = await testGateway([], [{ tool: "finish", input: { note: "ok" } }], {
       vault: vault(),

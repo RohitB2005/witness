@@ -4,10 +4,17 @@ import { createHash } from "node:crypto";
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const NUMERIC = /^\d+$/;
 const LONG_HEX = /^[0-9a-f]{16,}$/i;
+/** A reference number: a short letter prefix and at least 3 digits (`ORD-1042`, `INV2024`). */
+const REFERENCE = /^[A-Za-z]{1,6}[-_]?\d{3,}$/;
 
-/** True if a path segment looks like an identifier rather than a word: numbers, UUIDs, long hex. */
+/**
+ * True if a path segment looks like an identifier rather than a word: numbers, UUIDs, long hex, reference
+ * numbers. A word with one or two digits (`v2`, `s1`) stays a word.
+ */
 export function isIdSegment(segment: string): boolean {
-  return NUMERIC.test(segment) || UUID.test(segment) || LONG_HEX.test(segment);
+  return (
+    NUMERIC.test(segment) || UUID.test(segment) || LONG_HEX.test(segment) || REFERENCE.test(segment)
+  );
 }
 
 /**

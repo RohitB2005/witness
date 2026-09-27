@@ -16,7 +16,10 @@ import { createContext } from "../browser/context";
 import type { SafetyPolicy } from "../browser/policy";
 import type { SecretVault } from "../browser/vault";
 import { routePattern } from "../crawl/normalise";
+import { fetchWithoutLogin, shapeHash } from "../detectors/authz";
 import { brokenLinkCandidate, isBrokenStatus } from "../detectors/brokenlink";
+import { findDbError } from "../detectors/dberror";
+import { findSecrets } from "../detectors/secrets";
 import { http4xxDetector } from "../detectors/http4xx";
 import { PAGE_DETECTORS, toCandidate } from "../detectors/registry";
 import { secHeaderCandidates } from "../detectors/secheaders";
@@ -176,6 +179,11 @@ async function buildUnits(
     .map((t) => ({ t, steps: pathOf(t.candidate, deps.steps) }))
     .sort((a, b) => (b.steps?.length ?? -1) - (a.steps?.length ?? -1));
   for (const { t, steps } of withSteps) {
+    const unrepeatable = unrepeatableRequest(t.candidate);
+    if (unrepeatable) {
+      results.get(t.key)!.skipped = unrepeatable;
+      continue;
+    }
     if (!t.candidate.stepIds.length) {
       units.push({
         kind: "static",
@@ -312,6 +320,7 @@ async function openPage(deps: ReplayDeps, session: Candidate["session"], holder:
   const context = await createContext(deps.browser, {
     policy: deps.policy,
     viewport: deps.viewport,
+    observe: false,
   });
   holder.context = context;
   const page = await context.newPage();
@@ -438,6 +447,8 @@ async function attemptStatic(
         ],
       ]);
     }
+    const byRequest = await attemptByRequest(c, context, page, deps);
+    if (byRequest) return new Map([[t.key, byRequest]]);
     const response = await page.goto(c.url, { waitUntil: "domcontentloaded" });
     await recorder.waitForQuiet(LIMITS.crawlQuietCapMs, LIMITS.quietWindowMs);
     if (id === "DET-SECHEADERS") {
@@ -473,6 +484,103 @@ async function attemptStatic(
   } finally {
     await context.close().catch(() => undefined);
   }
+}
+
+/**
+ * A DB error seen in the response to a write request (from an edge input) can't be re-sent on its own:
+ * replays never repeat a write outside its recorded journey. Such a finding stays "not replayed".
+ */
+function unrepeatableRequest(c: Candidate): string | undefined {
+  if (c.source.kind !== "detector" || c.source.id !== "DET-DBERROR") return undefined;
+  if (c.signature.kind !== "detector") return undefined;
+  const [where, method] = c.signature.key.split("|");
+  return where === "response" && method !== "GET"
+    ? `it came from a ${method} request, which replay doesn't send again on its own`
+    : undefined;
+}
+
+/**
+ * Detectors that are re-checked by requesting a URL again (ADDENDUM A1, A3, A4): a secret in a file, a
+ * database error in a response or on a page, private data without a login. Undefined for everything else.
+ */
+async function attemptByRequest(
+  c: Candidate,
+  context: BrowserContext,
+  page: Page,
+  deps: ReplayDeps,
+): Promise<AttemptOutcome | undefined> {
+  if (c.source.kind !== "detector" || c.signature.kind !== "detector") return undefined;
+  const key = c.signature.key;
+  const origin = deps.policy.origin;
+  if (c.source.id === "DET-SECRETS" && c.signals.request) {
+    const url = new URL(c.signals.request.path, origin).href;
+    const res = await context.request.get(url, { failOnStatusCode: false }).catch(() => undefined);
+    const body = (await res?.text().catch(() => "")) ?? "";
+    const found = findSecrets(body).some((m) => `${m.patternId}|${m.hash}` === key);
+    return {
+      ok: found,
+      note: found ? "the key is still in the file" : "the key is no longer in the file",
+      evidenceId: await deps.evidence.put("network", {
+        kind: "replay-secret",
+        url,
+        status: res?.status(),
+        found,
+      }),
+    };
+  }
+  if (c.source.id === "DET-DBERROR") {
+    const [where, , ...rest] = key.split("|");
+    const url = rest.join("|");
+    let text: string;
+    let status: number | undefined;
+    if (where === "response" && url) {
+      const res = await context.request
+        .get(url, { failOnStatusCode: false })
+        .catch(() => undefined);
+      status = res?.status();
+      text = (await res?.text().catch(() => "")) ?? "";
+    } else {
+      await page.goto(c.url, { waitUntil: "domcontentloaded" });
+      await page.waitForLoadState("networkidle", { timeout: 6_000 }).catch(() => undefined);
+      text = await page
+        .locator("body")
+        .innerText()
+        .catch(() => "");
+    }
+    const match = findDbError(text);
+    return {
+      ok: !!match,
+      note: match ? `the ${match.db} error is still shown` : "no database error this time",
+      evidenceId: await deps.evidence.put("network", {
+        kind: "replay-db-error",
+        url: where === "response" ? url : page.url(),
+        status,
+        db: match?.db,
+        excerpt: match?.excerpt,
+      }),
+    };
+  }
+  if (c.source.id === "DET-AUTHZ") {
+    // This attempt's context has no login (the candidate's session is anonymous): no cookies are sent.
+    const probe = await fetchWithoutLogin(context.request, c.url).catch(() => ({
+      status: 0,
+      body: undefined,
+    }));
+    const expected = key.split("|").pop();
+    const ok =
+      probe.status === 200 && probe.body !== undefined && shapeHash(probe.body) === expected;
+    return {
+      ok,
+      note: `without a login it returned ${probe.status || "no response"}${ok ? " with the same data" : ""}`,
+      evidenceId: await deps.evidence.put("network", {
+        kind: "replay-authz",
+        url: c.url,
+        status: probe.status,
+        sameShape: ok,
+      }),
+    };
+  }
+  return undefined;
 }
 
 async function judgeTarget(

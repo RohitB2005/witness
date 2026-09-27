@@ -129,6 +129,26 @@ describe("exportTests", () => {
     expect([...out.tests.values()]).toEqual(["fd_total.spec.ts"]);
   });
 
+  it("a requirement missing from the app is never exported (an absence has nothing to assert)", () => {
+    const r = run();
+    const missing = {
+      ...r.findings[0]!,
+      id: "fd_missing",
+      tier: "likely",
+      source: { kind: "requirement", id: "REQ-NOTFOUND", criterionId: "AC9" },
+      repro: {
+        session: "authenticated",
+        viewport: "desktop",
+        url: site.url("/"),
+        stepIds: [],
+        signature: { kind: "requirement", criterionId: "AC9" },
+      },
+    } as Finding;
+    const out = exportTests({ ...r, findings: [missing] });
+    expect(out.tests.size).toBe(0);
+    expect(out.skipped[0]!.reason).toMatch(/missing from the app/);
+  });
+
   it(
     "the generated spec fails while the bug exists and passes once it's fixed",
     { timeout: 120_000 },

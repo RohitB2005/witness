@@ -27,6 +27,8 @@ export interface TierInput {
     selfReferential?: boolean;
     aiGuessedRule?: boolean;
   };
+  /** A deterministic finding a person still has to decide (e.g. a key often meant to be public). */
+  review?: string;
   evidenceValid: boolean;
   evidenceNote?: string;
   replay: ReplayFacts;
@@ -78,6 +80,22 @@ export function decideTier(i: TierInput): TierDecision {
       reason: `Its evidence didn't check out${i.evidenceNote ? `: ${i.evidenceNote}` : "."}`,
     };
   }
+  // A requirement with nothing matching it in the app (ADDENDUM A5): absence can't be replayed, and the
+  // match between the criterion and the app's words is the AI's reading, checked by code. Likely at most.
+  if (i.source.kind === "requirement") {
+    if (i.skeptic === "benign_likely")
+      return {
+        tier: "needs_review",
+        reason:
+          "The requirements promise this and no page shows it, but the skeptic found a plausible explanation.",
+      };
+    return {
+      tier: "likely",
+      reason:
+        "The requirements promise this, and no page Witness visited mentions it. An absence can't be replayed, so it is Likely at most.",
+    };
+  }
+
   const outcome = replayOutcome(i.replay);
   const replay = replayText(i.replay);
 
@@ -133,6 +151,11 @@ export function decideTier(i: TierInput): TierDecision {
     };
 
   if (i.source.kind === "detector") {
+    if (i.review)
+      return {
+        tier: "needs_review",
+        reason: `${i.source.id} found this and it ${replay}. ${i.review}`,
+      };
     return {
       tier: "confirmed",
       reason: `${i.source.id} found something that is always wrong, and it ${replay}.`,

@@ -1,4 +1,4 @@
-// pnpm eval:tests <runs/run_… | run.json> [--out dir]
+// pnpm eval:tests <runs/run_… | run.json> [--out dir] [--bugs bench/bugs-v2.yaml]
 // E3 (docs/EVALUATION.md): every exported test whose finding matches a seeded bug must FAIL with only that
 // bug's flag on and PASS with no flags on (the bench's /__bench control routes switch flags and reset data
 // before each run). Tests for findings that aren't seeded bugs are listed but not judged.
@@ -58,7 +58,7 @@ async function main(): Promise<number> {
   const { values, positionals } = parseArgs({
     args: process.argv.slice(2),
     allowPositionals: true,
-    options: { out: { type: "string" } },
+    options: { out: { type: "string" }, bugs: { type: "string" } },
   });
   const input = positionals[0];
   if (!input) {
@@ -68,7 +68,7 @@ async function main(): Promise<number> {
   const runFile = input.endsWith(".json") ? path.resolve(input) : path.resolve(input, "run.json");
   const result: RunResult = RunResultSchema.parse(JSON.parse(readFileSync(runFile, "utf8")));
   const testsDir = path.join(path.dirname(runFile), "tests");
-  const { truth } = loadTruth();
+  const { truth } = loadTruth(values.bugs ? path.resolve(values.bugs) : undefined);
   const labelsFile = path.join(REPO_ROOT, "eval", "labels.json");
   const labels: Labels = existsSync(labelsFile)
     ? LabelsFileSchema.parse(JSON.parse(readFileSync(labelsFile, "utf8")))

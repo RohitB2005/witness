@@ -22,9 +22,12 @@ export interface MatchResult {
   tentative: boolean;
 }
 
-/** The finding's source ID: detector ID (DET-*) or check type (e.g. numericRelation). */
+/**
+ * The finding's source ID: detector ID (DET-*), check type (e.g. numericRelation), or REQ-NOTFOUND for a
+ * requirement with nothing matching it in the app (v2, ADDENDUM A5).
+ */
 export function sourceId(f: MatchableFinding): string | undefined {
-  return f.source.kind === "detector" || f.source.kind === "check" ? f.source.id : undefined;
+  return "id" in f.source ? f.source.id : undefined;
 }
 
 /** Text the keyword fields search: title + description (the plain-language impact) + expected + actual. */

@@ -53,7 +53,11 @@ export const LOGOUT_TEXT = /\b(log\s?-?out|sign\s?-?out)\b/i;
 
 export async function preflight(deps: PreflightDeps): Promise<PreflightResult> {
   const { browser, config, policy, evidence } = deps;
-  const context = await createContext(browser, { policy, viewport: config.viewport });
+  const context = await createContext(browser, {
+    policy,
+    viewport: config.viewport,
+    observe: false,
+  });
   try {
     const page = await context.newPage();
     const recorder = new PageRecorder(page, policy);

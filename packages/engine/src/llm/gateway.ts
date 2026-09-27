@@ -25,6 +25,7 @@ import {
 import { assertLlmAllowed } from "./guard";
 import { estimateCostUsd } from "./prices";
 import { UNIVERSAL_RULES } from "./prompts/universal";
+import { redactSecrets } from "../detectors/secrets";
 
 export type LlmRole = "planner" | "explorer" | "edge" | "judge" | "skeptic" | "reporter" | "ux";
 export type ModelTier = "smart" | "fast";
@@ -308,13 +309,16 @@ export class LlmGateway {
   ): Promise<{ text?: string; toolCall?: ToolCallValue }> {
     const model = this.o.modelIds[tier];
     // Redact, then assert: nothing that leaves the process may contain a vault value (T5).
-    const instructions = this.o.vault.toPlaceholders(`${UNIVERSAL_RULES}\n\n${instructionsIn}`);
-    const prompt = this.o.vault.toPlaceholders(promptIn);
+    // Secret-key patterns found in page content never reach the model either (ADDENDUM A1).
+    const instructions = redactSecrets(
+      this.o.vault.toPlaceholders(`${UNIVERSAL_RULES}\n\n${instructionsIn}`),
+    );
+    const prompt = redactSecrets(this.o.vault.toPlaceholders(promptIn));
     const promptPrefix =
       spec.kind === "tools" && spec.promptPrefix !== undefined
         ? (Array.isArray(spec.promptPrefix) ? spec.promptPrefix : [spec.promptPrefix])
             .slice(0, 3)
-            .map((p) => this.o.vault.toPlaceholders(p))
+            .map((p) => redactSecrets(this.o.vault.toPlaceholders(p)))
         : undefined;
     const toolDefs =
       spec.kind === "tools"

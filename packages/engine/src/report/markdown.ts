@@ -1,6 +1,7 @@
 // Markdown report (SPEC FR-10). Page-controlled text is escaped; severity and tier are written as words.
 import type { Finding, RunResult } from "../types";
 import { replayText } from "../verify/tier";
+import { CRITERION_LABEL } from "./requirements";
 
 const VERDICT_LABEL = {
   ready: "READY",
@@ -49,6 +50,24 @@ export function renderMarkdown(r: RunResult): string {
     lines.push(`- ${mdEscape(n)}`);
   if (r.appModel) {
     lines.push("", "## What Witness understood the app to be", "", mdEscape(r.appModel.purpose));
+  }
+  if (r.requirements) {
+    const cs = r.requirements.criteria;
+    const n = (s: string) => cs.filter((c) => c.status === s).length;
+    lines.push(
+      "",
+      `## Requirements coverage (${cs.length} criteria)`,
+      "",
+      `Verified ${n("verified")} · Failed ${n("failed")} · Not found ${n("not_found")} · Not tested ${n("not_tested")}${r.requirements.droppedCriteria ? ` · ${r.requirements.droppedCriteria} proposed criteria dropped (their quote wasn't in the requirements)` : ""}`,
+      "",
+      "| # | Criterion | Status | Why |",
+      "| --- | --- | --- | --- |",
+    );
+    for (const c of cs) {
+      lines.push(
+        `| ${c.id} | ${mdEscape(c.quote)} | ${CRITERION_LABEL[c.status]} | ${mdEscape(c.reason)} |`,
+      );
+    }
   }
   if (r.journeys.length) {
     lines.push("", `## Journeys and automatic checks (${r.journeys.length})`, "");

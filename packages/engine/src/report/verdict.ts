@@ -1,5 +1,5 @@
 // Readiness verdict (SPEC FR-9). Pure function; always returns a one-sentence reason.
-import type { Finding, Journey, Verdict } from "../types";
+import type { Criterion, Finding, Journey, Verdict } from "../types";
 
 export interface VerdictInput {
   findings: Pick<Finding, "kind" | "tier" | "severity" | "title">[];
@@ -9,6 +9,11 @@ export interface VerdictInput {
    * Witness then can't claim "Ready": it only checked page loads (DEVLOG D16).
    */
   journeysAttempted: boolean;
+  /**
+   * Requirements coverage (ADDENDUM A5). Failed and not-found criteria are already bug findings (so they
+   * count above); untested ones are a caveat.
+   */
+  criteria?: Pick<Criterion, "status">[];
 }
 
 const ACTIVE_BUG_TIERS = new Set(["confirmed", "likely"]);
@@ -41,6 +46,9 @@ export function readinessVerdict(input: VerdictInput): Verdict {
     );
   }
   if (!input.journeysAttempted) caveats.push("no user journeys were exercised (page loads only)");
+  const untested = input.criteria?.filter((c) => c.status === "not_tested").length ?? 0;
+  if (untested)
+    caveats.push(`${untested} acceptance criteri${untested === 1 ? "on" : "a"} not tested`);
   if (caveats.length) {
     return { level: "caveats", reason: `Ready with caveats: ${joinList(caveats)}.` };
   }

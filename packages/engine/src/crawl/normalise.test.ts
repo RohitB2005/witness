@@ -27,6 +27,10 @@ describe("isIdSegment", () => {
     ["about", false],
     ["v2", false],
     ["deadbeefdeadbeef", true],
+    ["ORD-1042", true], // reference numbers
+    ["INV2024", true],
+    ["s1", false],
+    ["page-2", false],
   ])("%s → %s", (s, id) => expect(isIdSegment(s)).toBe(id));
 });
 

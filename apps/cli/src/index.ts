@@ -2,7 +2,7 @@
 // witness suppress <fingerprint> --origin <url> --reason <text> — "Not a bug" (FR-12).
 // Exit codes: 0 Ready · 1 Ready with caveats · 2 Not ready · 3 scan error.
 import { spawn } from "node:child_process";
-import { existsSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { parseArgs } from "node:util";
@@ -37,6 +37,8 @@ const USAGE = `Usage: witness scan <url> [options]
   --user <email or username>  log in with this account…
   --password-env <VAR>        …using the password in this environment variable (never pass it as an argument)
   --hint <text>               what the app is for (≤ 200 chars)
+  --requirements <file>       a .md or .txt file with what the app must do (≤ 5,000 characters): each
+                              acceptance criterion is checked and reported under Requirements coverage
   --out <dir>                 also copy the reports into this folder
   --format md,json,html       report formats (default: md,json,html); regression tests always go to tests/
   --pipeline deterministic|ai-no-verify|full|full-no-skeptic   (default: full)
@@ -57,6 +59,7 @@ async function main(argv: string[]): Promise<number> {
       user: { type: "string" },
       "password-env": { type: "string" },
       hint: { type: "string" },
+      requirements: { type: "string" },
       out: { type: "string" },
       format: { type: "string" },
       pipeline: { type: "string" },
@@ -91,6 +94,18 @@ async function main(argv: string[]): Promise<number> {
     credentials = { username: values.user, passwordRef: "password" };
   }
 
+  let requirements: string | undefined;
+  if (values.requirements) {
+    const file = path.resolve(values.requirements);
+    if (!/\.(md|markdown|txt)$/i.test(file) || !existsSync(file)) {
+      console.error(
+        `--requirements needs an existing .md or .txt file (got ${values.requirements}).`,
+      );
+      return EXIT.error;
+    }
+    requirements = readFileSync(file, "utf8");
+  }
+
   let config;
   try {
     config = resolveScanConfig({
@@ -99,6 +114,7 @@ async function main(argv: string[]): Promise<number> {
       budget: values.budget as ScanInput["budget"],
       credentials,
       hint: values.hint,
+      requirements,
       pipeline: values.pipeline as ScanInput["pipeline"],
       llmCache: values["llm-cache"] as ScanInput["llmCache"],
     });

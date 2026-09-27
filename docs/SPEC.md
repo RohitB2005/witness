@@ -155,7 +155,7 @@ Run on every recorded state (crawl and agent steps). IDs are stable (used by the
 - AC: token usage and estimated cost are recorded per LLM call and totalled in the report.
 
 ### FR-15 CLI
-- `witness scan <url> [--mode] [--budget] [--user --password-env] [--hint] [--out dir] [--format html,md,json] [--llm-cache off|rw|replay]`.
+- `witness scan <url> [--mode] [--budget] [--user --password-env] [--hint] [--requirements file] [--out dir] [--format html,md,json] [--llm-cache off|rw|replay]`.
 - Exit codes: `0` Ready, `1` Ready with caveats, `2` Not ready, `3` scan error.
 - AC: the CLI and dashboard produce identical findings for the same run config and cache.
 

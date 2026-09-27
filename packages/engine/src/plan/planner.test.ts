@@ -1,7 +1,7 @@
 // Planner validation (SPEC FR-5 AC) and the app-map summary. Pure: no browser, no model.
 import { describe, expect, it } from "vitest";
 import { resolveScanConfig } from "../config/schema";
-import { resolveStartRoute, validatePlan, verifyGrounding } from "./planner";
+import { resolveStartRoute, validatePlan, verifyGrounding, type PlannedCriterion } from "./planner";
 import { buildAppMapSummary, parseSnapshot, type MapPage } from "./summary";
 
 const SNAP_ITEMS = `- main [ref=e1]:
@@ -245,5 +245,62 @@ describe("app-map summary", () => {
       ),
     );
     expect(buildAppMapSummary(many, 5_000).length).toBeLessThanOrEqual(5_100);
+  });
+});
+
+describe("validatePlan: acceptance criteria (ADDENDUM A5)", () => {
+  const requirements = `Scope.\n1. Members can sort the catalogue by price.\n2. Members can renew a loan online.`;
+  const crit = (over: Partial<PlannedCriterion> = {}): PlannedCriterion => ({
+    number: 1,
+    text: "Sort by price",
+    quote: "Members can sort the catalogue by price.",
+    importance: "core",
+    foundInApp: true,
+    lookFor: [],
+    ...over,
+  });
+
+  it("keeps criteria whose quote is in the requirements, drops invented ones, links expectations", () => {
+    const out = validatePlan(
+      {
+        appModel,
+        journeys: [
+          journey({
+            expectations: [exp({ criterion: 1 }), exp({ criterion: 7 })],
+            criteria: [1, 2],
+          }),
+        ],
+        criteria: [
+          crit(),
+          crit({
+            number: 2,
+            text: "Renew a loan",
+            quote: "Members can renew a loan online.",
+            foundInApp: false,
+            lookFor: ["Renew", " "],
+          }),
+          crit({ number: 3, text: "Pay fines", quote: "Members can pay fines by card." }), // not in the text
+        ],
+      },
+      { pages, snapshotEvidence, requirements, maxJourneys: 5 },
+    );
+    expect(out.criteria.map((c) => [c.id, c.plannedNotFound, c.lookFor])).toEqual([
+      ["AC1", false, []],
+      ["AC2", true, ["Renew"]],
+    ]);
+    expect(out.metrics).toMatchObject({ criteriaProposed: 3, criteriaDroppedQuote: 1 });
+    const [e1, e2] = out.journeys[0]!.expectations;
+    expect(e1!.criterionId).toBe("AC1");
+    expect(e2!.criterionId).toBeUndefined(); // AC7 doesn't exist
+    expect(out.journeys[0]!.criterionIds).toEqual(["AC1", "AC2"]);
+  });
+
+  it("without requirements, no criteria survive", () => {
+    const out = validatePlan(
+      { appModel, journeys: [journey()], criteria: [crit()] },
+      { pages, snapshotEvidence, maxJourneys: 5 },
+    );
+    expect(out.criteria).toEqual([]);
+    expect(out.journeys[0]!.criterionIds).toBeUndefined();
   });
 });

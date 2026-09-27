@@ -2,6 +2,10 @@
 // script) into the GET query parameters the crawl saw and into GET search forms, then run DET-XSS: if an
 // element carrying the canary's attribute exists, the input was inserted into the page as HTML. GET only,
 // under a write-blocking policy, so it's allowed in production mode too.
+//
+// Each parameter and search box also gets one ordinary input full of quote characters (ADDENDUM A4). Nothing
+// is checked here: the run-level response observer sees the reply, and DET-DBERROR reports a database error
+// in it. No attack payloads, only punctuation a real name or search could contain.
 import { routePattern } from "../crawl/normalise";
 import { log } from "../events";
 import { newId } from "../ids";
@@ -19,6 +23,9 @@ import {
 
 const MAX_PARAMS = 6;
 const MAX_FORMS = 3;
+
+/** Plain text with apostrophes and double quotes, as a real name or search could contain. */
+export const QUOTE_INPUT = `O'Neill's "quoted" test`;
 
 export function canary(token: string): string {
   return `"><i data-witness-canary="${token}"></i>`;
@@ -187,6 +194,9 @@ export async function reflectProbe(
             ex.current?.state.id,
           );
         }
+        const quoted = new URL(p.url.href);
+        quoted.searchParams.set(p.param, QUOTE_INPUT);
+        await ex.act({ type: "goto", path: pathAndQuery(quoted.href) });
       }
       // 2. GET search forms (the same form often repeats across pages, e.g. in a header: test it once).
       let forms = 0;
@@ -242,6 +252,8 @@ export async function reflectProbe(
               ex.current?.state.id,
             );
           }
+          if ((await ex.act({ type: "fill", target: field, value: QUOTE_INPUT })).ok)
+            await ex.act({ type: "press", key: "Enter" });
         }
       }
     } catch (err) {

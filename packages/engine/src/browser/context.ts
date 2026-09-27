@@ -14,12 +14,35 @@ export interface DialogRecord {
   at: string;
 }
 
+/** Something that watches every context a scan opens (record/responses.ts). */
+export interface ContextObserver {
+  attach(context: BrowserContext, session: "anonymous" | "authenticated"): void;
+}
+
+const observers = new WeakMap<Browser, ContextObserver>();
+
+/**
+ * Registers an observer for every context created on `browser` from now on (unless the context opts out),
+ * so a run-level view of responses needs no plumbing through each stage. Returns the unregister function.
+ */
+export function observeContexts(browser: Browser, observer: ContextObserver): () => void {
+  observers.set(browser, observer);
+  return () => {
+    if (observers.get(browser) === observer) observers.delete(browser);
+  };
+}
+
 export interface ContextOptions {
   policy: SafetyPolicy;
   viewport: { width: number; height: number };
   /** In-memory session (cookies + storage) from preflight login; never written to disk. */
   storageState?: Awaited<ReturnType<BrowserContext["storageState"]>>;
   onDialog?: (dialog: DialogRecord) => void;
+  /**
+   * false: the run-level observer doesn't see this context (replays, which repeat what was already seen, and
+   * preflight, whose login changes the session mid-context). Default true.
+   */
+  observe?: boolean;
 }
 
 export async function createContext(
@@ -37,6 +60,8 @@ export async function createContext(
   context.setDefaultTimeout(LIMITS.actionTimeoutMs);
   context.setDefaultNavigationTimeout(LIMITS.navigationTimeoutMs);
   await opts.policy.install(context);
+  if (opts.observe !== false)
+    observers.get(browser)?.attach(context, opts.storageState ? "authenticated" : "anonymous");
   const attach = (page: Page) => {
     // alert/confirm/prompt are dismissed so a page can never block the scan; each one is logged.
     page.on("dialog", (dialog) => {

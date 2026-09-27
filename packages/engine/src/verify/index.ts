@@ -152,7 +152,7 @@ export async function verify(input: VerifyInput): Promise<VerifyOutput> {
   }
   if (pipeline !== "ai-no-verify") {
     const targets = groups
-      .filter((g) => g.evidenceValid && !g.suppressed)
+      .filter((g) => g.evidenceValid && !g.suppressed && g.rep.source.kind !== "requirement")
       .map((g) => ({ key: g.rep.groupKey, candidate: g.rep, priority: priority(g.rep) }));
     const results = await replayTargets(targets, {
       ...input.replay,

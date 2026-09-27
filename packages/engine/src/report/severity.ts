@@ -15,6 +15,8 @@ export interface SeverityInput {
 }
 
 const CRASH_DETECTORS = new Set(["DET-HTTP5XX", "DET-PAGEERROR"]);
+/** Security detectors set severity from what they found (ADDENDUM A1, A3, A4): the hint, else high. */
+const SECURITY_DETECTORS = new Set(["DET-SECRETS", "DET-DBERROR", "DET-AUTHZ"]);
 const SEVERE_IMPACTS = new Set(["money", "data-loss", "blocks-completion"]);
 
 export function severityFor(input: SeverityInput): Severity {
@@ -24,6 +26,7 @@ export function severityFor(input: SeverityInput): Severity {
   if (source.kind === "detector") {
     if (CRASH_DETECTORS.has(source.id)) return core ? "critical" : "high";
     if (source.id === "DET-XSS") return "high";
+    if (SECURITY_DETECTORS.has(source.id)) return input.severityHint ?? "high";
     // A wrong total is a money error (FR-9: critical in a core journey); a wrong sort order is wrong info.
     if (source.id === "DET-TOTALS") return core ? "critical" : "high";
     if (source.id === "DET-SORT") return core || input.onCoreJourneyPage ? "high" : "medium";
@@ -40,6 +43,8 @@ export function severityFor(input: SeverityInput): Severity {
     return input.journeyPriority === "secondary" ? "medium" : "low";
   }
   if (source.kind === "judgement") return core ? "high" : "medium";
+  // A promised feature that isn't in the app: the criterion's own weight (ADDENDUM A5).
+  if (source.kind === "requirement") return input.severityHint ?? "high";
   return "low"; // ux-review suggestions
 }
 

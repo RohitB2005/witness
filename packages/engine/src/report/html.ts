@@ -3,6 +3,7 @@
 // never render it. Severity and tier are always written as words, never shown by colour alone.
 import type { Finding, RunResult } from "../types";
 import { replayText } from "../verify/tier";
+import { CRITERION_LABEL } from "./requirements";
 
 const VERDICT = {
   ready: "Ready",
@@ -17,6 +18,21 @@ const TIER: Record<Finding["tier"], string> = {
   evidence_based: "Evidence-based",
   suggestion: "Suggestion",
 };
+
+function requirementsTable(r: RunResult): string {
+  const cs = r.requirements!.criteria;
+  const link = new Map(r.findings.map((f) => [f.id, f.title]));
+  const rows = cs
+    .map(
+      (c) =>
+        `<tr><td>${esc(c.id)}</td><td>${esc(c.quote)}</td><td><strong>${esc(CRITERION_LABEL[c.status])}</strong></td><td>${esc(c.reason)}${c.findingIds
+          .filter((id) => link.has(id))
+          .map((id) => ` <a href="#${esc(id)}">(finding)</a>`)
+          .join("")}</td></tr>`,
+    )
+    .join("");
+  return `<h2>Requirements coverage (${cs.length} criteria)</h2><table><thead><tr><th>#</th><th>Criterion (from the requirements)</th><th>Status</th><th>Why</th></tr></thead><tbody>${rows}</tbody></table>`;
+}
 
 export function esc(value: unknown): string {
   return String(value ?? "")
@@ -35,6 +51,7 @@ export interface HtmlOptions {
 const CSS = `
 :root{--bg:#fff;--fg:#1a1a1a;--muted:#555;--line:#ddd;--card:#fafafa;--bad:#a4161a;--warn:#8a5a00;--ok:#1b6e3a}
 @media (prefers-color-scheme:dark){:root{--bg:#141414;--fg:#eee;--muted:#aaa;--line:#333;--card:#1c1c1c;--bad:#ff8a8a;--warn:#ffcf70;--ok:#7fd99a}}
+table{border-collapse:collapse;width:100%;display:block;overflow-x:auto}th,td{border:1px solid var(--line);padding:6px 8px;text-align:left;vertical-align:top}
 *{box-sizing:border-box}body{margin:0 auto;max-width:960px;padding:24px 16px;background:var(--bg);color:var(--fg);font:15px/1.5 system-ui,-apple-system,Segoe UI,sans-serif}
 h1{font-size:1.5rem;margin:0 0 4px}h2{font-size:1.2rem;margin:32px 0 8px;border-bottom:1px solid var(--line);padding-bottom:4px}h3{font-size:1.05rem;margin:0 0 6px}
 .verdict{border:2px solid var(--line);border-radius:8px;padding:12px 16px;margin:16px 0}.verdict strong{font-size:1.1rem}
@@ -88,6 +105,7 @@ ${r.notes?.length ? `<h2>Notes</h2><ul>${r.notes.map((n) => `<li>${esc(n)}</li>`
 ${r.error ? `<p><strong>Scan error:</strong> ${esc(r.error)}</p>` : ""}
 <h2>What wasn't tested</h2><ul>${(r.notTested.length ? r.notTested : ["Nothing noted."]).map((n) => `<li>${esc(n)}</li>`).join("")}</ul>
 ${r.appModel ? `<h2>What Witness understood the app to be</h2><p>${esc(r.appModel.purpose)}</p>` : ""}
+${r.requirements ? requirementsTable(r) : ""}
 <h2>Bugs (${bugs.length})</h2>${bugs.length ? bugs.map((f, i) => card(f, i + 1, o)).join("\n") : "<p>None found.</p>"}
 <h2>Improvements (${improvements.length})</h2>${improvements.length ? improvements.map((f, i) => card(f, i + 1, o)).join("\n") : "<p>None found.</p>"}
 ${

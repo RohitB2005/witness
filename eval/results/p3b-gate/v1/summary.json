@@ -1,0 +1,4915 @@
+{
+  "generatedAt": "2026-09-27T13:39:20.673Z",
+  "benchCommit": "cf36a08",
+  "bugsYamlHash": "eb16281ebdd853c58bf10a4f88f6b6af7ef9613c22bbe654a86703bb07cd38fc",
+  "runIds": [
+    "run_20260927-130217_vg4y",
+    "run_20260927-130217_vg4y",
+    "run_20260927-130217_vg4y",
+    "run_20260927-131110_waqv",
+    "run_20260927-131110_waqv",
+    "run_20260927-131110_waqv",
+    "run_20260927-131858_a21a",
+    "run_20260927-131858_a21a",
+    "run_20260927-131858_a21a",
+    "run_20260927-133005_qn8k",
+    "run_20260927-133005_qn8k",
+    "run_20260927-133005_qn8k",
+    "run_20260927-125512_jhx0"
+  ],
+  "pipelines": {
+    "full": {
+      "runs": 4,
+      "recall": {
+        "confirmed": [
+          0.7222222222222222,
+          0.6666666666666666
+        ],
+        "confirmedLikely": [
+          0.8333333333333334,
+          0.7222222222222222
+        ],
+        "all": [
+          0.8333333333333334,
+          0.7222222222222222
+        ]
+      },
+      "precision": {
+        "bugs": [
+          1,
+          1,
+          null,
+          null
+        ],
+        "improvements": [
+          0.875,
+          1,
+          0.8,
+          0.7142857142857143
+        ]
+      },
+      "cleanFalsePositives": [
+        0,
+        0
+      ],
+      "tierAccuracy": [
+        0.8666666666666667,
+        0.9230769230769231
+      ],
+      "minutes": [
+        8.15,
+        6.99,
+        5.75,
+        5.3
+      ],
+      "costUsd": [
+        0.4198945000000002,
+        0.40739610000000004,
+        0.30284544999999996,
+        0.27994319999999995
+      ],
+      "llmCalls": [
+        77,
+        76,
+        61,
+        54
+      ],
+      "stabilityJaccard": 0.75
+    },
+    "ai-no-verify (derived)": {
+      "runs": 4,
+      "recall": {
+        "confirmed": [
+          0.8333333333333334,
+          0.7222222222222222
+        ],
+        "confirmedLikely": [
+          0.8333333333333334,
+          0.7222222222222222
+        ],
+        "all": [
+          0.8333333333333334,
+          0.7222222222222222
+        ]
+      },
+      "precision": {
+        "bugs": [
+          1,
+          1,
+          1,
+          null
+        ],
+        "improvements": [
+          0.875,
+          1,
+          0.8,
+          0.7142857142857143
+        ]
+      },
+      "cleanFalsePositives": [
+        3,
+        3
+      ],
+      "tierAccuracy": [
+        0.8,
+        0.9230769230769231
+      ],
+      "minutes": [
+        8.15,
+        6.99,
+        5.75,
+        5.3
+      ],
+      "costUsd": [
+        0.4198945000000002,
+        0.40739610000000004,
+        0.30284544999999996,
+        0.27994319999999995
+      ],
+      "llmCalls": [
+        77,
+        76,
+        61,
+        54
+      ],
+      "stabilityJaccard": 0.75
+    },
+    "full-no-skeptic (derived)": {
+      "runs": 4,
+      "recall": {
+        "confirmed": [
+          0.7222222222222222,
+          0.6666666666666666
+        ],
+        "confirmedLikely": [
+          0.8333333333333334,
+          0.7222222222222222
+        ],
+        "all": [
+          0.8333333333333334,
+          0.7222222222222222
+        ]
+      },
+      "precision": {
+        "bugs": [
+          1,
+          1,
+          null,
+          null
+        ],
+        "improvements": [
+          0.875,
+          1,
+          0.8,
+          0.7142857142857143
+        ]
+      },
+      "cleanFalsePositives": [
+        0,
+        0
+      ],
+      "tierAccuracy": [
+        0.8666666666666667,
+        0.9230769230769231
+      ],
+      "minutes": [
+        8.15,
+        6.99,
+        5.75,
+        5.3
+      ],
+      "costUsd": [
+        0.4198945000000002,
+        0.40739610000000004,
+        0.30284544999999996,
+        0.27994319999999995
+      ],
+      "llmCalls": [
+        77,
+        76,
+        61,
+        54
+      ],
+      "stabilityJaccard": 0.75
+    },
+    "deterministic": {
+      "runs": 1,
+      "recall": {
+        "confirmed": [
+          0.5
+        ],
+        "confirmedLikely": [
+          0.5
+        ],
+        "all": [
+          0.5
+        ]
+      },
+      "precision": {
+        "bugs": [
+          1
+        ],
+        "improvements": [
+          1
+        ]
+      },
+      "cleanFalsePositives": [],
+      "tierAccuracy": [
+        1
+      ],
+      "minutes": [
+        1.35
+      ],
+      "costUsd": [
+        0
+      ],
+      "llmCalls": [
+        0
+      ],
+      "stabilityJaccard": null
+    }
+  },
+  "recallByCategory": {
+    "functional": 0.5,
+    "validation": 0,
+    "crash": 0.5,
+    "state": 0.6666666666666666,
+    "broken-resource": 1,
+    "accessibility": 1,
+    "performance": 1,
+    "security": 1,
+    "responsive": 1
+  },
+  "perBug": [
+    {
+      "id": "B01",
+      "found": [
+        false,
+        true,
+        false
+      ],
+      "bestTier": "confirmed",
+      "expectedTier": "Confirmed"
+    },
+    {
+      "id": "B02",
+      "found": [
+        true,
+        true,
+        true
+      ],
+      "bestTier": "confirmed",
+      "expectedTier": "Confirmed"
+    },
+    {
+      "id": "B03",
+      "found": [
+        false,
+        false,
+        false
+      ],
+      "bestTier": null,
+      "expectedTier": "Likely"
+    },
+    {
+      "id": "B04",
+      "found": [
+        true,
+        false,
+        false
+      ],
+      "bestTier": "confirmed",
+      "expectedTier": "Likely"
+    },
+    {
+      "id": "B05",
+      "found": [
+        true,
+        false,
+        false
+      ],
+      "bestTier": "confirmed",
+      "expectedTier": "Confirmed"
+    },
+    {
+      "id": "B06",
+      "found": [
+        true,
+        true,
+        false
+      ],
+      "bestTier": "confirmed",
+      "expectedTier": "Confirmed"
+    },
+    {
+      "id": "B07",
+      "found": [
+        false,
+        false,
+        false
+      ],
+      "bestTier": null,
+      "expectedTier": "Likely"
+    },
+    {
+      "id": "B08",
+      "found": [
+        true,
+        true,
+        false
+      ],
+      "bestTier": "confirmed",
+      "expectedTier": "Confirmed"
+    },
+    {
+      "id": "B09",
+      "found": [
+        true,
+        true,
+        true
+      ],
+      "bestTier": "confirmed",
+      "expectedTier": "Confirmed"
+    },
+    {
+      "id": "B10",
+      "found": [
+        true,
+        true,
+        true
+      ],
+      "bestTier": "confirmed",
+      "expectedTier": "Confirmed"
+    },
+    {
+      "id": "B11",
+      "found": [
+        true,
+        true,
+        true
+      ],
+      "bestTier": "confirmed",
+      "expectedTier": "Confirmed"
+    },
+    {
+      "id": "B12",
+      "found": [
+        true,
+        true,
+        true
+      ],
+      "bestTier": "confirmed",
+      "expectedTier": "Confirmed"
+    },
+    {
+      "id": "B13",
+      "found": [
+        true,
+        true,
+        true
+      ],
+      "bestTier": "confirmed",
+      "expectedTier": "Confirmed"
+    },
+    {
+      "id": "B14",
+      "found": [
+        true,
+        true,
+        true
+      ],
+      "bestTier": "confirmed",
+      "expectedTier": "Confirmed"
+    },
+    {
+      "id": "B15",
+      "found": [
+        true,
+        true,
+        true
+      ],
+      "bestTier": "confirmed",
+      "expectedTier": "Confirmed"
+    },
+    {
+      "id": "B16",
+      "found": [
+        true,
+        true,
+        true
+      ],
+      "bestTier": "confirmed",
+      "expectedTier": "Confirmed"
+    },
+    {
+      "id": "B17",
+      "found": [
+        true,
+        false,
+        false
+      ],
+      "bestTier": "likely",
+      "expectedTier": "Likely"
+    },
+    {
+      "id": "B18",
+      "found": [
+        true,
+        true,
+        false
+      ],
+      "bestTier": "likely",
+      "expectedTier": "Needs review"
+    }
+  ],
+  "decoysFlagged": {
+    "D01": 0,
+    "D02": 0,
+    "D03": 3,
+    "D04": 0
+  },
+  "unlabelled": 87,
+  "runs": [
+    {
+      "runId": "run_20260927-130217_vg4y",
+      "pipeline": "full",
+      "clean": false,
+      "findings": [
+        {
+          "findingId": "fd_v3rnbvcb",
+          "fingerprint": "fp_108e130b1258f658",
+          "title": "Booking details can be viewed without logging in",
+          "kind": "bug",
+          "tier": "confirmed",
+          "category": "security",
+          "route": "/bookings/:id",
+          "outcome": "unlabelled",
+          "why": "matches no rule; needs a label"
+        },
+        {
+          "findingId": "fd_cxf7owzi",
+          "fingerprint": "fp_c35559a5aa03b124",
+          "title": "Booking form accepts dates that have already passed",
+          "kind": "bug",
+          "tier": "confirmed",
+          "category": "validation",
+          "route": "/book",
+          "match": {
+            "kind": "bug",
+            "id": "B04",
+            "ruleIndex": 0,
+            "tentative": false
+          },
+          "outcome": "tp",
+          "bugId": "B04",
+          "why": "matches B04 rule 1"
+        },
+        {
+          "findingId": "fd_lrgql6bm",
+          "fingerprint": "fp_987039207f2338d9",
+          "title": "Booking form crashes when a name contains an apostrophe",
+          "kind": "bug",
+          "tier": "confirmed",
+          "category": "crash",
+          "route": "/book",
+          "match": {
+            "kind": "bug",
+            "id": "B05",
+            "ruleIndex": 0,
+            "tentative": false
+          },
+          "outcome": "tp",
+          "bugId": "B05",
+          "why": "matches B05 rule 1"
+        },
+        {
+          "findingId": "fd_li3re0mk",
+          "fingerprint": "fp_ce124386e82c3363",
+          "title": "Cancelled booking still shows up in the bookings list",
+          "kind": "bug",
+          "tier": "confirmed",
+          "category": "state",
+          "route": "/bookings",
+          "match": {
+            "kind": "bug",
+            "id": "B06",
+            "ruleIndex": 0,
+            "tentative": false
+          },
+          "outcome": "tp",
+          "bugId": "B06",
+          "why": "matches B06 rule 1"
+        },
+        {
+          "findingId": "fd_17jis960",
+          "fingerprint": "fp_ae14784f6329e477",
+          "title": "Clicking the booking button twice quickly creates two bookings",
+          "kind": "bug",
+          "tier": "likely",
+          "category": "functional",
+          "route": "/book/confirmation?ref",
+          "match": {
+            "kind": "bug",
+            "id": "B17",
+            "ruleIndex": 0,
+            "tentative": false
+          },
+          "outcome": "tp",
+          "bugId": "B17",
+          "why": "matches B17 rule 1"
+        },
+        {
+          "findingId": "fd_be65gvux",
+          "fingerprint": "fp_4807641267f25a31",
+          "title": "Secret Stripe key is visible to anyone visiting the site",
+          "kind": "bug",
+          "tier": "confirmed",
+          "category": "security",
+          "route": "/",
+          "outcome": "unlabelled",
+          "why": "matches no rule; needs a label"
+        },
+        {
+          "findingId": "fd_7wiazhwm",
+          "fingerprint": "fp_859845f0ad6cf94d",
+          "title": "Updated phone number on profile does not save correctly",
+          "kind": "bug",
+          "tier": "confirmed",
+          "category": "state",
+          "route": "/profile",
+          "match": {
+            "kind": "bug",
+            "id": "B08",
+            "ruleIndex": 0,
+            "tentative": false
+          },
+          "outcome": "tp",
+          "bugId": "B08",
+          "why": "matches B08 rule 1"
+        },
+        {
+          "findingId": "fd_1454va1o",
+          "fingerprint": "fp_c6688d3c457c8c97",
+          "title": "\"Price: low to high\" sorting doesn't actually sort by price",
+          "kind": "bug",
+          "tier": "confirmed",
+          "category": "functional",
+          "route": "/services",
+          "match": {
+            "kind": "bug",
+            "id": "B02",
+            "ruleIndex": 1,
+            "tentative": true
+          },
+          "label": "tp:B02",
+          "outcome": "tp",
+          "bugId": "B02",
+          "why": "labelled tp:B02: DET-SORT: \"Price: low to high\" doesn't put the services in price order."
+        },
+        {
+          "findingId": "fd_29lpb5xu",
+          "fingerprint": "fp_402826ae5f6a4b43",
+          "title": "Booking form accepts a date that has already passed",
+          "kind": "bug",
+          "tier": "needs_review",
+          "category": "validation",
+          "route": "/book/confirmation?ref",
+          "match": {
+            "kind": "bug",
+            "id": "B04",
+            "ruleIndex": 0,
+            "tentative": false
+          },
+          "outcome": "tp",
+          "bugId": "B04",
+          "why": "matches B04 rule 1"
+        },
+        {
+          "findingId": "fd_ab4xsryh",
+          "fingerprint": "fp_e38a34ecea756a5f",
+          "title": "Booking form may not accept half-hour amounts like 1.5 hours",
+          "kind": "bug",
+          "tier": "needs_review",
+          "category": "validation",
+          "route": "/book",
+          "outcome": "unlabelled",
+          "why": "matches no rule; needs a label"
+        },
+        {
+          "findingId": "fd_o3jhyx7h",
+          "fingerprint": "fp_a4abe8cbebd37e3b",
+          "title": "Cancelled booking still shows in the list after cancellation",
+          "kind": "bug",
+          "tier": "likely",
+          "category": "functional",
+          "route": "/bookings",
+          "match": {
+            "kind": "bug",
+            "id": "B06",
+            "ruleIndex": 1,
+            "tentative": true
+          },
+          "outcome": "unlabelled",
+          "why": "tentative match (B06 rule 2, confirm: manual); needs a label"
+        },
+        {
+          "findingId": "fd_k3fivrag",
+          "fingerprint": "fp_d06593923558174f",
+          "title": "No way found to reschedule an existing booking",
+          "kind": "bug",
+          "tier": "likely",
+          "category": "functional",
+          "route": "/",
+          "outcome": "unlabelled",
+          "why": "matches no rule; needs a label"
+        },
+        {
+          "findingId": "fd_q4ra71ed",
+          "fingerprint": "fp_e9638a3d5b6b4bdd",
+          "title": "Profile form accepts an incomplete phone number",
+          "kind": "bug",
+          "tier": "needs_review",
+          "category": "validation",
+          "route": "/profile",
+          "outcome": "unlabelled",
+          "why": "matches no rule; needs a label"
+        },
+        {
+          "findingId": "fd_dh4fny4d",
+          "fingerprint": "fp_8e5d8914cb66379e",
+          "title": "Profile updates (name and phone) don't save after reload",
+          "kind": "bug",
+          "tier": "likely",
+          "category": "functional",
+          "route": "/profile",
+          "match": {
+            "kind": "bug",
+            "id": "B08",
+            "ruleIndex": 1,
+            "tentative": true
+          },
+          "outcome": "unlabelled",
+          "why": "tentative match (B08 rule 2, confirm: manual); needs a label"
+        },
+        {
+          "findingId": "fd_0kzhq4xd",
+          "fingerprint": "fp_b3f5826353bd1a23",
+          "title": "Search box lets typed text be inserted as page code (security risk)",
+          "kind": "bug",
+          "tier": "confirmed",
+          "category": "security",
+          "route": "/services?q",
+          "match": {
+            "kind": "bug",
+            "id": "B15",
+            "ruleIndex": 0,
+            "tentative": false
+          },
+          "outcome": "tp",
+          "bugId": "B15",
+          "why": "matches B15 rule 1"
+        },
+        {
+          "findingId": "fd_stqegnm5",
+          "fingerprint": "fp_285baedc870abb76",
+          "title": "Searching with an apostrophe crashes search and reveals database details",
+          "kind": "bug",
+          "tier": "confirmed",
+          "category": "security",
+          "route": "/services?q",
+          "match": {
+            "kind": "bug",
+            "id": "B15",
+            "ruleIndex": 1,
+            "tentative": false
+          },
+          "outcome": "tp",
+          "bugId": "B15",
+          "why": "matches B15 rule 2"
+        },
+        {
+          "findingId": "fd_ftm0ug1c",
+          "fingerprint": "fp_67b897a090f8b356",
+          "title": "The page's JavaScript crashed: TypeError: Cannot read properties of undefined (reading 'links')",
+          "kind": "bug",
+          "tier": "confirmed",
+          "category": "crash",
+          "route": "/faq",
+          "match": {
+            "kind": "bug",
+            "id": "B11",
+            "ruleIndex": 0,
+            "tentative": false
+          },
+          "outcome": "tp",
+          "bugId": "B11",
+          "why": "matches B11 rule 1"
+        },
+        {
+          "findingId": "fd_nron9k4e",
+          "fingerprint": "fp_7b76efbe19cde62c",
+          "title": "Image doesn't load: \"Carpet shampoo\"",
+          "kind": "bug",
+          "tier": "confirmed",
+          "category": "broken-resource",
+          "route": "/services",
+          "match": {
+            "kind": "bug",
+            "id": "B09",
+            "ruleIndex": 0,
+            "tentative": false
+          },
+          "outcome": "tp",
+          "bugId": "B09",
+          "why": "matches B09 rule 1"
+        },
+        {
+          "findingId": "fd_vfzb02c3",
+          "fingerprint": "fp_66408ac5789781e6",
+          "title": "Login errors reveal whether an account exists",
+          "kind": "bug",
+          "tier": "likely",
+          "category": "security",
+          "route": "/login",
+          "match": {
+            "kind": "bug",
+            "id": "B18",
+            "ruleIndex": 0,
+            "tentative": false
+          },
+          "outcome": "tp",
+          "bugId": "B18",
+          "why": "matches B18 rule 1"
+        },
+        {
+          "findingId": "fd_ycmz6d9h",
+          "fingerprint": "fp_0fa71620b9c525c3",
+          "title": "Page scrolls sideways on a phone (605 px content in a 375 px screen)",
+          "kind": "bug",
+          "tier": "confirmed",
+          "category": "responsive",
+          "route": "/book",
+          "match": {
+            "kind": "bug",
+            "id": "B16",
+            "ruleIndex": 0,
+            "tentative": false
+          },
+          "outcome": "tp",
+          "bugId": "B16",
+          "why": "matches B16 rule 1"
+        },
+        {
+          "findingId": "fd_jqic73mb",
+          "fingerprint": "fp_d2cffea3ad040b42",
+          "title": "Link \"Terms\" goes to a missing page (/terms-and-conditions → 404)",
+          "kind": "bug",
+          "tier": "confirmed",
+          "category": "broken-resource",
+          "route": "/",
+          "match": {
+            "kind": "bug",
+            "id": "B10",
+            "ruleIndex": 0,
+            "tentative": false
+          },
+          "outcome": "tp",
+          "bugId": "B10",
+          "why": "matches B10 rule 1"
+        },
+        {
+          "findingId": "fd_4l5azjuj",
+          "fingerprint": "fp_47bcc5a3238b3d5f",
+          "title": "Accessibility: Buttons must have discernible text",
+          "kind": "improvement",
+          "tier": "evidence_based",
+          "category": "accessibility",
+          "route": "/contact",
+          "match": {
+            "kind": "bug",
+            "id": "B12",
+            "ruleIndex": 1,
+            "tentative": false
+          },
+          "outcome": "tp",
+          "bugId": "B12",
+          "why": "matches B12 rule 2"
+        },
+        {
+          "findingId": "fd_njr5zpaw",
+          "fingerprint": "fp_4b42d1f0cab26db3",
+          "title": "Accessibility: Elements must meet minimum color contrast ratio thresholds",
+          "kind": "improvement",
+          "tier": "evidence_based",
+          "category": "accessibility",
+          "route": "/",
+          "match": {
+            "kind": "bug",
+            "id": "B13",
+            "ruleIndex": 0,
+            "tentative": false
+          },
+          "outcome": "tp",
+          "bugId": "B13",
+          "why": "matches B13 rule 1"
+        },
+        {
+          "findingId": "fd_eu511ft9",
+          "fingerprint": "fp_88181b5b01b2e3b0",
+          "title": "Accessibility: Form elements must have labels",
+          "kind": "improvement",
+          "tier": "evidence_based",
+          "category": "accessibility",
+          "route": "/contact",
+          "match": {
+            "kind": "bug",
+            "id": "B12",
+            "ruleIndex": 0,
+            "tentative": false
+          },
+          "outcome": "tp",
+          "bugId": "B12",
+          "why": "matches B12 rule 1"
+        },
+        {
+          "findingId": "fd_pbbzfv2g",
+          "fingerprint": "fp_fcb2c9f64fd53c70",
+          "title": "Slow API call: GET /api/bookings took 3.5 s",
+          "kind": "improvement",
+          "tier": "evidence_based",
+          "category": "performance",
+          "route": "/bookings",
+          "match": {
+            "kind": "bug",
+            "id": "B14",
+            "ruleIndex": 0,
+            "tentative": false
+          },
+          "outcome": "tp",
+          "bugId": "B14",
+          "why": "matches B14 rule 1"
+        },
+        {
+          "findingId": "fd_efommbqm",
+          "fingerprint": "fp_5d1df82c859cac79",
+          "title": "Booking summary 'When' field never shows a value",
+          "kind": "improvement",
+          "tier": "suggestion",
+          "category": "ux",
+          "route": "/book?service",
+          "outcome": "unlabelled",
+          "why": "matches no rule; needs a label"
+        },
+        {
+          "findingId": "fd_aphrg6ca",
+          "fingerprint": "fp_fcfdeb6d277ac726",
+          "title": "Date field has no format hint",
+          "kind": "improvement",
+          "tier": "suggestion",
+          "category": "ux",
+          "route": "/book",
+          "outcome": "unlabelled",
+          "why": "matches no rule; needs a label"
+        },
+        {
+          "findingId": "fd_v036psls",
+          "fingerprint": "fp_93ef4fb1e3cee74f",
+          "title": "Login page gives no indication of why the user was redirected there",
+          "kind": "improvement",
+          "tier": "suggestion",
+          "category": "ux",
+          "route": "/login?next",
+          "outcome": "unlabelled",
+          "why": "matches no rule; needs a label"
+        },
+        {
+          "findingId": "fd_qbz73y77",
+          "fingerprint": "fp_031bc07487cf3c29",
+          "title": "Missing X-Content-Type-Options: nosniff",
+          "kind": "improvement",
+          "tier": "evidence_based",
+          "category": "security",
+          "route": "/",
+          "label": "tp_unseeded",
+          "outcome": "tp",
+          "why": "labelled real (not seeded): The bench doesn't send X-Content-Type-Options: nosniff (P0 note); a hygiene improvement no seeded bug covers."
+        },
+        {
+          "findingId": "fd_dno38d2a",
+          "fingerprint": "fp_cf5703bdcd814b7c",
+          "title": "No Content-Security-Policy header",
+          "kind": "improvement",
+          "tier": "evidence_based",
+          "category": "security",
+          "route": "/",
+          "match": {
+            "kind": "bug",
+            "id": "B15",
+            "ruleIndex": 1,
+            "tentative": false
+          },
+          "label": "tp_unseeded",
+          "outcome": "tp",
+          "why": "labelled real (not seeded): The bench sends no CSP (P0 note). Not B15: it matched B15's keyword rule only via 'script' in its impact text."
+        },
+        {
+          "findingId": "fd_gmrid9c4",
+          "fingerprint": "fp_6cc1851db0e7ecdd",
+          "title": "Page can be embedded in other sites (no frame protection)",
+          "kind": "improvement",
+          "tier": "evidence_based",
+          "category": "security",
+          "route": "/",
+          "label": "tp_unseeded",
+          "outcome": "tp",
+          "why": "labelled real (not seeded): The bench sends no frame protection (P0 note); a hygiene improvement no seeded bug covers."
+        },
+        {
+          "findingId": "fd_oilhin0j",
+          "fingerprint": "fp_110f442c2ba140c4",
+          "title": "Price unit inconsistency across services list",
+          "kind": "improvement",
+          "tier": "suggestion",
+          "category": "ux",
+          "route": "/services",
+          "outcome": "unlabelled",
+          "why": "matches no rule; needs a label"
+        },
+        {
+          "findingId": "fd_h8awxr3u",
+          "fingerprint": "fp_8a1b5addf9b47851",
+          "title": "Sold-out service still listed prominently in main services list",
+          "kind": "improvement",
+          "tier": "suggestion",
+          "category": "ux",
+          "route": "/services",
+          "label": "fp",
+          "outcome": "fp",
+          "why": "labelled false positive: Decoy D01: the sold-out service's Book button is disabled with an explanation; missed the rule only on \"Sold-out\" vs \"sold out\"."
+        }
+      ],
+      "found": {
+        "B04": "confirmed",
+        "B05": "confirmed",
+        "B06": "confirmed",
+        "B17": "likely",
+        "B08": "confirmed",
+        "B02": "confirmed",
+        "B15": "confirmed",
+        "B11": "confirmed",
+        "B09": "confirmed",
+        "B18": "likely",
+        "B16": "confirmed",
+        "B10": "confirmed",
+        "B12": "confirmed",
+        "B13": "confirmed",
+        "B14": "confirmed"
+      },
+      "recall": {
+        "confirmed": 0.7222222222222222,
+        "confirmedLikely": 0.8333333333333334,
+        "all": 0.8333333333333334
+      },
+      "precision": {
+        "bugs": {
+          "confirmed": 1,
+          "confirmedLikely": 1,
+          "all": 1
+        },
+        "improvements": {
+          "evidenceBased": 1,
+          "all": 0.875
+        }
+      },
+      "cleanFalsePositives": null,
+      "decoysFlagged": [],
+      "tierAccuracy": 0.8666666666666667,
+      "unlabelled": 11,
+      "minutes": 8.153033333333333,
+      "costUsd": 0.4198945000000002,
+      "llmCalls": 77
+    },
+    {
+      "runId": "run_20260927-130217_vg4y",
+      "pipeline": "ai-no-verify (derived)",
+      "clean": false,
+      "findings": [
+        {
+          "findingId": "fd_v3rnbvcb",
+          "fingerprint": "fp_108e130b1258f658",
+          "title": "Booking details can be viewed without logging in",
+          "kind": "bug",
+          "tier": "confirmed",
+          "category": "security",
+          "route": "/bookings/:id",
+          "outcome": "unlabelled",
+          "why": "matches no rule; needs a label"
+        },
+        {
+          "findingId": "fd_cxf7owzi",
+          "fingerprint": "fp_c35559a5aa03b124",
+          "title": "Booking form accepts dates that have already passed",
+          "kind": "bug",
+          "tier": "confirmed",
+          "category": "validation",
+          "route": "/book",
+          "match": {
+            "kind": "bug",
+            "id": "B04",
+            "ruleIndex": 0,
+            "tentative": false
+          },
+          "outcome": "tp",
+          "bugId": "B04",
+          "why": "matches B04 rule 1"
+        },
+        {
+          "findingId": "fd_lrgql6bm",
+          "fingerprint": "fp_987039207f2338d9",
+          "title": "Booking form crashes when a name contains an apostrophe",
+          "kind": "bug",
+          "tier": "confirmed",
+          "category": "crash",
+          "route": "/book",
+          "match": {
+            "kind": "bug",
+            "id": "B05",
+            "ruleIndex": 0,
+            "tentative": false
+          },
+          "outcome": "tp",
+          "bugId": "B05",
+          "why": "matches B05 rule 1"
+        },
+        {
+          "findingId": "fd_li3re0mk",
+          "fingerprint": "fp_ce124386e82c3363",
+          "title": "Cancelled booking still shows up in the bookings list",
+          "kind": "bug",
+          "tier": "confirmed",
+          "category": "state",
+          "route": "/bookings",
+          "match": {
+            "kind": "bug",
+            "id": "B06",
+            "ruleIndex": 0,
+            "tentative": false
+          },
+          "outcome": "tp",
+          "bugId": "B06",
+          "why": "matches B06 rule 1"
+        },
+        {
+          "findingId": "fd_17jis960",
+          "fingerprint": "fp_ae14784f6329e477",
+          "title": "Clicking the booking button twice quickly creates two bookings",
+          "kind": "bug",
+          "tier": "confirmed",
+          "category": "functional",
+          "route": "/book/confirmation?ref",
+          "match": {
+            "kind": "bug",
+            "id": "B17",
+            "ruleIndex": 0,
+            "tentative": false
+          },
+          "outcome": "tp",
+          "bugId": "B17",
+          "why": "matches B17 rule 1"
+        },
+        {
+          "findingId": "fd_be65gvux",
+          "fingerprint": "fp_4807641267f25a31",
+          "title": "Secret Stripe key is visible to anyone visiting the site",
+          "kind": "bug",
+          "tier": "confirmed",
+          "category": "security",
+          "route": "/",
+          "outcome": "unlabelled",
+          "why": "matches no rule; needs a label"
+        },
+        {
+          "findingId": "fd_7wiazhwm",
+          "fingerprint": "fp_859845f0ad6cf94d",
+          "title": "Updated phone number on profile does not save correctly",
+          "kind": "bug",
+          "tier": "confirmed",
+          "category": "state",
+          "route": "/profile",
+          "match": {
+            "kind": "bug",
+            "id": "B08",
+            "ruleIndex": 0,
+            "tentative": false
+          },
+          "outcome": "tp",
+          "bugId": "B08",
+          "why": "matches B08 rule 1"
+        },
+        {
+          "findingId": "fd_1454va1o",
+          "fingerprint": "fp_c6688d3c457c8c97",
+          "title": "\"Price: low to high\" sorting doesn't actually sort by price",
+          "kind": "bug",
+          "tier": "confirmed",
+          "category": "functional",
+          "route": "/services",
+          "match": {
+            "kind": "bug",
+            "id": "B02",
+            "ruleIndex": 1,
+            "tentative": true
+          },
+          "label": "tp:B02",
+          "outcome": "tp",
+          "bugId": "B02",
+          "why": "labelled tp:B02: DET-SORT: \"Price: low to high\" doesn't put the services in price order."
+        },
+        {
+          "findingId": "fd_29lpb5xu",
+          "fingerprint": "fp_402826ae5f6a4b43",
+          "title": "Booking form accepts a date that has already passed",
+          "kind": "bug",
+          "tier": "confirmed",
+          "category": "validation",
+          "route": "/book/confirmation?ref",
+          "match": {
+            "kind": "bug",
+            "id": "B04",
+            "ruleIndex": 0,
+            "tentative": false
+          },
+          "outcome": "tp",
+          "bugId": "B04",
+          "why": "matches B04 rule 1"
+        },
+        {
+          "findingId": "fd_ab4xsryh",
+          "fingerprint": "fp_e38a34ecea756a5f",
+          "title": "Booking form may not accept half-hour amounts like 1.5 hours",
+          "kind": "bug",
+          "tier": "confirmed",
+          "category": "validation",
+          "route": "/book",
+          "outcome": "unlabelled",
+          "why": "matches no rule; needs a label"
+        },
+        {
+          "findingId": "fd_o3jhyx7h",
+          "fingerprint": "fp_a4abe8cbebd37e3b",
+          "title": "Cancelled booking still shows in the list after cancellation",
+          "kind": "bug",
+          "tier": "confirmed",
+          "category": "functional",
+          "route": "/bookings",
+          "match": {
+            "kind": "bug",
+            "id": "B06",
+            "ruleIndex": 1,
+            "tentative": true
+          },
+          "outcome": "unlabelled",
+          "why": "tentative match (B06 rule 2, confirm: manual); needs a label"
+        },
+        {
+          "findingId": "fd_k3fivrag",
+          "fingerprint": "fp_d06593923558174f",
+          "title": "No way found to reschedule an existing booking",
+          "kind": "bug",
+          "tier": "confirmed",
+          "category": "functional",
+          "route": "/",
+          "outcome": "unlabelled",
+          "why": "matches no rule; needs a label"
+        },
+        {
+          "findingId": "fd_q4ra71ed",
+          "fingerprint": "fp_e9638a3d5b6b4bdd",
+          "title": "Profile form accepts an incomplete phone number",
+          "kind": "bug",
+          "tier": "confirmed",
+          "category": "validation",
+          "route": "/profile",
+          "outcome": "unlabelled",
+          "why": "matches no rule; needs a label"
+        },
+        {
+          "findingId": "fd_dh4fny4d",
+          "fingerprint": "fp_8e5d8914cb66379e",
+          "title": "Profile updates (name and phone) don't save after reload",
+          "kind": "bug",
+          "tier": "confirmed",
+          "category": "functional",
+          "route": "/profile",
+          "match": {
+            "kind": "bug",
+            "id": "B08",
+            "ruleIndex": 1,
+            "tentative": true
+          },
+          "outcome": "unlabelled",
+          "why": "tentative match (B08 rule 2, confirm: manual); needs a label"
+        },
+        {
+          "findingId": "fd_0kzhq4xd",
+          "fingerprint": "fp_b3f5826353bd1a23",
+          "title": "Search box lets typed text be inserted as page code (security risk)",
+          "kind": "bug",
+          "tier": "confirmed",
+          "category": "security",
+          "route": "/services?q",
+          "match": {
+            "kind": "bug",
+            "id": "B15",
+            "ruleIndex": 0,
+            "tentative": false
+          },
+          "outcome": "tp",
+          "bugId": "B15",
+          "why": "matches B15 rule 1"
+        },
+        {
+          "findingId": "fd_stqegnm5",
+          "fingerprint": "fp_285baedc870abb76",
+          "title": "Searching with an apostrophe crashes search and reveals database details",
+          "kind": "bug",
+          "tier": "confirmed",
+          "category": "security",
+          "route": "/services?q",
+          "match": {
+            "kind": "bug",
+            "id": "B15",
+            "ruleIndex": 1,
+            "tentative": false
+          },
+          "outcome": "tp",
+          "bugId": "B15",
+          "why": "matches B15 rule 2"
+        },
+        {
+          "findingId": "fd_ftm0ug1c",
+          "fingerprint": "fp_67b897a090f8b356",
+          "title": "The page's JavaScript crashed: TypeError: Cannot read properties of undefined (reading 'links')",
+          "kind": "bug",
+          "tier": "confirmed",
+          "category": "crash",
+          "route": "/faq",
+          "match": {
+            "kind": "bug",
+            "id": "B11",
+            "ruleIndex": 0,
+            "tentative": false
+          },
+          "outcome": "tp",
+          "bugId": "B11",
+          "why": "matches B11 rule 1"
+        },
+        {
+          "findingId": "fd_nron9k4e",
+          "fingerprint": "fp_7b76efbe19cde62c",
+          "title": "Image doesn't load: \"Carpet shampoo\"",
+          "kind": "bug",
+          "tier": "confirmed",
+          "category": "broken-resource",
+          "route": "/services",
+          "match": {
+            "kind": "bug",
+            "id": "B09",
+            "ruleIndex": 0,
+            "tentative": false
+          },
+          "outcome": "tp",
+          "bugId": "B09",
+          "why": "matches B09 rule 1"
+        },
+        {
+          "findingId": "fd_vfzb02c3",
+          "fingerprint": "fp_66408ac5789781e6",
+          "title": "Login errors reveal whether an account exists",
+          "kind": "bug",
+          "tier": "confirmed",
+          "category": "security",
+          "route": "/login",
+          "match": {
+            "kind": "bug",
+            "id": "B18",
+            "ruleIndex": 0,
+            "tentative": false
+          },
+          "outcome": "tp",
+          "bugId": "B18",
+          "why": "matches B18 rule 1"
+        },
+        {
+          "findingId": "fd_ycmz6d9h",
+          "fingerprint": "fp_0fa71620b9c525c3",
+          "title": "Page scrolls sideways on a phone (605 px content in a 375 px screen)",
+          "kind": "bug",
+          "tier": "confirmed",
+          "category": "responsive",
+          "route": "/book",
+          "match": {
+            "kind": "bug",
+            "id": "B16",
+            "ruleIndex": 0,
+            "tentative": false
+          },
+          "outcome": "tp",
+          "bugId": "B16",
+          "why": "matches B16 rule 1"
+        },
+        {
+          "findingId": "fd_jqic73mb",
+          "fingerprint": "fp_d2cffea3ad040b42",
+          "title": "Link \"Terms\" goes to a missing page (/terms-and-conditions → 404)",
+          "kind": "bug",
+          "tier": "confirmed",
+          "category": "broken-resource",
+          "route": "/",
+          "match": {
+            "kind": "bug",
+            "id": "B10",
+            "ruleIndex": 0,
+            "tentative": false
+          },
+          "outcome": "tp",
+          "bugId": "B10",
+          "why": "matches B10 rule 1"
+        },
+        {
+          "findingId": "fd_4l5azjuj",
+          "fingerprint": "fp_47bcc5a3238b3d5f",
+          "title": "Accessibility: Buttons must have discernible text",
+          "kind": "improvement",
+          "tier": "evidence_based",
+          "category": "accessibility",
+          "route": "/contact",
+          "match": {
+            "kind": "bug",
+            "id": "B12",
+            "ruleIndex": 1,
+            "tentative": false
+          },
+          "outcome": "tp",
+          "bugId": "B12",
+          "why": "matches B12 rule 2"
+        },
+        {
+          "findingId": "fd_njr5zpaw",
+          "fingerprint": "fp_4b42d1f0cab26db3",
+          "title": "Accessibility: Elements must meet minimum color contrast ratio thresholds",
+          "kind": "improvement",
+          "tier": "evidence_based",
+          "category": "accessibility",
+          "route": "/",
+          "match": {
+            "kind": "bug",
+            "id": "B13",
+            "ruleIndex": 0,
+            "tentative": false
+          },
+          "outcome": "tp",
+          "bugId": "B13",
+          "why": "matches B13 rule 1"
+        },
+        {
+          "findingId": "fd_eu511ft9",
+          "fingerprint": "fp_88181b5b01b2e3b0",
+          "title": "Accessibility: Form elements must have labels",
+          "kind": "improvement",
+          "tier": "evidence_based",
+          "category": "accessibility",
+          "route": "/contact",
+          "match": {
+            "kind": "bug",
+            "id": "B12",
+            "ruleIndex": 0,
+            "tentative": false
+          },
+          "outcome": "tp",
+          "bugId": "B12",
+          "why": "matches B12 rule 1"
+        },
+        {
+          "findingId": "fd_pbbzfv2g",
+          "fingerprint": "fp_fcb2c9f64fd53c70",
+          "title": "Slow API call: GET /api/bookings took 3.5 s",
+          "kind": "improvement",
+          "tier": "evidence_based",
+          "category": "performance",
+          "route": "/bookings",
+          "match": {
+            "kind": "bug",
+            "id": "B14",
+            "ruleIndex": 0,
+            "tentative": false
+          },
+          "outcome": "tp",
+          "bugId": "B14",
+          "why": "matches B14 rule 1"
+        },
+        {
+          "findingId": "fd_efommbqm",
+          "fingerprint": "fp_5d1df82c859cac79",
+          "title": "Booking summary 'When' field never shows a value",
+          "kind": "improvement",
+          "tier": "suggestion",
+          "category": "ux",
+          "route": "/book?service",
+          "outcome": "unlabelled",
+          "why": "matches no rule; needs a label"
+        },
+        {
+          "findingId": "fd_aphrg6ca",
+          "fingerprint": "fp_fcfdeb6d277ac726",
+          "title": "Date field has no format hint",
+          "kind": "improvement",
+          "tier": "suggestion",
+          "category": "ux",
+          "route": "/book",
+          "outcome": "unlabelled",
+          "why": "matches no rule; needs a label"
+        },
+        {
+          "findingId": "fd_v036psls",
+          "fingerprint": "fp_93ef4fb1e3cee74f",
+          "title": "Login page gives no indication of why the user was redirected there",
+          "kind": "improvement",
+          "tier": "suggestion",
+          "category": "ux",
+          "route": "/login?next",
+          "outcome": "unlabelled",
+          "why": "matches no rule; needs a label"
+        },
+        {
+          "findingId": "fd_qbz73y77",
+          "fingerprint": "fp_031bc07487cf3c29",
+          "title": "Missing X-Content-Type-Options: nosniff",
+          "kind": "improvement",
+          "tier": "evidence_based",
+          "category": "security",
+          "route": "/",
+          "label": "tp_unseeded",
+          "outcome": "tp",
+          "why": "labelled real (not seeded): The bench doesn't send X-Content-Type-Options: nosniff (P0 note); a hygiene improvement no seeded bug covers."
+        },
+        {
+          "findingId": "fd_dno38d2a",
+          "fingerprint": "fp_cf5703bdcd814b7c",
+          "title": "No Content-Security-Policy header",
+          "kind": "improvement",
+          "tier": "evidence_based",
+          "category": "security",
+          "route": "/",
+          "match": {
+            "kind": "bug",
+            "id": "B15",
+            "ruleIndex": 1,
+            "tentative": false
+          },
+          "label": "tp_unseeded",
+          "outcome": "tp",
+          "why": "labelled real (not seeded): The bench sends no CSP (P0 note). Not B15: it matched B15's keyword rule only via 'script' in its impact text."
+        },
+        {
+          "findingId": "fd_gmrid9c4",
+          "fingerprint": "fp_6cc1851db0e7ecdd",
+          "title": "Page can be embedded in other sites (no frame protection)",
+          "kind": "improvement",
+          "tier": "evidence_based",
+          "category": "security",
+          "route": "/",
+          "label": "tp_unseeded",
+          "outcome": "tp",
+          "why": "labelled real (not seeded): The bench sends no frame protection (P0 note); a hygiene improvement no seeded bug covers."
+        },
+        {
+          "findingId": "fd_oilhin0j",
+          "fingerprint": "fp_110f442c2ba140c4",
+          "title": "Price unit inconsistency across services list",
+          "kind": "improvement",
+          "tier": "suggestion",
+          "category": "ux",
+          "route": "/services",
+          "outcome": "unlabelled",
+          "why": "matches no rule; needs a label"
+        },
+        {
+          "findingId": "fd_h8awxr3u",
+          "fingerprint": "fp_8a1b5addf9b47851",
+          "title": "Sold-out service still listed prominently in main services list",
+          "kind": "improvement",
+          "tier": "suggestion",
+          "category": "ux",
+          "route": "/services",
+          "label": "fp",
+          "outcome": "fp",
+          "why": "labelled false positive: Decoy D01: the sold-out service's Book button is disabled with an explanation; missed the rule only on \"Sold-out\" vs \"sold out\"."
+        }
+      ],
+      "found": {
+        "B04": "confirmed",
+        "B05": "confirmed",
+        "B06": "confirmed",
+        "B17": "confirmed",
+        "B08": "confirmed",
+        "B02": "confirmed",
+        "B15": "confirmed",
+        "B11": "confirmed",
+        "B09": "confirmed",
+        "B18": "confirmed",
+        "B16": "confirmed",
+        "B10": "confirmed",
+        "B12": "confirmed",
+        "B13": "confirmed",
+        "B14": "confirmed"
+      },
+      "recall": {
+        "confirmed": 0.8333333333333334,
+        "confirmedLikely": 0.8333333333333334,
+        "all": 0.8333333333333334
+      },
+      "precision": {
+        "bugs": {
+          "confirmed": 1,
+          "confirmedLikely": 1,
+          "all": 1
+        },
+        "improvements": {
+          "evidenceBased": 1,
+          "all": 0.875
+        }
+      },
+      "cleanFalsePositives": null,
+      "decoysFlagged": [],
+      "tierAccuracy": 0.8,
+      "unlabelled": 11,
+      "minutes": 8.153033333333333,
+      "costUsd": 0.4198945000000002,
+      "llmCalls": 77
+    },
+    {
+      "runId": "run_20260927-130217_vg4y",
+      "pipeline": "full-no-skeptic (derived)",
+      "clean": false,
+      "findings": [
+        {
+          "findingId": "fd_v3rnbvcb",
+          "fingerprint": "fp_108e130b1258f658",
+          "title": "Booking details can be viewed without logging in",
+          "kind": "bug",
+          "tier": "confirmed",
+          "category": "security",
+          "route": "/bookings/:id",
+          "outcome": "unlabelled",
+          "why": "matches no rule; needs a label"
+        },
+        {
+          "findingId": "fd_cxf7owzi",
+          "fingerprint": "fp_c35559a5aa03b124",
+          "title": "Booking form accepts dates that have already passed",
+          "kind": "bug",
+          "tier": "confirmed",
+          "category": "validation",
+          "route": "/book",
+          "match": {
+            "kind": "bug",
+            "id": "B04",
+            "ruleIndex": 0,
+            "tentative": false
+          },
+          "outcome": "tp",
+          "bugId": "B04",
+          "why": "matches B04 rule 1"
+        },
+        {
+          "findingId": "fd_lrgql6bm",
+          "fingerprint": "fp_987039207f2338d9",
+          "title": "Booking form crashes when a name contains an apostrophe",
+          "kind": "bug",
+          "tier": "confirmed",
+          "category": "crash",
+          "route": "/book",
+          "match": {
+            "kind": "bug",
+            "id": "B05",
+            "ruleIndex": 0,
+            "tentative": false
+          },
+          "outcome": "tp",
+          "bugId": "B05",
+          "why": "matches B05 rule 1"
+        },
+        {
+          "findingId": "fd_li3re0mk",
+          "fingerprint": "fp_ce124386e82c3363",
+          "title": "Cancelled booking still shows up in the bookings list",
+          "kind": "bug",
+          "tier": "confirmed",
+          "category": "state",
+          "route": "/bookings",
+          "match": {
+            "kind": "bug",
+            "id": "B06",
+            "ruleIndex": 0,
+            "tentative": false
+          },
+          "outcome": "tp",
+          "bugId": "B06",
+          "why": "matches B06 rule 1"
+        },
+        {
+          "findingId": "fd_17jis960",
+          "fingerprint": "fp_ae14784f6329e477",
+          "title": "Clicking the booking button twice quickly creates two bookings",
+          "kind": "bug",
+          "tier": "likely",
+          "category": "functional",
+          "route": "/book/confirmation?ref",
+          "match": {
+            "kind": "bug",
+            "id": "B17",
+            "ruleIndex": 0,
+            "tentative": false
+          },
+          "outcome": "tp",
+          "bugId": "B17",
+          "why": "matches B17 rule 1"
+        },
+        {
+          "findingId": "fd_be65gvux",
+          "fingerprint": "fp_4807641267f25a31",
+          "title": "Secret Stripe key is visible to anyone visiting the site",
+          "kind": "bug",
+          "tier": "confirmed",
+          "category": "security",
+          "route": "/",
+          "outcome": "unlabelled",
+          "why": "matches no rule; needs a label"
+        },
+        {
+          "findingId": "fd_7wiazhwm",
+          "fingerprint": "fp_859845f0ad6cf94d",
+          "title": "Updated phone number on profile does not save correctly",
+          "kind": "bug",
+          "tier": "confirmed",
+          "category": "state",
+          "route": "/profile",
+          "match": {
+            "kind": "bug",
+            "id": "B08",
+            "ruleIndex": 0,
+            "tentative": false
+          },
+          "outcome": "tp",
+          "bugId": "B08",
+          "why": "matches B08 rule 1"
+        },
+        {
+          "findingId": "fd_1454va1o",
+          "fingerprint": "fp_c6688d3c457c8c97",
+          "title": "\"Price: low to high\" sorting doesn't actually sort by price",
+          "kind": "bug",
+          "tier": "confirmed",
+          "category": "functional",
+          "route": "/services",
+          "match": {
+            "kind": "bug",
+            "id": "B02",
+            "ruleIndex": 1,
+            "tentative": true
+          },
+          "label": "tp:B02",
+          "outcome": "tp",
+          "bugId": "B02",
+          "why": "labelled tp:B02: DET-SORT: \"Price: low to high\" doesn't put the services in price order."
+        },
+        {
+          "findingId": "fd_29lpb5xu",
+          "fingerprint": "fp_402826ae5f6a4b43",
+          "title": "Booking form accepts a date that has already passed",
+          "kind": "bug",
+          "tier": "needs_review",
+          "category": "validation",
+          "route": "/book/confirmation?ref",
+          "match": {
+            "kind": "bug",
+            "id": "B04",
+            "ruleIndex": 0,
+            "tentative": false
+          },
+          "outcome": "tp",
+          "bugId": "B04",
+          "why": "matches B04 rule 1"
+        },
+        {
+          "findingId": "fd_ab4xsryh",
+          "fingerprint": "fp_e38a34ecea756a5f",
+          "title": "Booking form may not accept half-hour amounts like 1.5 hours",
+          "kind": "bug",
+          "tier": "needs_review",
+          "category": "validation",
+          "route": "/book",
+          "outcome": "unlabelled",
+          "why": "matches no rule; needs a label"
+        },
+        {
+          "findingId": "fd_o3jhyx7h",
+          "fingerprint": "fp_a4abe8cbebd37e3b",
+          "title": "Cancelled booking still shows in the list after cancellation",
+          "kind": "bug",
+          "tier": "likely",
+          "category": "functional",
+          "route": "/bookings",
+          "match": {
+            "kind": "bug",
+            "id": "B06",
+            "ruleIndex": 1,
+            "tentative": true
+          },
+          "outcome": "unlabelled",
+          "why": "tentative match (B06 rule 2, confirm: manual); needs a label"
+        },
+        {
+          "findingId": "fd_k3fivrag",
+          "fingerprint": "fp_d06593923558174f",
+          "title": "No way found to reschedule an existing booking",
+          "kind": "bug",
+          "tier": "likely",
+          "category": "functional",
+          "route": "/",
+          "outcome": "unlabelled",
+          "why": "matches no rule; needs a label"
+        },
+        {
+          "findingId": "fd_q4ra71ed",
+          "fingerprint": "fp_e9638a3d5b6b4bdd",
+          "title": "Profile form accepts an incomplete phone number",
+          "kind": "bug",
+          "tier": "needs_review",
+          "category": "validation",
+          "route": "/profile",
+          "outcome": "unlabelled",
+          "why": "matches no rule; needs a label"
+        },
+        {
+          "findingId": "fd_dh4fny4d",
+          "fingerprint": "fp_8e5d8914cb66379e",
+          "title": "Profile updates (name and phone) don't save after reload",
+          "kind": "bug",
+          "tier": "likely",
+          "category": "functional",
+          "route": "/profile",
+          "match": {
+            "kind": "bug",
+            "id": "B08",
+            "ruleIndex": 1,
+            "tentative": true
+          },
+          "outcome": "unlabelled",
+          "why": "tentative match (B08 rule 2, confirm: manual); needs a label"
+        },
+        {
+          "findingId": "fd_0kzhq4xd",
+          "fingerprint": "fp_b3f5826353bd1a23",
+          "title": "Search box lets typed text be inserted as page code (security risk)",
+          "kind": "bug",
+          "tier": "confirmed",
+          "category": "security",
+          "route": "/services?q",
+          "match": {
+            "kind": "bug",
+            "id": "B15",
+            "ruleIndex": 0,
+            "tentative": false
+          },
+          "outcome": "tp",
+          "bugId": "B15",
+          "why": "matches B15 rule 1"
+        },
+        {
+          "findingId": "fd_stqegnm5",
+          "fingerprint": "fp_285baedc870abb76",
+          "title": "Searching with an apostrophe crashes search and reveals database details",
+          "kind": "bug",
+          "tier": "confirmed",
+          "category": "security",
+          "route": "/services?q",
+          "match": {
+            "kind": "bug",
+            "id": "B15",
+            "ruleIndex": 1,
+            "tentative": false
+          },
+          "outcome": "tp",
+          "bugId": "B15",
+          "why": "matches B15 rule 2"
+        },
+        {
+          "findingId": "fd_ftm0ug1c",
+          "fingerprint": "fp_67b897a090f8b356",
+          "title": "The page's JavaScript crashed: TypeError: Cannot read properties of undefined (reading 'links')",
+          "kind": "bug",
+          "tier": "confirmed",
+          "category": "crash",
+          "route": "/faq",
+          "match": {
+            "kind": "bug",
+            "id": "B11",
+            "ruleIndex": 0,
+            "tentative": false
+          },
+          "outcome": "tp",
+          "bugId": "B11",
+          "why": "matches B11 rule 1"
+        },
+        {
+          "findingId": "fd_nron9k4e",
+          "fingerprint": "fp_7b76efbe19cde62c",
+          "title": "Image doesn't load: \"Carpet shampoo\"",
+          "kind": "bug",
+          "tier": "confirmed",
+          "category": "broken-resource",
+          "route": "/services",
+          "match": {
+            "kind": "bug",
+            "id": "B09",
+            "ruleIndex": 0,
+            "tentative": false
+          },
+          "outcome": "tp",
+          "bugId": "B09",
+          "why": "matches B09 rule 1"
+        },
+        {
+          "findingId": "fd_vfzb02c3",
+          "fingerprint": "fp_66408ac5789781e6",
+          "title": "Login errors reveal whether an account exists",
+          "kind": "bug",
+          "tier": "likely",
+          "category": "security",
+          "route": "/login",
+          "match": {
+            "kind": "bug",
+            "id": "B18",
+            "ruleIndex": 0,
+            "tentative": false
+          },
+          "outcome": "tp",
+          "bugId": "B18",
+          "why": "matches B18 rule 1"
+        },
+        {
+          "findingId": "fd_ycmz6d9h",
+          "fingerprint": "fp_0fa71620b9c525c3",
+          "title": "Page scrolls sideways on a phone (605 px content in a 375 px screen)",
+          "kind": "bug",
+          "tier": "confirmed",
+          "category": "responsive",
+          "route": "/book",
+          "match": {
+            "kind": "bug",
+            "id": "B16",
+            "ruleIndex": 0,
+            "tentative": false
+          },
+          "outcome": "tp",
+          "bugId": "B16",
+          "why": "matches B16 rule 1"
+        },
+        {
+          "findingId": "fd_jqic73mb",
+          "fingerprint": "fp_d2cffea3ad040b42",
+          "title": "Link \"Terms\" goes to a missing page (/terms-and-conditions → 404)",
+          "kind": "bug",
+          "tier": "confirmed",
+          "category": "broken-resource",
+          "route": "/",
+          "match": {
+            "kind": "bug",
+            "id": "B10",
+            "ruleIndex": 0,
+            "tentative": false
+          },
+          "outcome": "tp",
+          "bugId": "B10",
+          "why": "matches B10 rule 1"
+        },
+        {
+          "findingId": "fd_4l5azjuj",
+          "fingerprint": "fp_47bcc5a3238b3d5f",
+          "title": "Accessibility: Buttons must have discernible text",
+          "kind": "improvement",
+          "tier": "evidence_based",
+          "category": "accessibility",
+          "route": "/contact",
+          "match": {
+            "kind": "bug",
+            "id": "B12",
+            "ruleIndex": 1,
+            "tentative": false
+          },
+          "outcome": "tp",
+          "bugId": "B12",
+          "why": "matches B12 rule 2"
+        },
+        {
+          "findingId": "fd_njr5zpaw",
+          "fingerprint": "fp_4b42d1f0cab26db3",
+          "title": "Accessibility: Elements must meet minimum color contrast ratio thresholds",
+          "kind": "improvement",
+          "tier": "evidence_based",
+          "category": "accessibility",
+          "route": "/",
+          "match": {
+            "kind": "bug",
+            "id": "B13",
+            "ruleIndex": 0,
+            "tentative": false
+          },
+          "outcome": "tp",
+          "bugId": "B13",
+          "why": "matches B13 rule 1"
+        },
+        {
+          "findingId": "fd_eu511ft9",
+          "fingerprint": "fp_88181b5b01b2e3b0",
+          "title": "Accessibility: Form elements must have labels",
+          "kind": "improvement",
+          "tier": "evidence_based",
+          "category": "accessibility",
+          "route": "/contact",
+          "match": {
+            "kind": "bug",
+            "id": "B12",
+            "ruleIndex": 0,
+            "tentative": false
+          },
+          "outcome": "tp",
+          "bugId": "B12",
+          "why": "matches B12 rule 1"
+        },
+        {
+          "findingId": "fd_pbbzfv2g",
+          "fingerprint": "fp_fcb2c9f64fd53c70",
+          "title": "Slow API call: GET /api/bookings took 3.5 s",
+          "kind": "improvement",
+          "tier": "evidence_based",
+          "category": "performance",
+          "route": "/bookings",
+          "match": {
+            "kind": "bug",
+            "id": "B14",
+            "ruleIndex": 0,
+            "tentative": false
+          },
+          "outcome": "tp",
+          "bugId": "B14",
+          "why": "matches B14 rule 1"
+        },
+        {
+          "findingId": "fd_efommbqm",
+          "fingerprint": "fp_5d1df82c859cac79",
+          "title": "Booking summary 'When' field never shows a value",
+          "kind": "improvement",
+          "tier": "suggestion",
+          "category": "ux",
+          "route": "/book?service",
+          "outcome": "unlabelled",
+          "why": "matches no rule; needs a label"
+        },
+        {
+          "findingId": "fd_aphrg6ca",
+          "fingerprint": "fp_fcfdeb6d277ac726",
+          "title": "Date field has no format hint",
+          "kind": "improvement",
+          "tier": "suggestion",
+          "category": "ux",
+          "route": "/book",
+          "outcome": "unlabelled",
+          "why": "matches no rule; needs a label"
+        },
+        {
+          "findingId": "fd_v036psls",
+          "fingerprint": "fp_93ef4fb1e3cee74f",
+          "title": "Login page gives no indication of why the user was redirected there",
+          "kind": "improvement",
+          "tier": "suggestion",
+          "category": "ux",
+          "route": "/login?next",
+          "outcome": "unlabelled",
+          "why": "matches no rule; needs a label"
+        },
+        {
+          "findingId": "fd_qbz73y77",
+          "fingerprint": "fp_031bc07487cf3c29",
+          "title": "Missing X-Content-Type-Options: nosniff",
+          "kind": "improvement",
+          "tier": "evidence_based",
+          "category": "security",
+          "route": "/",
+          "label": "tp_unseeded",
+          "outcome": "tp",
+          "why": "labelled real (not seeded): The bench doesn't send X-Content-Type-Options: nosniff (P0 note); a hygiene improvement no seeded bug covers."
+        },
+        {
+          "findingId": "fd_dno38d2a",
+          "fingerprint": "fp_cf5703bdcd814b7c",
+          "title": "No Content-Security-Policy header",
+          "kind": "improvement",
+          "tier": "evidence_based",
+          "category": "security",
+          "route": "/",
+          "match": {
+            "kind": "bug",
+            "id": "B15",
+            "ruleIndex": 1,
+            "tentative": false
+          },
+          "label": "tp_unseeded",
+          "outcome": "tp",
+          "why": "labelled real (not seeded): The bench sends no CSP (P0 note). Not B15: it matched B15's keyword rule only via 'script' in its impact text."
+        },
+        {
+          "findingId": "fd_gmrid9c4",
+          "fingerprint": "fp_6cc1851db0e7ecdd",
+          "title": "Page can be embedded in other sites (no frame protection)",
+          "kind": "improvement",
+          "tier": "evidence_based",
+          "category": "security",
+          "route": "/",
+          "label": "tp_unseeded",
+          "outcome": "tp",
+          "why": "labelled real (not seeded): The bench sends no frame protection (P0 note); a hygiene improvement no seeded bug covers."
+        },
+        {
+          "findingId": "fd_oilhin0j",
+          "fingerprint": "fp_110f442c2ba140c4",
+          "title": "Price unit inconsistency across services list",
+          "kind": "improvement",
+          "tier": "suggestion",
+          "category": "ux",
+          "route": "/services",
+          "outcome": "unlabelled",
+          "why": "matches no rule; needs a label"
+        },
+        {
+          "findingId": "fd_h8awxr3u",
+          "fingerprint": "fp_8a1b5addf9b47851",
+          "title": "Sold-out service still listed prominently in main services list",
+          "kind": "improvement",
+          "tier": "suggestion",
+          "category": "ux",
+          "route": "/services",
+          "label": "fp",
+          "outcome": "fp",
+          "why": "labelled false positive: Decoy D01: the sold-out service's Book button is disabled with an explanation; missed the rule only on \"Sold-out\" vs \"sold out\"."
+        }
+      ],
+      "found": {
+        "B04": "confirmed",
+        "B05": "confirmed",
+        "B06": "confirmed",
+        "B17": "likely",
+        "B08": "confirmed",
+        "B02": "confirmed",
+        "B15": "confirmed",
+        "B11": "confirmed",
+        "B09": "confirmed",
+        "B18": "likely",
+        "B16": "confirmed",
+        "B10": "confirmed",
+        "B12": "confirmed",
+        "B13": "confirmed",
+        "B14": "confirmed"
+      },
+      "recall": {
+        "confirmed": 0.7222222222222222,
+        "confirmedLikely": 0.8333333333333334,
+        "all": 0.8333333333333334
+      },
+      "precision": {
+        "bugs": {
+          "confirmed": 1,
+          "confirmedLikely": 1,
+          "all": 1
+        },
+        "improvements": {
+          "evidenceBased": 1,
+          "all": 0.875
+        }
+      },
+      "cleanFalsePositives": null,
+      "decoysFlagged": [],
+      "tierAccuracy": 0.8666666666666667,
+      "unlabelled": 11,
+      "minutes": 8.153033333333333,
+      "costUsd": 0.4198945000000002,
+      "llmCalls": 77
+    },
+    {
+      "runId": "run_20260927-131110_waqv",
+      "pipeline": "full",
+      "clean": false,
+      "findings": [
+        {
+          "findingId": "fd_1kla6efx",
+          "fingerprint": "fp_4807641267f25a31",
+          "title": "A secret payment key is visible to anyone who visits the site",
+          "kind": "bug",
+          "tier": "confirmed",
+          "category": "security",
+          "route": "/",
+          "outcome": "unlabelled",
+          "why": "matches no rule; needs a label"
+        },
+        {
+          "findingId": "fd_i7h9eyhw",
+          "fingerprint": "fp_108e130b1258f658",
+          "title": "Booking data can be viewed by anyone without logging in",
+          "kind": "bug",
+          "tier": "confirmed",
+          "category": "security",
+          "route": "/bookings/:id",
+          "outcome": "unlabelled",
+          "why": "matches no rule; needs a label"
+        },
+        {
+          "findingId": "fd_xs178ps0",
+          "fingerprint": "fp_6bb97fda8af2347e",
+          "title": "Quote total doesn't match the subtotal and tax shown",
+          "kind": "bug",
+          "tier": "confirmed",
+          "category": "functional",
+          "route": "/quote",
+          "match": {
+            "kind": "bug",
+            "id": "B01",
+            "ruleIndex": 1,
+            "tentative": true
+          },
+          "label": "tp:B01",
+          "outcome": "tp",
+          "bugId": "B01",
+          "why": "labelled tp:B01: DET-TOTALS: the quote total isn't subtotal + GST on /quote (GST applied twice)."
+        },
+        {
+          "findingId": "fd_fc2njp6y",
+          "fingerprint": "fp_285baedc870abb76",
+          "title": "Search box crashes and leaks database error text",
+          "kind": "bug",
+          "tier": "confirmed",
+          "category": "security",
+          "route": "/services?q",
+          "match": {
+            "kind": "bug",
+            "id": "B15",
+            "ruleIndex": 1,
+            "tentative": false
+          },
+          "outcome": "tp",
+          "bugId": "B15",
+          "why": "matches B15 rule 2"
+        },
+        {
+          "findingId": "fd_brik0j4z",
+          "fingerprint": "fp_c6688d3c457c8c97",
+          "title": "\"Price: low to high\" sorting doesn't actually sort by price",
+          "kind": "bug",
+          "tier": "confirmed",
+          "category": "functional",
+          "route": "/services",
+          "match": {
+            "kind": "bug",
+            "id": "B02",
+            "ruleIndex": 1,
+            "tentative": true
+          },
+          "label": "tp:B02",
+          "outcome": "tp",
+          "bugId": "B02",
+          "why": "labelled tp:B02: DET-SORT: \"Price: low to high\" doesn't put the services in price order."
+        },
+        {
+          "findingId": "fd_060y4hdu",
+          "fingerprint": "fp_67b897a090f8b356",
+          "title": "Clicking a question on the FAQ page crashes the page's code",
+          "kind": "bug",
+          "tier": "confirmed",
+          "category": "crash",
+          "route": "/faq",
+          "match": {
+            "kind": "bug",
+            "id": "B11",
+            "ruleIndex": 0,
+            "tentative": false
+          },
+          "outcome": "tp",
+          "bugId": "B11",
+          "why": "matches B11 rule 1"
+        },
+        {
+          "findingId": "fd_9rvy7jdg",
+          "fingerprint": "fp_6a8aae906f8d1072",
+          "title": "Hidden text on services page tries to trick automated testers",
+          "kind": "bug",
+          "tier": "needs_review",
+          "category": "security",
+          "route": "/services?q&sort",
+          "match": {
+            "kind": "bug",
+            "id": "B15",
+            "ruleIndex": 1,
+            "tentative": false
+          },
+          "outcome": "tp",
+          "bugId": "B15",
+          "why": "matches B15 rule 2"
+        },
+        {
+          "findingId": "fd_h7l1agd6",
+          "fingerprint": "fp_b3f5826353bd1a23",
+          "title": "Text typed into the search box can be turned into hidden page elements",
+          "kind": "bug",
+          "tier": "confirmed",
+          "category": "security",
+          "route": "/services?q",
+          "match": {
+            "kind": "bug",
+            "id": "B15",
+            "ruleIndex": 0,
+            "tentative": false
+          },
+          "outcome": "tp",
+          "bugId": "B15",
+          "why": "matches B15 rule 1"
+        },
+        {
+          "findingId": "fd_kbt5t9dp",
+          "fingerprint": "fp_0fa71620b9c525c3",
+          "title": "Booking page scrolls sideways on phone screens",
+          "kind": "bug",
+          "tier": "confirmed",
+          "category": "responsive",
+          "route": "/book",
+          "match": {
+            "kind": "bug",
+            "id": "B16",
+            "ruleIndex": 0,
+            "tentative": false
+          },
+          "outcome": "tp",
+          "bugId": "B16",
+          "why": "matches B16 rule 1"
+        },
+        {
+          "findingId": "fd_kgg5cwpf",
+          "fingerprint": "fp_cdb7372dc62cb2e3",
+          "title": "Cancelled booking HC-1001 still shows up in the bookings list",
+          "kind": "bug",
+          "tier": "confirmed",
+          "category": "state",
+          "route": "/bookings",
+          "match": {
+            "kind": "bug",
+            "id": "B06",
+            "ruleIndex": 1,
+            "tentative": true
+          },
+          "label": "tp:B06",
+          "outcome": "tp",
+          "bugId": "B06",
+          "why": "labelled tp:B06: Check: the booking the user cancelled is still listed after confirming, so a different one was removed (B06)."
+        },
+        {
+          "findingId": "fd_g0qy2roh",
+          "fingerprint": "fp_8c961abfcbec67da",
+          "title": "Cancelling a booking says it worked but the booking stays in the list",
+          "kind": "bug",
+          "tier": "likely",
+          "category": "functional",
+          "route": "/bookings",
+          "match": {
+            "kind": "bug",
+            "id": "B06",
+            "ruleIndex": 1,
+            "tentative": true
+          },
+          "outcome": "unlabelled",
+          "why": "tentative match (B06 rule 2, confirm: manual); needs a label"
+        },
+        {
+          "findingId": "fd_ere1596f",
+          "fingerprint": "fp_66408ac5789781e6",
+          "title": "Login error messages reveal if an email has an account",
+          "kind": "bug",
+          "tier": "likely",
+          "category": "security",
+          "route": "/login",
+          "match": {
+            "kind": "bug",
+            "id": "B18",
+            "ruleIndex": 0,
+            "tentative": false
+          },
+          "outcome": "tp",
+          "bugId": "B18",
+          "why": "matches B18 rule 1"
+        },
+        {
+          "findingId": "fd_1xemput9",
+          "fingerprint": "fp_7b76efbe19cde62c",
+          "title": "Missing image: \"Carpet shampoo\" picture doesn't load",
+          "kind": "bug",
+          "tier": "confirmed",
+          "category": "broken-resource",
+          "route": "/services",
+          "match": {
+            "kind": "bug",
+            "id": "B09",
+            "ruleIndex": 0,
+            "tentative": false
+          },
+          "outcome": "tp",
+          "bugId": "B09",
+          "why": "matches B09 rule 1"
+        },
+        {
+          "findingId": "fd_lmw86nga",
+          "fingerprint": "fp_755e1d5164900d54",
+          "title": "Profile form accepts a too-short phone number",
+          "kind": "bug",
+          "tier": "needs_review",
+          "category": "validation",
+          "route": "/profile",
+          "outcome": "unlabelled",
+          "why": "matches no rule; needs a label"
+        },
+        {
+          "findingId": "fd_aptvgvc3",
+          "fingerprint": "fp_164ec372b85c1608",
+          "title": "Profile name change not persisting: Changed \"Full name\" from \"Alex Demo\" to \"Jordan Smith\", clicked Save, rel…",
+          "kind": "bug",
+          "tier": "likely",
+          "category": "functional",
+          "route": "/profile",
+          "match": {
+            "kind": "bug",
+            "id": "B08",
+            "ruleIndex": 1,
+            "tentative": true
+          },
+          "outcome": "unlabelled",
+          "why": "tentative match (B08 rule 2, confirm: manual); needs a label"
+        },
+        {
+          "findingId": "fd_06kmmn0l",
+          "fingerprint": "fp_316a32c2cba4ab42",
+          "title": "Profile page accepts a phone number that contains letters",
+          "kind": "bug",
+          "tier": "needs_review",
+          "category": "validation",
+          "route": "/profile",
+          "outcome": "unlabelled",
+          "why": "matches no rule; needs a label"
+        },
+        {
+          "findingId": "fd_ux6pinuj",
+          "fingerprint": "fp_0b5018fbe735f602",
+          "title": "Saved name change on profile page is lost after reloading",
+          "kind": "bug",
+          "tier": "confirmed",
+          "category": "state",
+          "route": "/profile",
+          "match": {
+            "kind": "bug",
+            "id": "B08",
+            "ruleIndex": 0,
+            "tentative": false
+          },
+          "outcome": "tp",
+          "bugId": "B08",
+          "why": "matches B08 rule 1"
+        },
+        {
+          "findingId": "fd_ebxpyn18",
+          "fingerprint": "fp_d2cffea3ad040b42",
+          "title": "Link \"Terms\" goes to a missing page (/terms-and-conditions → 404)",
+          "kind": "bug",
+          "tier": "confirmed",
+          "category": "broken-resource",
+          "route": "/",
+          "match": {
+            "kind": "bug",
+            "id": "B10",
+            "ruleIndex": 0,
+            "tentative": false
+          },
+          "outcome": "tp",
+          "bugId": "B10",
+          "why": "matches B10 rule 1"
+        },
+        {
+          "findingId": "fd_aph0twit",
+          "fingerprint": "fp_47bcc5a3238b3d5f",
+          "title": "Accessibility: Buttons must have discernible text",
+          "kind": "improvement",
+          "tier": "evidence_based",
+          "category": "accessibility",
+          "route": "/contact",
+          "match": {
+            "kind": "bug",
+            "id": "B12",
+            "ruleIndex": 1,
+            "tentative": false
+          },
+          "outcome": "tp",
+          "bugId": "B12",
+          "why": "matches B12 rule 2"
+        },
+        {
+          "findingId": "fd_ochw0c0v",
+          "fingerprint": "fp_4b42d1f0cab26db3",
+          "title": "Accessibility: Elements must meet minimum color contrast ratio thresholds",
+          "kind": "improvement",
+          "tier": "evidence_based",
+          "category": "accessibility",
+          "route": "/",
+          "match": {
+            "kind": "bug",
+            "id": "B13",
+            "ruleIndex": 0,
+            "tentative": false
+          },
+          "outcome": "tp",
+          "bugId": "B13",
+          "why": "matches B13 rule 1"
+        },
+        {
+          "findingId": "fd_lm2d1ndm",
+          "fingerprint": "fp_88181b5b01b2e3b0",
+          "title": "Accessibility: Form elements must have labels",
+          "kind": "improvement",
+          "tier": "evidence_based",
+          "category": "accessibility",
+          "route": "/contact",
+          "match": {
+            "kind": "bug",
+            "id": "B12",
+            "ruleIndex": 0,
+            "tentative": false
+          },
+          "outcome": "tp",
+          "bugId": "B12",
+          "why": "matches B12 rule 1"
+        },
+        {
+          "findingId": "fd_5pd0cz6s",
+          "fingerprint": "fp_bde51281a6cf251e",
+          "title": "Booking summary estimate excludes GST without clear total",
+          "kind": "improvement",
+          "tier": "suggestion",
+          "category": "ux",
+          "route": "/book?service",
+          "label": "tp_unseeded",
+          "outcome": "tp",
+          "why": "labelled real (not seeded): True: /book shows only an estimate \"excl. GST\" and never says GST is added to the final price. Judgement call; flagged to Rohit."
+        },
+        {
+          "findingId": "fd_pbiedr3w",
+          "fingerprint": "fp_8c2541616859d4fd",
+          "title": "Inconsistent service list formatting between Quote and Book forms",
+          "kind": "improvement",
+          "tier": "suggestion",
+          "category": "ux",
+          "route": "/book",
+          "outcome": "unlabelled",
+          "why": "matches no rule; needs a label"
+        },
+        {
+          "findingId": "fd_kjgy9ak3",
+          "fingerprint": "fp_031bc07487cf3c29",
+          "title": "Missing X-Content-Type-Options: nosniff",
+          "kind": "improvement",
+          "tier": "evidence_based",
+          "category": "security",
+          "route": "/",
+          "label": "tp_unseeded",
+          "outcome": "tp",
+          "why": "labelled real (not seeded): The bench doesn't send X-Content-Type-Options: nosniff (P0 note); a hygiene improvement no seeded bug covers."
+        },
+        {
+          "findingId": "fd_yn86kzwt",
+          "fingerprint": "fp_cf5703bdcd814b7c",
+          "title": "No Content-Security-Policy header",
+          "kind": "improvement",
+          "tier": "evidence_based",
+          "category": "security",
+          "route": "/",
+          "match": {
+            "kind": "bug",
+            "id": "B15",
+            "ruleIndex": 1,
+            "tentative": false
+          },
+          "label": "tp_unseeded",
+          "outcome": "tp",
+          "why": "labelled real (not seeded): The bench sends no CSP (P0 note). Not B15: it matched B15's keyword rule only via 'script' in its impact text."
+        },
+        {
+          "findingId": "fd_3k3c85sa",
+          "fingerprint": "fp_6cc1851db0e7ecdd",
+          "title": "Page can be embedded in other sites (no frame protection)",
+          "kind": "improvement",
+          "tier": "evidence_based",
+          "category": "security",
+          "route": "/",
+          "label": "tp_unseeded",
+          "outcome": "tp",
+          "why": "labelled real (not seeded): The bench sends no frame protection (P0 note); a hygiene improvement no seeded bug covers."
+        },
+        {
+          "findingId": "fd_u90f2l05",
+          "fingerprint": "fp_fcb2c9f64fd53c70",
+          "title": "Slow API call: GET /api/bookings took 3.5 s",
+          "kind": "improvement",
+          "tier": "evidence_based",
+          "category": "performance",
+          "route": "/bookings",
+          "match": {
+            "kind": "bug",
+            "id": "B14",
+            "ruleIndex": 0,
+            "tentative": false
+          },
+          "outcome": "tp",
+          "bugId": "B14",
+          "why": "matches B14 rule 1"
+        },
+        {
+          "findingId": "fd_ayrpiljl",
+          "fingerprint": "fp_61b812e374329e33",
+          "title": "Sold-out service still listed without clear next step on quote page",
+          "kind": "improvement",
+          "tier": "suggestion",
+          "category": "ux",
+          "route": "/quote",
+          "outcome": "unlabelled",
+          "why": "matches no rule; needs a label"
+        },
+        {
+          "findingId": "fd_3zmnvqrg",
+          "fingerprint": "fp_20404a92a3d47f6e",
+          "title": "Suspicious embedded instruction text on page could mislead automated checks",
+          "kind": "improvement",
+          "tier": "suggestion",
+          "category": "ux",
+          "route": "/",
+          "outcome": "unlabelled",
+          "why": "matches no rule; needs a label"
+        }
+      ],
+      "found": {
+        "B01": "confirmed",
+        "B15": "confirmed",
+        "B02": "confirmed",
+        "B11": "confirmed",
+        "B16": "confirmed",
+        "B06": "confirmed",
+        "B18": "likely",
+        "B09": "confirmed",
+        "B08": "confirmed",
+        "B10": "confirmed",
+        "B12": "confirmed",
+        "B13": "confirmed",
+        "B14": "confirmed"
+      },
+      "recall": {
+        "confirmed": 0.6666666666666666,
+        "confirmedLikely": 0.7222222222222222,
+        "all": 0.7222222222222222
+      },
+      "precision": {
+        "bugs": {
+          "confirmed": 1,
+          "confirmedLikely": 1,
+          "all": 1
+        },
+        "improvements": {
+          "evidenceBased": 1,
+          "all": 1
+        }
+      },
+      "cleanFalsePositives": null,
+      "decoysFlagged": [],
+      "tierAccuracy": 0.9230769230769231,
+      "unlabelled": 9,
+      "minutes": 6.990683333333333,
+      "costUsd": 0.40739610000000004,
+      "llmCalls": 76
+    },
+    {
+      "runId": "run_20260927-131110_waqv",
+      "pipeline": "ai-no-verify (derived)",
+      "clean": false,
+      "findings": [
+        {
+          "findingId": "fd_1kla6efx",
+          "fingerprint": "fp_4807641267f25a31",
+          "title": "A secret payment key is visible to anyone who visits the site",
+          "kind": "bug",
+          "tier": "confirmed",
+          "category": "security",
+          "route": "/",
+          "outcome": "unlabelled",
+          "why": "matches no rule; needs a label"
+        },
+        {
+          "findingId": "fd_i7h9eyhw",
+          "fingerprint": "fp_108e130b1258f658",
+          "title": "Booking data can be viewed by anyone without logging in",
+          "kind": "bug",
+          "tier": "confirmed",
+          "category": "security",
+          "route": "/bookings/:id",
+          "outcome": "unlabelled",
+          "why": "matches no rule; needs a label"
+        },
+        {
+          "findingId": "fd_xs178ps0",
+          "fingerprint": "fp_6bb97fda8af2347e",
+          "title": "Quote total doesn't match the subtotal and tax shown",
+          "kind": "bug",
+          "tier": "confirmed",
+          "category": "functional",
+          "route": "/quote",
+          "match": {
+            "kind": "bug",
+            "id": "B01",
+            "ruleIndex": 1,
+            "tentative": true
+          },
+          "label": "tp:B01",
+          "outcome": "tp",
+          "bugId": "B01",
+          "why": "labelled tp:B01: DET-TOTALS: the quote total isn't subtotal + GST on /quote (GST applied twice)."
+        },
+        {
+          "findingId": "fd_fc2njp6y",
+          "fingerprint": "fp_285baedc870abb76",
+          "title": "Search box crashes and leaks database error text",
+          "kind": "bug",
+          "tier": "confirmed",
+          "category": "security",
+          "route": "/services?q",
+          "match": {
+            "kind": "bug",
+            "id": "B15",
+            "ruleIndex": 1,
+            "tentative": false
+          },
+          "outcome": "tp",
+          "bugId": "B15",
+          "why": "matches B15 rule 2"
+        },
+        {
+          "findingId": "fd_brik0j4z",
+          "fingerprint": "fp_c6688d3c457c8c97",
+          "title": "\"Price: low to high\" sorting doesn't actually sort by price",
+          "kind": "bug",
+          "tier": "confirmed",
+          "category": "functional",
+          "route": "/services",
+          "match": {
+            "kind": "bug",
+            "id": "B02",
+            "ruleIndex": 1,
+            "tentative": true
+          },
+          "label": "tp:B02",
+          "outcome": "tp",
+          "bugId": "B02",
+          "why": "labelled tp:B02: DET-SORT: \"Price: low to high\" doesn't put the services in price order."
+        },
+        {
+          "findingId": "fd_060y4hdu",
+          "fingerprint": "fp_67b897a090f8b356",
+          "title": "Clicking a question on the FAQ page crashes the page's code",
+          "kind": "bug",
+          "tier": "confirmed",
+          "category": "crash",
+          "route": "/faq",
+          "match": {
+            "kind": "bug",
+            "id": "B11",
+            "ruleIndex": 0,
+            "tentative": false
+          },
+          "outcome": "tp",
+          "bugId": "B11",
+          "why": "matches B11 rule 1"
+        },
+        {
+          "findingId": "fd_9rvy7jdg",
+          "fingerprint": "fp_6a8aae906f8d1072",
+          "title": "Hidden text on services page tries to trick automated testers",
+          "kind": "bug",
+          "tier": "confirmed",
+          "category": "security",
+          "route": "/services?q&sort",
+          "match": {
+            "kind": "bug",
+            "id": "B15",
+            "ruleIndex": 1,
+            "tentative": false
+          },
+          "outcome": "tp",
+          "bugId": "B15",
+          "why": "matches B15 rule 2"
+        },
+        {
+          "findingId": "fd_h7l1agd6",
+          "fingerprint": "fp_b3f5826353bd1a23",
+          "title": "Text typed into the search box can be turned into hidden page elements",
+          "kind": "bug",
+          "tier": "confirmed",
+          "category": "security",
+          "route": "/services?q",
+          "match": {
+            "kind": "bug",
+            "id": "B15",
+            "ruleIndex": 0,
+            "tentative": false
+          },
+          "outcome": "tp",
+          "bugId": "B15",
+          "why": "matches B15 rule 1"
+        },
+        {
+          "findingId": "fd_kbt5t9dp",
+          "fingerprint": "fp_0fa71620b9c525c3",
+          "title": "Booking page scrolls sideways on phone screens",
+          "kind": "bug",
+          "tier": "confirmed",
+          "category": "responsive",
+          "route": "/book",
+          "match": {
+            "kind": "bug",
+            "id": "B16",
+            "ruleIndex": 0,
+            "tentative": false
+          },
+          "outcome": "tp",
+          "bugId": "B16",
+          "why": "matches B16 rule 1"
+        },
+        {
+          "findingId": "fd_kgg5cwpf",
+          "fingerprint": "fp_cdb7372dc62cb2e3",
+          "title": "Cancelled booking HC-1001 still shows up in the bookings list",
+          "kind": "bug",
+          "tier": "confirmed",
+          "category": "state",
+          "route": "/bookings",
+          "match": {
+            "kind": "bug",
+            "id": "B06",
+            "ruleIndex": 1,
+            "tentative": true
+          },
+          "label": "tp:B06",
+          "outcome": "tp",
+          "bugId": "B06",
+          "why": "labelled tp:B06: Check: the booking the user cancelled is still listed after confirming, so a different one was removed (B06)."
+        },
+        {
+          "findingId": "fd_g0qy2roh",
+          "fingerprint": "fp_8c961abfcbec67da",
+          "title": "Cancelling a booking says it worked but the booking stays in the list",
+          "kind": "bug",
+          "tier": "confirmed",
+          "category": "functional",
+          "route": "/bookings",
+          "match": {
+            "kind": "bug",
+            "id": "B06",
+            "ruleIndex": 1,
+            "tentative": true
+          },
+          "outcome": "unlabelled",
+          "why": "tentative match (B06 rule 2, confirm: manual); needs a label"
+        },
+        {
+          "findingId": "fd_ere1596f",
+          "fingerprint": "fp_66408ac5789781e6",
+          "title": "Login error messages reveal if an email has an account",
+          "kind": "bug",
+          "tier": "confirmed",
+          "category": "security",
+          "route": "/login",
+          "match": {
+            "kind": "bug",
+            "id": "B18",
+            "ruleIndex": 0,
+            "tentative": false
+          },
+          "outcome": "tp",
+          "bugId": "B18",
+          "why": "matches B18 rule 1"
+        },
+        {
+          "findingId": "fd_1xemput9",
+          "fingerprint": "fp_7b76efbe19cde62c",
+          "title": "Missing image: \"Carpet shampoo\" picture doesn't load",
+          "kind": "bug",
+          "tier": "confirmed",
+          "category": "broken-resource",
+          "route": "/services",
+          "match": {
+            "kind": "bug",
+            "id": "B09",
+            "ruleIndex": 0,
+            "tentative": false
+          },
+          "outcome": "tp",
+          "bugId": "B09",
+          "why": "matches B09 rule 1"
+        },
+        {
+          "findingId": "fd_lmw86nga",
+          "fingerprint": "fp_755e1d5164900d54",
+          "title": "Profile form accepts a too-short phone number",
+          "kind": "bug",
+          "tier": "confirmed",
+          "category": "validation",
+          "route": "/profile",
+          "outcome": "unlabelled",
+          "why": "matches no rule; needs a label"
+        },
+        {
+          "findingId": "fd_aptvgvc3",
+          "fingerprint": "fp_164ec372b85c1608",
+          "title": "Profile name change not persisting: Changed \"Full name\" from \"Alex Demo\" to \"Jordan Smith\", clicked Save, rel…",
+          "kind": "bug",
+          "tier": "confirmed",
+          "category": "functional",
+          "route": "/profile",
+          "match": {
+            "kind": "bug",
+            "id": "B08",
+            "ruleIndex": 1,
+            "tentative": true
+          },
+          "outcome": "unlabelled",
+          "why": "tentative match (B08 rule 2, confirm: manual); needs a label"
+        },
+        {
+          "findingId": "fd_06kmmn0l",
+          "fingerprint": "fp_316a32c2cba4ab42",
+          "title": "Profile page accepts a phone number that contains letters",
+          "kind": "bug",
+          "tier": "confirmed",
+          "category": "validation",
+          "route": "/profile",
+          "outcome": "unlabelled",
+          "why": "matches no rule; needs a label"
+        },
+        {
+          "findingId": "fd_ux6pinuj",
+          "fingerprint": "fp_0b5018fbe735f602",
+          "title": "Saved name change on profile page is lost after reloading",
+          "kind": "bug",
+          "tier": "confirmed",
+          "category": "state",
+          "route": "/profile",
+          "match": {
+            "kind": "bug",
+            "id": "B08",
+            "ruleIndex": 0,
+            "tentative": false
+          },
+          "outcome": "tp",
+          "bugId": "B08",
+          "why": "matches B08 rule 1"
+        },
+        {
+          "findingId": "fd_ebxpyn18",
+          "fingerprint": "fp_d2cffea3ad040b42",
+          "title": "Link \"Terms\" goes to a missing page (/terms-and-conditions → 404)",
+          "kind": "bug",
+          "tier": "confirmed",
+          "category": "broken-resource",
+          "route": "/",
+          "match": {
+            "kind": "bug",
+            "id": "B10",
+            "ruleIndex": 0,
+            "tentative": false
+          },
+          "outcome": "tp",
+          "bugId": "B10",
+          "why": "matches B10 rule 1"
+        },
+        {
+          "findingId": "fd_aph0twit",
+          "fingerprint": "fp_47bcc5a3238b3d5f",
+          "title": "Accessibility: Buttons must have discernible text",
+          "kind": "improvement",
+          "tier": "evidence_based",
+          "category": "accessibility",
+          "route": "/contact",
+          "match": {
+            "kind": "bug",
+            "id": "B12",
+            "ruleIndex": 1,
+            "tentative": false
+          },
+          "outcome": "tp",
+          "bugId": "B12",
+          "why": "matches B12 rule 2"
+        },
+        {
+          "findingId": "fd_ochw0c0v",
+          "fingerprint": "fp_4b42d1f0cab26db3",
+          "title": "Accessibility: Elements must meet minimum color contrast ratio thresholds",
+          "kind": "improvement",
+          "tier": "evidence_based",
+          "category": "accessibility",
+          "route": "/",
+          "match": {
+            "kind": "bug",
+            "id": "B13",
+            "ruleIndex": 0,
+            "tentative": false
+          },
+          "outcome": "tp",
+          "bugId": "B13",
+          "why": "matches B13 rule 1"
+        },
+        {
+          "findingId": "fd_lm2d1ndm",
+          "fingerprint": "fp_88181b5b01b2e3b0",
+          "title": "Accessibility: Form elements must have labels",
+          "kind": "improvement",
+          "tier": "evidence_based",
+          "category": "accessibility",
+          "route": "/contact",
+          "match": {
+            "kind": "bug",
+            "id": "B12",
+            "ruleIndex": 0,
+            "tentative": false
+          },
+          "outcome": "tp",
+          "bugId": "B12",
+          "why": "matches B12 rule 1"
+        },
+        {
+          "findingId": "fd_5pd0cz6s",
+          "fingerprint": "fp_bde51281a6cf251e",
+          "title": "Booking summary estimate excludes GST without clear total",
+          "kind": "improvement",
+          "tier": "suggestion",
+          "category": "ux",
+          "route": "/book?service",
+          "label": "tp_unseeded",
+          "outcome": "tp",
+          "why": "labelled real (not seeded): True: /book shows only an estimate \"excl. GST\" and never says GST is added to the final price. Judgement call; flagged to Rohit."
+        },
+        {
+          "findingId": "fd_pbiedr3w",
+          "fingerprint": "fp_8c2541616859d4fd",
+          "title": "Inconsistent service list formatting between Quote and Book forms",
+          "kind": "improvement",
+          "tier": "suggestion",
+          "category": "ux",
+          "route": "/book",
+          "outcome": "unlabelled",
+          "why": "matches no rule; needs a label"
+        },
+        {
+          "findingId": "fd_kjgy9ak3",
+          "fingerprint": "fp_031bc07487cf3c29",
+          "title": "Missing X-Content-Type-Options: nosniff",
+          "kind": "improvement",
+          "tier": "evidence_based",
+          "category": "security",
+          "route": "/",
+          "label": "tp_unseeded",
+          "outcome": "tp",
+          "why": "labelled real (not seeded): The bench doesn't send X-Content-Type-Options: nosniff (P0 note); a hygiene improvement no seeded bug covers."
+        },
+        {
+          "findingId": "fd_yn86kzwt",
+          "fingerprint": "fp_cf5703bdcd814b7c",
+          "title": "No Content-Security-Policy header",
+          "kind": "improvement",
+          "tier": "evidence_based",
+          "category": "security",
+          "route": "/",
+          "match": {
+            "kind": "bug",
+            "id": "B15",
+            "ruleIndex": 1,
+            "tentative": false
+          },
+          "label": "tp_unseeded",
+          "outcome": "tp",
+          "why": "labelled real (not seeded): The bench sends no CSP (P0 note). Not B15: it matched B15's keyword rule only via 'script' in its impact text."
+        },
+        {
+          "findingId": "fd_3k3c85sa",
+          "fingerprint": "fp_6cc1851db0e7ecdd",
+          "title": "Page can be embedded in other sites (no frame protection)",
+          "kind": "improvement",
+          "tier": "evidence_based",
+          "category": "security",
+          "route": "/",
+          "label": "tp_unseeded",
+          "outcome": "tp",
+          "why": "labelled real (not seeded): The bench sends no frame protection (P0 note); a hygiene improvement no seeded bug covers."
+        },
+        {
+          "findingId": "fd_u90f2l05",
+          "fingerprint": "fp_fcb2c9f64fd53c70",
+          "title": "Slow API call: GET /api/bookings took 3.5 s",
+          "kind": "improvement",
+          "tier": "evidence_based",
+          "category": "performance",
+          "route": "/bookings",
+          "match": {
+            "kind": "bug",
+            "id": "B14",
+            "ruleIndex": 0,
+            "tentative": false
+          },
+          "outcome": "tp",
+          "bugId": "B14",
+          "why": "matches B14 rule 1"
+        },
+        {
+          "findingId": "fd_ayrpiljl",
+          "fingerprint": "fp_61b812e374329e33",
+          "title": "Sold-out service still listed without clear next step on quote page",
+          "kind": "improvement",
+          "tier": "suggestion",
+          "category": "ux",
+          "route": "/quote",
+          "outcome": "unlabelled",
+          "why": "matches no rule; needs a label"
+        },
+        {
+          "findingId": "fd_3zmnvqrg",
+          "fingerprint": "fp_20404a92a3d47f6e",
+          "title": "Suspicious embedded instruction text on page could mislead automated checks",
+          "kind": "improvement",
+          "tier": "suggestion",
+          "category": "ux",
+          "route": "/",
+          "outcome": "unlabelled",
+          "why": "matches no rule; needs a label"
+        }
+      ],
+      "found": {
+        "B01": "confirmed",
+        "B15": "confirmed",
+        "B02": "confirmed",
+        "B11": "confirmed",
+        "B16": "confirmed",
+        "B06": "confirmed",
+        "B18": "confirmed",
+        "B09": "confirmed",
+        "B08": "confirmed",
+        "B10": "confirmed",
+        "B12": "confirmed",
+        "B13": "confirmed",
+        "B14": "confirmed"
+      },
+      "recall": {
+        "confirmed": 0.7222222222222222,
+        "confirmedLikely": 0.7222222222222222,
+        "all": 0.7222222222222222
+      },
+      "precision": {
+        "bugs": {
+          "confirmed": 1,
+          "confirmedLikely": 1,
+          "all": 1
+        },
+        "improvements": {
+          "evidenceBased": 1,
+          "all": 1
+        }
+      },
+      "cleanFalsePositives": null,
+      "decoysFlagged": [],
+      "tierAccuracy": 0.9230769230769231,
+      "unlabelled": 9,
+      "minutes": 6.990683333333333,
+      "costUsd": 0.40739610000000004,
+      "llmCalls": 76
+    },
+    {
+      "runId": "run_20260927-131110_waqv",
+      "pipeline": "full-no-skeptic (derived)",
+      "clean": false,
+      "findings": [
+        {
+          "findingId": "fd_1kla6efx",
+          "fingerprint": "fp_4807641267f25a31",
+          "title": "A secret payment key is visible to anyone who visits the site",
+          "kind": "bug",
+          "tier": "confirmed",
+          "category": "security",
+          "route": "/",
+          "outcome": "unlabelled",
+          "why": "matches no rule; needs a label"
+        },
+        {
+          "findingId": "fd_i7h9eyhw",
+          "fingerprint": "fp_108e130b1258f658",
+          "title": "Booking data can be viewed by anyone without logging in",
+          "kind": "bug",
+          "tier": "confirmed",
+          "category": "security",
+          "route": "/bookings/:id",
+          "outcome": "unlabelled",
+          "why": "matches no rule; needs a label"
+        },
+        {
+          "findingId": "fd_xs178ps0",
+          "fingerprint": "fp_6bb97fda8af2347e",
+          "title": "Quote total doesn't match the subtotal and tax shown",
+          "kind": "bug",
+          "tier": "confirmed",
+          "category": "functional",
+          "route": "/quote",
+          "match": {
+            "kind": "bug",
+            "id": "B01",
+            "ruleIndex": 1,
+            "tentative": true
+          },
+          "label": "tp:B01",
+          "outcome": "tp",
+          "bugId": "B01",
+          "why": "labelled tp:B01: DET-TOTALS: the quote total isn't subtotal + GST on /quote (GST applied twice)."
+        },
+        {
+          "findingId": "fd_fc2njp6y",
+          "fingerprint": "fp_285baedc870abb76",
+          "title": "Search box crashes and leaks database error text",
+          "kind": "bug",
+          "tier": "confirmed",
+          "category": "security",
+          "route": "/services?q",
+          "match": {
+            "kind": "bug",
+            "id": "B15",
+            "ruleIndex": 1,
+            "tentative": false
+          },
+          "outcome": "tp",
+          "bugId": "B15",
+          "why": "matches B15 rule 2"
+        },
+        {
+          "findingId": "fd_brik0j4z",
+          "fingerprint": "fp_c6688d3c457c8c97",
+          "title": "\"Price: low to high\" sorting doesn't actually sort by price",
+          "kind": "bug",
+          "tier": "confirmed",
+          "category": "functional",
+          "route": "/services",
+          "match": {
+            "kind": "bug",
+            "id": "B02",
+            "ruleIndex": 1,
+            "tentative": true
+          },
+          "label": "tp:B02",
+          "outcome": "tp",
+          "bugId": "B02",
+          "why": "labelled tp:B02: DET-SORT: \"Price: low to high\" doesn't put the services in price order."
+        },
+        {
+          "findingId": "fd_060y4hdu",
+          "fingerprint": "fp_67b897a090f8b356",
+          "title": "Clicking a question on the FAQ page crashes the page's code",
+          "kind": "bug",
+          "tier": "confirmed",
+          "category": "crash",
+          "route": "/faq",
+          "match": {
+            "kind": "bug",
+            "id": "B11",
+            "ruleIndex": 0,
+            "tentative": false
+          },
+          "outcome": "tp",
+          "bugId": "B11",
+          "why": "matches B11 rule 1"
+        },
+        {
+          "findingId": "fd_9rvy7jdg",
+          "fingerprint": "fp_6a8aae906f8d1072",
+          "title": "Hidden text on services page tries to trick automated testers",
+          "kind": "bug",
+          "tier": "likely",
+          "category": "security",
+          "route": "/services?q&sort",
+          "match": {
+            "kind": "bug",
+            "id": "B15",
+            "ruleIndex": 1,
+            "tentative": false
+          },
+          "outcome": "tp",
+          "bugId": "B15",
+          "why": "matches B15 rule 2"
+        },
+        {
+          "findingId": "fd_h7l1agd6",
+          "fingerprint": "fp_b3f5826353bd1a23",
+          "title": "Text typed into the search box can be turned into hidden page elements",
+          "kind": "bug",
+          "tier": "confirmed",
+          "category": "security",
+          "route": "/services?q",
+          "match": {
+            "kind": "bug",
+            "id": "B15",
+            "ruleIndex": 0,
+            "tentative": false
+          },
+          "outcome": "tp",
+          "bugId": "B15",
+          "why": "matches B15 rule 1"
+        },
+        {
+          "findingId": "fd_kbt5t9dp",
+          "fingerprint": "fp_0fa71620b9c525c3",
+          "title": "Booking page scrolls sideways on phone screens",
+          "kind": "bug",
+          "tier": "confirmed",
+          "category": "responsive",
+          "route": "/book",
+          "match": {
+            "kind": "bug",
+            "id": "B16",
+            "ruleIndex": 0,
+            "tentative": false
+          },
+          "outcome": "tp",
+          "bugId": "B16",
+          "why": "matches B16 rule 1"
+        },
+        {
+          "findingId": "fd_kgg5cwpf",
+          "fingerprint": "fp_cdb7372dc62cb2e3",
+          "title": "Cancelled booking HC-1001 still shows up in the bookings list",
+          "kind": "bug",
+          "tier": "confirmed",
+          "category": "state",
+          "route": "/bookings",
+          "match": {
+            "kind": "bug",
+            "id": "B06",
+            "ruleIndex": 1,
+            "tentative": true
+          },
+          "label": "tp:B06",
+          "outcome": "tp",
+          "bugId": "B06",
+          "why": "labelled tp:B06: Check: the booking the user cancelled is still listed after confirming, so a different one was removed (B06)."
+        },
+        {
+          "findingId": "fd_g0qy2roh",
+          "fingerprint": "fp_8c961abfcbec67da",
+          "title": "Cancelling a booking says it worked but the booking stays in the list",
+          "kind": "bug",
+          "tier": "likely",
+          "category": "functional",
+          "route": "/bookings",
+          "match": {
+            "kind": "bug",
+            "id": "B06",
+            "ruleIndex": 1,
+            "tentative": true
+          },
+          "outcome": "unlabelled",
+          "why": "tentative match (B06 rule 2, confirm: manual); needs a label"
+        },
+        {
+          "findingId": "fd_ere1596f",
+          "fingerprint": "fp_66408ac5789781e6",
+          "title": "Login error messages reveal if an email has an account",
+          "kind": "bug",
+          "tier": "likely",
+          "category": "security",
+          "route": "/login",
+          "match": {
+            "kind": "bug",
+            "id": "B18",
+            "ruleIndex": 0,
+            "tentative": false
+          },
+          "outcome": "tp",
+          "bugId": "B18",
+          "why": "matches B18 rule 1"
+        },
+        {
+          "findingId": "fd_1xemput9",
+          "fingerprint": "fp_7b76efbe19cde62c",
+          "title": "Missing image: \"Carpet shampoo\" picture doesn't load",
+          "kind": "bug",
+          "tier": "confirmed",
+          "category": "broken-resource",
+          "route": "/services",
+          "match": {
+            "kind": "bug",
+            "id": "B09",
+            "ruleIndex": 0,
+            "tentative": false
+          },
+          "outcome": "tp",
+          "bugId": "B09",
+          "why": "matches B09 rule 1"
+        },
+        {
+          "findingId": "fd_lmw86nga",
+          "fingerprint": "fp_755e1d5164900d54",
+          "title": "Profile form accepts a too-short phone number",
+          "kind": "bug",
+          "tier": "needs_review",
+          "category": "validation",
+          "route": "/profile",
+          "outcome": "unlabelled",
+          "why": "matches no rule; needs a label"
+        },
+        {
+          "findingId": "fd_aptvgvc3",
+          "fingerprint": "fp_164ec372b85c1608",
+          "title": "Profile name change not persisting: Changed \"Full name\" from \"Alex Demo\" to \"Jordan Smith\", clicked Save, rel…",
+          "kind": "bug",
+          "tier": "likely",
+          "category": "functional",
+          "route": "/profile",
+          "match": {
+            "kind": "bug",
+            "id": "B08",
+            "ruleIndex": 1,
+            "tentative": true
+          },
+          "outcome": "unlabelled",
+          "why": "tentative match (B08 rule 2, confirm: manual); needs a label"
+        },
+        {
+          "findingId": "fd_06kmmn0l",
+          "fingerprint": "fp_316a32c2cba4ab42",
+          "title": "Profile page accepts a phone number that contains letters",
+          "kind": "bug",
+          "tier": "needs_review",
+          "category": "validation",
+          "route": "/profile",
+          "outcome": "unlabelled",
+          "why": "matches no rule; needs a label"
+        },
+        {
+          "findingId": "fd_ux6pinuj",
+          "fingerprint": "fp_0b5018fbe735f602",
+          "title": "Saved name change on profile page is lost after reloading",
+          "kind": "bug",
+          "tier": "confirmed",
+          "category": "state",
+          "route": "/profile",
+          "match": {
+            "kind": "bug",
+            "id": "B08",
+            "ruleIndex": 0,
+            "tentative": false
+          },
+          "outcome": "tp",
+          "bugId": "B08",
+          "why": "matches B08 rule 1"
+        },
+        {
+          "findingId": "fd_ebxpyn18",
+          "fingerprint": "fp_d2cffea3ad040b42",
+          "title": "Link \"Terms\" goes to a missing page (/terms-and-conditions → 404)",
+          "kind": "bug",
+          "tier": "confirmed",
+          "category": "broken-resource",
+          "route": "/",
+          "match": {
+            "kind": "bug",
+            "id": "B10",
+            "ruleIndex": 0,
+            "tentative": false
+          },
+          "outcome": "tp",
+          "bugId": "B10",
+          "why": "matches B10 rule 1"
+        },
+        {
+          "findingId": "fd_aph0twit",
+          "fingerprint": "fp_47bcc5a3238b3d5f",
+          "title": "Accessibility: Buttons must have discernible text",
+          "kind": "improvement",
+          "tier": "evidence_based",
+          "category": "accessibility",
+          "route": "/contact",
+          "match": {
+            "kind": "bug",
+            "id": "B12",
+            "ruleIndex": 1,
+            "tentative": false
+          },
+          "outcome": "tp",
+          "bugId": "B12",
+          "why": "matches B12 rule 2"
+        },
+        {
+          "findingId": "fd_ochw0c0v",
+          "fingerprint": "fp_4b42d1f0cab26db3",
+          "title": "Accessibility: Elements must meet minimum color contrast ratio thresholds",
+          "kind": "improvement",
+          "tier": "evidence_based",
+          "category": "accessibility",
+          "route": "/",
+          "match": {
+            "kind": "bug",
+            "id": "B13",
+            "ruleIndex": 0,
+            "tentative": false
+          },
+          "outcome": "tp",
+          "bugId": "B13",
+          "why": "matches B13 rule 1"
+        },
+        {
+          "findingId": "fd_lm2d1ndm",
+          "fingerprint": "fp_88181b5b01b2e3b0",
+          "title": "Accessibility: Form elements must have labels",
+          "kind": "improvement",
+          "tier": "evidence_based",
+          "category": "accessibility",
+          "route": "/contact",
+          "match": {
+            "kind": "bug",
+            "id": "B12",
+            "ruleIndex": 0,
+            "tentative": false
+          },
+          "outcome": "tp",
+          "bugId": "B12",
+          "why": "matches B12 rule 1"
+        },
+        {
+          "findingId": "fd_5pd0cz6s",
+          "fingerprint": "fp_bde51281a6cf251e",
+          "title": "Booking summary estimate excludes GST without clear total",
+          "kind": "improvement",
+          "tier": "suggestion",
+          "category": "ux",
+          "route": "/book?service",
+          "label": "tp_unseeded",
+          "outcome": "tp",
+          "why": "labelled real (not seeded): True: /book shows only an estimate \"excl. GST\" and never says GST is added to the final price. Judgement call; flagged to Rohit."
+        },
+        {
+          "findingId": "fd_pbiedr3w",
+          "fingerprint": "fp_8c2541616859d4fd",
+          "title": "Inconsistent service list formatting between Quote and Book forms",
+          "kind": "improvement",
+          "tier": "suggestion",
+          "category": "ux",
+          "route": "/book",
+          "outcome": "unlabelled",
+          "why": "matches no rule; needs a label"
+        },
+        {
+          "findingId": "fd_kjgy9ak3",
+          "fingerprint": "fp_031bc07487cf3c29",
+          "title": "Missing X-Content-Type-Options: nosniff",
+          "kind": "improvement",
+          "tier": "evidence_based",
+          "category": "security",
+          "route": "/",
+          "label": "tp_unseeded",
+          "outcome": "tp",
+          "why": "labelled real (not seeded): The bench doesn't send X-Content-Type-Options: nosniff (P0 note); a hygiene improvement no seeded bug covers."
+        },
+        {
+          "findingId": "fd_yn86kzwt",
+          "fingerprint": "fp_cf5703bdcd814b7c",
+          "title": "No Content-Security-Policy header",
+          "kind": "improvement",
+          "tier": "evidence_based",
+          "category": "security",
+          "route": "/",
+          "match": {
+            "kind": "bug",
+            "id": "B15",
+            "ruleIndex": 1,
+            "tentative": false
+          },
+          "label": "tp_unseeded",
+          "outcome": "tp",
+          "why": "labelled real (not seeded): The bench sends no CSP (P0 note). Not B15: it matched B15's keyword rule only via 'script' in its impact text."
+        },
+        {
+          "findingId": "fd_3k3c85sa",
+          "fingerprint": "fp_6cc1851db0e7ecdd",
+          "title": "Page can be embedded in other sites (no frame protection)",
+          "kind": "improvement",
+          "tier": "evidence_based",
+          "category": "security",
+          "route": "/",
+          "label": "tp_unseeded",
+          "outcome": "tp",
+          "why": "labelled real (not seeded): The bench sends no frame protection (P0 note); a hygiene improvement no seeded bug covers."
+        },
+        {
+          "findingId": "fd_u90f2l05",
+          "fingerprint": "fp_fcb2c9f64fd53c70",
+          "title": "Slow API call: GET /api/bookings took 3.5 s",
+          "kind": "improvement",
+          "tier": "evidence_based",
+          "category": "performance",
+          "route": "/bookings",
+          "match": {
+            "kind": "bug",
+            "id": "B14",
+            "ruleIndex": 0,
+            "tentative": false
+          },
+          "outcome": "tp",
+          "bugId": "B14",
+          "why": "matches B14 rule 1"
+        },
+        {
+          "findingId": "fd_ayrpiljl",
+          "fingerprint": "fp_61b812e374329e33",
+          "title": "Sold-out service still listed without clear next step on quote page",
+          "kind": "improvement",
+          "tier": "suggestion",
+          "category": "ux",
+          "route": "/quote",
+          "outcome": "unlabelled",
+          "why": "matches no rule; needs a label"
+        },
+        {
+          "findingId": "fd_3zmnvqrg",
+          "fingerprint": "fp_20404a92a3d47f6e",
+          "title": "Suspicious embedded instruction text on page could mislead automated checks",
+          "kind": "improvement",
+          "tier": "suggestion",
+          "category": "ux",
+          "route": "/",
+          "outcome": "unlabelled",
+          "why": "matches no rule; needs a label"
+        }
+      ],
+      "found": {
+        "B01": "confirmed",
+        "B15": "confirmed",
+        "B02": "confirmed",
+        "B11": "confirmed",
+        "B16": "confirmed",
+        "B06": "confirmed",
+        "B18": "likely",
+        "B09": "confirmed",
+        "B08": "confirmed",
+        "B10": "confirmed",
+        "B12": "confirmed",
+        "B13": "confirmed",
+        "B14": "confirmed"
+      },
+      "recall": {
+        "confirmed": 0.6666666666666666,
+        "confirmedLikely": 0.7222222222222222,
+        "all": 0.7222222222222222
+      },
+      "precision": {
+        "bugs": {
+          "confirmed": 1,
+          "confirmedLikely": 1,
+          "all": 1
+        },
+        "improvements": {
+          "evidenceBased": 1,
+          "all": 1
+        }
+      },
+      "cleanFalsePositives": null,
+      "decoysFlagged": [],
+      "tierAccuracy": 0.9230769230769231,
+      "unlabelled": 9,
+      "minutes": 6.990683333333333,
+      "costUsd": 0.40739610000000004,
+      "llmCalls": 76
+    },
+    {
+      "runId": "run_20260927-131858_a21a",
+      "pipeline": "full",
+      "clean": true,
+      "findings": [
+        {
+          "findingId": "fd_daehdgw0",
+          "fingerprint": "fp_cd9227181d688f8a",
+          "title": "Contact form does not confirm submission after clicking Send",
+          "kind": "bug",
+          "tier": "needs_review",
+          "category": "functional",
+          "route": "/contact",
+          "outcome": "unlabelled",
+          "why": "matches no rule; needs a label"
+        },
+        {
+          "findingId": "fd_1eo8i6b2",
+          "fingerprint": "fp_ca537fb10dfed8b6",
+          "title": "Booking summary shows only placeholder dashes with no guidance",
+          "kind": "improvement",
+          "tier": "suggestion",
+          "category": "ux",
+          "route": "/book",
+          "label": "tp_unseeded",
+          "outcome": "tp",
+          "why": "labelled real (not seeded): True on the clean bench: the booking summary shows only dashes before input, with no hint; a reasonable clarity improvement."
+        },
+        {
+          "findingId": "fd_d6um1gvf",
+          "fingerprint": "fp_85e5cfb28a3ccd5c",
+          "title": "Inconsistent service pricing labels between Quote and Book pages",
+          "kind": "improvement",
+          "tier": "suggestion",
+          "category": "ux",
+          "route": "/book",
+          "outcome": "unlabelled",
+          "why": "matches no rule; needs a label"
+        },
+        {
+          "findingId": "fd_cnom5l0r",
+          "fingerprint": "fp_93ef4fb1e3cee74f",
+          "title": "Login page after redirect gives no indication why the user was sent there",
+          "kind": "improvement",
+          "tier": "suggestion",
+          "category": "ux",
+          "route": "/login?next",
+          "outcome": "unlabelled",
+          "why": "matches no rule; needs a label"
+        },
+        {
+          "findingId": "fd_etvv22wj",
+          "fingerprint": "fp_031bc07487cf3c29",
+          "title": "Missing X-Content-Type-Options: nosniff",
+          "kind": "improvement",
+          "tier": "evidence_based",
+          "category": "security",
+          "route": "/",
+          "label": "tp_unseeded",
+          "outcome": "tp",
+          "why": "labelled real (not seeded): The bench doesn't send X-Content-Type-Options: nosniff (P0 note); a hygiene improvement no seeded bug covers."
+        },
+        {
+          "findingId": "fd_ef14fo49",
+          "fingerprint": "fp_cf5703bdcd814b7c",
+          "title": "No Content-Security-Policy header",
+          "kind": "improvement",
+          "tier": "evidence_based",
+          "category": "security",
+          "route": "/",
+          "match": {
+            "kind": "bug",
+            "id": "B15",
+            "ruleIndex": 1,
+            "tentative": false
+          },
+          "label": "tp_unseeded",
+          "outcome": "tp",
+          "why": "labelled real (not seeded): The bench sends no CSP (P0 note). Not B15: it matched B15's keyword rule only via 'script' in its impact text."
+        },
+        {
+          "findingId": "fd_armtzs6d",
+          "fingerprint": "fp_6cc1851db0e7ecdd",
+          "title": "Page can be embedded in other sites (no frame protection)",
+          "kind": "improvement",
+          "tier": "evidence_based",
+          "category": "security",
+          "route": "/",
+          "label": "tp_unseeded",
+          "outcome": "tp",
+          "why": "labelled real (not seeded): The bench sends no frame protection (P0 note); a hygiene improvement no seeded bug covers."
+        },
+        {
+          "findingId": "fd_2tmepb7p",
+          "fingerprint": "fp_7b1e727ade68f10a",
+          "title": "Quote page mentions GST but doesn't show it until calculation, with no example",
+          "kind": "improvement",
+          "tier": "suggestion",
+          "category": "ux",
+          "route": "/quote",
+          "outcome": "unlabelled",
+          "why": "matches no rule; needs a label"
+        },
+        {
+          "findingId": "fd_nilxzl8l",
+          "fingerprint": "fp_8a1b5addf9b47851",
+          "title": "Sold-out service still listed with a working 'View' link",
+          "kind": "improvement",
+          "tier": "suggestion",
+          "category": "ux",
+          "route": "/services",
+          "label": "fp",
+          "outcome": "fp",
+          "why": "labelled false positive: Decoy D01: the sold-out service's Book button is disabled with an explanation; missed the rule only on \"Sold-out\" vs \"sold out\"."
+        }
+      ],
+      "found": {},
+      "recall": {
+        "confirmed": 0,
+        "confirmedLikely": 0,
+        "all": 0
+      },
+      "precision": {
+        "bugs": {
+          "confirmed": null,
+          "confirmedLikely": null,
+          "all": null
+        },
+        "improvements": {
+          "evidenceBased": 1,
+          "all": 0.8
+        }
+      },
+      "cleanFalsePositives": 0,
+      "decoysFlagged": [],
+      "tierAccuracy": null,
+      "unlabelled": 4,
+      "minutes": 5.745833333333334,
+      "costUsd": 0.30284544999999996,
+      "llmCalls": 61
+    },
+    {
+      "runId": "run_20260927-131858_a21a",
+      "pipeline": "ai-no-verify (derived)",
+      "clean": true,
+      "findings": [
+        {
+          "findingId": "fd_vim9fvq3",
+          "fingerprint": "fp_2ea3c4d580491a45",
+          "title": "Failed check: Cancelling a booking removes only that booking, leaving other bookings visible",
+          "kind": "bug",
+          "tier": "confirmed",
+          "category": "state",
+          "route": "/bookings",
+          "match": {
+            "kind": "bug",
+            "id": "B06",
+            "ruleIndex": 0,
+            "tentative": false
+          },
+          "outcome": "tp",
+          "bugId": "B06",
+          "why": "matches B06 rule 1"
+        },
+        {
+          "findingId": "fd_i3i1ng2x",
+          "fingerprint": "fp_6b42bd7cd3ba2655",
+          "title": "Booking HC-1001 was not removed from the list after cancellation. The status message shows \"Booking HC-1001 c…",
+          "kind": "bug",
+          "tier": "confirmed",
+          "category": "functional",
+          "route": "/bookings",
+          "match": {
+            "kind": "bug",
+            "id": "B06",
+            "ruleIndex": 1,
+            "tentative": true
+          },
+          "outcome": "unlabelled",
+          "why": "tentative match (B06 rule 2, confirm: manual); needs a label"
+        },
+        {
+          "findingId": "fd_daehdgw0",
+          "fingerprint": "fp_cd9227181d688f8a",
+          "title": "Contact form does not confirm submission after clicking Send",
+          "kind": "bug",
+          "tier": "confirmed",
+          "category": "functional",
+          "route": "/contact",
+          "outcome": "unlabelled",
+          "why": "matches no rule; needs a label"
+        },
+        {
+          "findingId": "fd_1eo8i6b2",
+          "fingerprint": "fp_ca537fb10dfed8b6",
+          "title": "Booking summary shows only placeholder dashes with no guidance",
+          "kind": "improvement",
+          "tier": "suggestion",
+          "category": "ux",
+          "route": "/book",
+          "label": "tp_unseeded",
+          "outcome": "tp",
+          "why": "labelled real (not seeded): True on the clean bench: the booking summary shows only dashes before input, with no hint; a reasonable clarity improvement."
+        },
+        {
+          "findingId": "fd_d6um1gvf",
+          "fingerprint": "fp_85e5cfb28a3ccd5c",
+          "title": "Inconsistent service pricing labels between Quote and Book pages",
+          "kind": "improvement",
+          "tier": "suggestion",
+          "category": "ux",
+          "route": "/book",
+          "outcome": "unlabelled",
+          "why": "matches no rule; needs a label"
+        },
+        {
+          "findingId": "fd_cnom5l0r",
+          "fingerprint": "fp_93ef4fb1e3cee74f",
+          "title": "Login page after redirect gives no indication why the user was sent there",
+          "kind": "improvement",
+          "tier": "suggestion",
+          "category": "ux",
+          "route": "/login?next",
+          "outcome": "unlabelled",
+          "why": "matches no rule; needs a label"
+        },
+        {
+          "findingId": "fd_etvv22wj",
+          "fingerprint": "fp_031bc07487cf3c29",
+          "title": "Missing X-Content-Type-Options: nosniff",
+          "kind": "improvement",
+          "tier": "evidence_based",
+          "category": "security",
+          "route": "/",
+          "label": "tp_unseeded",
+          "outcome": "tp",
+          "why": "labelled real (not seeded): The bench doesn't send X-Content-Type-Options: nosniff (P0 note); a hygiene improvement no seeded bug covers."
+        },
+        {
+          "findingId": "fd_ef14fo49",
+          "fingerprint": "fp_cf5703bdcd814b7c",
+          "title": "No Content-Security-Policy header",
+          "kind": "improvement",
+          "tier": "evidence_based",
+          "category": "security",
+          "route": "/",
+          "match": {
+            "kind": "bug",
+            "id": "B15",
+            "ruleIndex": 1,
+            "tentative": false
+          },
+          "label": "tp_unseeded",
+          "outcome": "tp",
+          "why": "labelled real (not seeded): The bench sends no CSP (P0 note). Not B15: it matched B15's keyword rule only via 'script' in its impact text."
+        },
+        {
+          "findingId": "fd_armtzs6d",
+          "fingerprint": "fp_6cc1851db0e7ecdd",
+          "title": "Page can be embedded in other sites (no frame protection)",
+          "kind": "improvement",
+          "tier": "evidence_based",
+          "category": "security",
+          "route": "/",
+          "label": "tp_unseeded",
+          "outcome": "tp",
+          "why": "labelled real (not seeded): The bench sends no frame protection (P0 note); a hygiene improvement no seeded bug covers."
+        },
+        {
+          "findingId": "fd_2tmepb7p",
+          "fingerprint": "fp_7b1e727ade68f10a",
+          "title": "Quote page mentions GST but doesn't show it until calculation, with no example",
+          "kind": "improvement",
+          "tier": "suggestion",
+          "category": "ux",
+          "route": "/quote",
+          "outcome": "unlabelled",
+          "why": "matches no rule; needs a label"
+        },
+        {
+          "findingId": "fd_nilxzl8l",
+          "fingerprint": "fp_8a1b5addf9b47851",
+          "title": "Sold-out service still listed with a working 'View' link",
+          "kind": "improvement",
+          "tier": "suggestion",
+          "category": "ux",
+          "route": "/services",
+          "label": "fp",
+          "outcome": "fp",
+          "why": "labelled false positive: Decoy D01: the sold-out service's Book button is disabled with an explanation; missed the rule only on \"Sold-out\" vs \"sold out\"."
+        }
+      ],
+      "found": {
+        "B06": "confirmed"
+      },
+      "recall": {
+        "confirmed": 0.05555555555555555,
+        "confirmedLikely": 0.05555555555555555,
+        "all": 0.05555555555555555
+      },
+      "precision": {
+        "bugs": {
+          "confirmed": 1,
+          "confirmedLikely": 1,
+          "all": 1
+        },
+        "improvements": {
+          "evidenceBased": 1,
+          "all": 0.8
+        }
+      },
+      "cleanFalsePositives": 3,
+      "decoysFlagged": [],
+      "tierAccuracy": 1,
+      "unlabelled": 5,
+      "minutes": 5.745833333333334,
+      "costUsd": 0.30284544999999996,
+      "llmCalls": 61
+    },
+    {
+      "runId": "run_20260927-131858_a21a",
+      "pipeline": "full-no-skeptic (derived)",
+      "clean": true,
+      "findings": [
+        {
+          "findingId": "fd_daehdgw0",
+          "fingerprint": "fp_cd9227181d688f8a",
+          "title": "Contact form does not confirm submission after clicking Send",
+          "kind": "bug",
+          "tier": "needs_review",
+          "category": "functional",
+          "route": "/contact",
+          "outcome": "unlabelled",
+          "why": "matches no rule; needs a label"
+        },
+        {
+          "findingId": "fd_1eo8i6b2",
+          "fingerprint": "fp_ca537fb10dfed8b6",
+          "title": "Booking summary shows only placeholder dashes with no guidance",
+          "kind": "improvement",
+          "tier": "suggestion",
+          "category": "ux",
+          "route": "/book",
+          "label": "tp_unseeded",
+          "outcome": "tp",
+          "why": "labelled real (not seeded): True on the clean bench: the booking summary shows only dashes before input, with no hint; a reasonable clarity improvement."
+        },
+        {
+          "findingId": "fd_d6um1gvf",
+          "fingerprint": "fp_85e5cfb28a3ccd5c",
+          "title": "Inconsistent service pricing labels between Quote and Book pages",
+          "kind": "improvement",
+          "tier": "suggestion",
+          "category": "ux",
+          "route": "/book",
+          "outcome": "unlabelled",
+          "why": "matches no rule; needs a label"
+        },
+        {
+          "findingId": "fd_cnom5l0r",
+          "fingerprint": "fp_93ef4fb1e3cee74f",
+          "title": "Login page after redirect gives no indication why the user was sent there",
+          "kind": "improvement",
+          "tier": "suggestion",
+          "category": "ux",
+          "route": "/login?next",
+          "outcome": "unlabelled",
+          "why": "matches no rule; needs a label"
+        },
+        {
+          "findingId": "fd_etvv22wj",
+          "fingerprint": "fp_031bc07487cf3c29",
+          "title": "Missing X-Content-Type-Options: nosniff",
+          "kind": "improvement",
+          "tier": "evidence_based",
+          "category": "security",
+          "route": "/",
+          "label": "tp_unseeded",
+          "outcome": "tp",
+          "why": "labelled real (not seeded): The bench doesn't send X-Content-Type-Options: nosniff (P0 note); a hygiene improvement no seeded bug covers."
+        },
+        {
+          "findingId": "fd_ef14fo49",
+          "fingerprint": "fp_cf5703bdcd814b7c",
+          "title": "No Content-Security-Policy header",
+          "kind": "improvement",
+          "tier": "evidence_based",
+          "category": "security",
+          "route": "/",
+          "match": {
+            "kind": "bug",
+            "id": "B15",
+            "ruleIndex": 1,
+            "tentative": false
+          },
+          "label": "tp_unseeded",
+          "outcome": "tp",
+          "why": "labelled real (not seeded): The bench sends no CSP (P0 note). Not B15: it matched B15's keyword rule only via 'script' in its impact text."
+        },
+        {
+          "findingId": "fd_armtzs6d",
+          "fingerprint": "fp_6cc1851db0e7ecdd",
+          "title": "Page can be embedded in other sites (no frame protection)",
+          "kind": "improvement",
+          "tier": "evidence_based",
+          "category": "security",
+          "route": "/",
+          "label": "tp_unseeded",
+          "outcome": "tp",
+          "why": "labelled real (not seeded): The bench sends no frame protection (P0 note); a hygiene improvement no seeded bug covers."
+        },
+        {
+          "findingId": "fd_2tmepb7p",
+          "fingerprint": "fp_7b1e727ade68f10a",
+          "title": "Quote page mentions GST but doesn't show it until calculation, with no example",
+          "kind": "improvement",
+          "tier": "suggestion",
+          "category": "ux",
+          "route": "/quote",
+          "outcome": "unlabelled",
+          "why": "matches no rule; needs a label"
+        },
+        {
+          "findingId": "fd_nilxzl8l",
+          "fingerprint": "fp_8a1b5addf9b47851",
+          "title": "Sold-out service still listed with a working 'View' link",
+          "kind": "improvement",
+          "tier": "suggestion",
+          "category": "ux",
+          "route": "/services",
+          "label": "fp",
+          "outcome": "fp",
+          "why": "labelled false positive: Decoy D01: the sold-out service's Book button is disabled with an explanation; missed the rule only on \"Sold-out\" vs \"sold out\"."
+        }
+      ],
+      "found": {},
+      "recall": {
+        "confirmed": 0,
+        "confirmedLikely": 0,
+        "all": 0
+      },
+      "precision": {
+        "bugs": {
+          "confirmed": null,
+          "confirmedLikely": null,
+          "all": null
+        },
+        "improvements": {
+          "evidenceBased": 1,
+          "all": 0.8
+        }
+      },
+      "cleanFalsePositives": 0,
+      "decoysFlagged": [],
+      "tierAccuracy": null,
+      "unlabelled": 4,
+      "minutes": 5.745833333333334,
+      "costUsd": 0.30284544999999996,
+      "llmCalls": 61
+    },
+    {
+      "runId": "run_20260927-133005_qn8k",
+      "pipeline": "full",
+      "clean": true,
+      "findings": [
+        {
+          "findingId": "fd_9deq4b60",
+          "fingerprint": "fp_3aa7507552778b32",
+          "title": "Profile form accepts a phone number containing letters and an extension",
+          "kind": "bug",
+          "tier": "needs_review",
+          "category": "validation",
+          "route": "/profile",
+          "outcome": "unlabelled",
+          "why": "matches no rule; needs a label"
+        },
+        {
+          "findingId": "fd_5jc3co53",
+          "fingerprint": "fp_e9638a3d5b6b4bdd",
+          "title": "Profile form accepts a phone number that is too short",
+          "kind": "bug",
+          "tier": "needs_review",
+          "category": "validation",
+          "route": "/profile",
+          "outcome": "unlabelled",
+          "why": "matches no rule; needs a label"
+        },
+        {
+          "findingId": "fd_342ptez1",
+          "fingerprint": "fp_ec3facead619473a",
+          "title": "Sending a message through the contact form doesn't confirm it was sent",
+          "kind": "bug",
+          "tier": "needs_review",
+          "category": "functional",
+          "route": "/contact",
+          "outcome": "unlabelled",
+          "why": "matches no rule; needs a label"
+        },
+        {
+          "findingId": "fd_ykkrd5b6",
+          "fingerprint": "fp_bde51281a6cf251e",
+          "title": "Booking estimate doesn't mention GST while Quote page does",
+          "kind": "improvement",
+          "tier": "suggestion",
+          "category": "ux",
+          "route": "/book?service",
+          "label": "tp_unseeded",
+          "outcome": "tp",
+          "why": "labelled real (not seeded): True: /book shows only an estimate \"excl. GST\" and never says GST is added to the final price. Judgement call; flagged to Rohit."
+        },
+        {
+          "findingId": "fd_rgjovu2o",
+          "fingerprint": "fp_ca537fb10dfed8b6",
+          "title": "Booking summary shows empty dashes with no guidance on what's missing",
+          "kind": "improvement",
+          "tier": "suggestion",
+          "category": "ux",
+          "route": "/book",
+          "label": "tp_unseeded",
+          "outcome": "tp",
+          "why": "labelled real (not seeded): True on the clean bench: the booking summary shows only dashes before input, with no hint; a reasonable clarity improvement."
+        },
+        {
+          "findingId": "fd_z3mmq58w",
+          "fingerprint": "fp_93ef4fb1e3cee74f",
+          "title": "Login redirect gives no explanation for why login is required",
+          "kind": "improvement",
+          "tier": "suggestion",
+          "category": "ux",
+          "route": "/login?next",
+          "outcome": "unlabelled",
+          "why": "matches no rule; needs a label"
+        },
+        {
+          "findingId": "fd_9bxetdry",
+          "fingerprint": "fp_031bc07487cf3c29",
+          "title": "Missing X-Content-Type-Options: nosniff",
+          "kind": "improvement",
+          "tier": "evidence_based",
+          "category": "security",
+          "route": "/",
+          "label": "tp_unseeded",
+          "outcome": "tp",
+          "why": "labelled real (not seeded): The bench doesn't send X-Content-Type-Options: nosniff (P0 note); a hygiene improvement no seeded bug covers."
+        },
+        {
+          "findingId": "fd_2147kfdo",
+          "fingerprint": "fp_cf5703bdcd814b7c",
+          "title": "No Content-Security-Policy header",
+          "kind": "improvement",
+          "tier": "evidence_based",
+          "category": "security",
+          "route": "/",
+          "match": {
+            "kind": "bug",
+            "id": "B15",
+            "ruleIndex": 1,
+            "tentative": false
+          },
+          "label": "tp_unseeded",
+          "outcome": "tp",
+          "why": "labelled real (not seeded): The bench sends no CSP (P0 note). Not B15: it matched B15's keyword rule only via 'script' in its impact text."
+        },
+        {
+          "findingId": "fd_r1nfdso4",
+          "fingerprint": "fp_6cc1851db0e7ecdd",
+          "title": "Page can be embedded in other sites (no frame protection)",
+          "kind": "improvement",
+          "tier": "evidence_based",
+          "category": "security",
+          "route": "/",
+          "label": "tp_unseeded",
+          "outcome": "tp",
+          "why": "labelled real (not seeded): The bench sends no frame protection (P0 note); a hygiene improvement no seeded bug covers."
+        },
+        {
+          "findingId": "fd_h9iqkk98",
+          "fingerprint": "fp_5feb33a82b0e8a81",
+          "title": "Quote page has no way to proceed to booking",
+          "kind": "improvement",
+          "tier": "suggestion",
+          "category": "ux",
+          "route": "/quote",
+          "match": {
+            "kind": "decoy",
+            "id": "D03",
+            "ruleIndex": 1,
+            "tentative": false
+          },
+          "outcome": "fp",
+          "decoyId": "D03",
+          "why": "matches decoy D03 rule 2"
+        },
+        {
+          "findingId": "fd_uc0h0mt4",
+          "fingerprint": "fp_8a1b5addf9b47851",
+          "title": "Sold-out service still visible and selectable-looking in listing",
+          "kind": "improvement",
+          "tier": "suggestion",
+          "category": "ux",
+          "route": "/services",
+          "match": {
+            "kind": "bug",
+            "id": "B07",
+            "ruleIndex": 1,
+            "tentative": true
+          },
+          "label": "fp",
+          "outcome": "fp",
+          "why": "labelled false positive: Decoy D01: the sold-out service's Book button is disabled with an explanation; missed the rule only on \"Sold-out\" vs \"sold out\"."
+        }
+      ],
+      "found": {},
+      "recall": {
+        "confirmed": 0,
+        "confirmedLikely": 0,
+        "all": 0
+      },
+      "precision": {
+        "bugs": {
+          "confirmed": null,
+          "confirmedLikely": null,
+          "all": null
+        },
+        "improvements": {
+          "evidenceBased": 1,
+          "all": 0.7142857142857143
+        }
+      },
+      "cleanFalsePositives": 0,
+      "decoysFlagged": [
+        "D03"
+      ],
+      "tierAccuracy": null,
+      "unlabelled": 4,
+      "minutes": 5.2971,
+      "costUsd": 0.27994319999999995,
+      "llmCalls": 54
+    },
+    {
+      "runId": "run_20260927-133005_qn8k",
+      "pipeline": "ai-no-verify (derived)",
+      "clean": true,
+      "findings": [
+        {
+          "findingId": "fd_9deq4b60",
+          "fingerprint": "fp_3aa7507552778b32",
+          "title": "Profile form accepts a phone number containing letters and an extension",
+          "kind": "bug",
+          "tier": "confirmed",
+          "category": "validation",
+          "route": "/profile",
+          "outcome": "unlabelled",
+          "why": "matches no rule; needs a label"
+        },
+        {
+          "findingId": "fd_5jc3co53",
+          "fingerprint": "fp_e9638a3d5b6b4bdd",
+          "title": "Profile form accepts a phone number that is too short",
+          "kind": "bug",
+          "tier": "confirmed",
+          "category": "validation",
+          "route": "/profile",
+          "outcome": "unlabelled",
+          "why": "matches no rule; needs a label"
+        },
+        {
+          "findingId": "fd_342ptez1",
+          "fingerprint": "fp_ec3facead619473a",
+          "title": "Sending a message through the contact form doesn't confirm it was sent",
+          "kind": "bug",
+          "tier": "confirmed",
+          "category": "functional",
+          "route": "/contact",
+          "outcome": "unlabelled",
+          "why": "matches no rule; needs a label"
+        },
+        {
+          "findingId": "fd_ykkrd5b6",
+          "fingerprint": "fp_bde51281a6cf251e",
+          "title": "Booking estimate doesn't mention GST while Quote page does",
+          "kind": "improvement",
+          "tier": "suggestion",
+          "category": "ux",
+          "route": "/book?service",
+          "label": "tp_unseeded",
+          "outcome": "tp",
+          "why": "labelled real (not seeded): True: /book shows only an estimate \"excl. GST\" and never says GST is added to the final price. Judgement call; flagged to Rohit."
+        },
+        {
+          "findingId": "fd_rgjovu2o",
+          "fingerprint": "fp_ca537fb10dfed8b6",
+          "title": "Booking summary shows empty dashes with no guidance on what's missing",
+          "kind": "improvement",
+          "tier": "suggestion",
+          "category": "ux",
+          "route": "/book",
+          "label": "tp_unseeded",
+          "outcome": "tp",
+          "why": "labelled real (not seeded): True on the clean bench: the booking summary shows only dashes before input, with no hint; a reasonable clarity improvement."
+        },
+        {
+          "findingId": "fd_z3mmq58w",
+          "fingerprint": "fp_93ef4fb1e3cee74f",
+          "title": "Login redirect gives no explanation for why login is required",
+          "kind": "improvement",
+          "tier": "suggestion",
+          "category": "ux",
+          "route": "/login?next",
+          "outcome": "unlabelled",
+          "why": "matches no rule; needs a label"
+        },
+        {
+          "findingId": "fd_9bxetdry",
+          "fingerprint": "fp_031bc07487cf3c29",
+          "title": "Missing X-Content-Type-Options: nosniff",
+          "kind": "improvement",
+          "tier": "evidence_based",
+          "category": "security",
+          "route": "/",
+          "label": "tp_unseeded",
+          "outcome": "tp",
+          "why": "labelled real (not seeded): The bench doesn't send X-Content-Type-Options: nosniff (P0 note); a hygiene improvement no seeded bug covers."
+        },
+        {
+          "findingId": "fd_2147kfdo",
+          "fingerprint": "fp_cf5703bdcd814b7c",
+          "title": "No Content-Security-Policy header",
+          "kind": "improvement",
+          "tier": "evidence_based",
+          "category": "security",
+          "route": "/",
+          "match": {
+            "kind": "bug",
+            "id": "B15",
+            "ruleIndex": 1,
+            "tentative": false
+          },
+          "label": "tp_unseeded",
+          "outcome": "tp",
+          "why": "labelled real (not seeded): The bench sends no CSP (P0 note). Not B15: it matched B15's keyword rule only via 'script' in its impact text."
+        },
+        {
+          "findingId": "fd_r1nfdso4",
+          "fingerprint": "fp_6cc1851db0e7ecdd",
+          "title": "Page can be embedded in other sites (no frame protection)",
+          "kind": "improvement",
+          "tier": "evidence_based",
+          "category": "security",
+          "route": "/",
+          "label": "tp_unseeded",
+          "outcome": "tp",
+          "why": "labelled real (not seeded): The bench sends no frame protection (P0 note); a hygiene improvement no seeded bug covers."
+        },
+        {
+          "findingId": "fd_h9iqkk98",
+          "fingerprint": "fp_5feb33a82b0e8a81",
+          "title": "Quote page has no way to proceed to booking",
+          "kind": "improvement",
+          "tier": "suggestion",
+          "category": "ux",
+          "route": "/quote",
+          "match": {
+            "kind": "decoy",
+            "id": "D03",
+            "ruleIndex": 1,
+            "tentative": false
+          },
+          "outcome": "fp",
+          "decoyId": "D03",
+          "why": "matches decoy D03 rule 2"
+        },
+        {
+          "findingId": "fd_uc0h0mt4",
+          "fingerprint": "fp_8a1b5addf9b47851",
+          "title": "Sold-out service still visible and selectable-looking in listing",
+          "kind": "improvement",
+          "tier": "suggestion",
+          "category": "ux",
+          "route": "/services",
+          "match": {
+            "kind": "bug",
+            "id": "B07",
+            "ruleIndex": 1,
+            "tentative": true
+          },
+          "label": "fp",
+          "outcome": "fp",
+          "why": "labelled false positive: Decoy D01: the sold-out service's Book button is disabled with an explanation; missed the rule only on \"Sold-out\" vs \"sold out\"."
+        }
+      ],
+      "found": {},
+      "recall": {
+        "confirmed": 0,
+        "confirmedLikely": 0,
+        "all": 0
+      },
+      "precision": {
+        "bugs": {
+          "confirmed": null,
+          "confirmedLikely": null,
+          "all": null
+        },
+        "improvements": {
+          "evidenceBased": 1,
+          "all": 0.7142857142857143
+        }
+      },
+      "cleanFalsePositives": 3,
+      "decoysFlagged": [
+        "D03"
+      ],
+      "tierAccuracy": null,
+      "unlabelled": 4,
+      "minutes": 5.2971,
+      "costUsd": 0.27994319999999995,
+      "llmCalls": 54
+    },
+    {
+      "runId": "run_20260927-133005_qn8k",
+      "pipeline": "full-no-skeptic (derived)",
+      "clean": true,
+      "findings": [
+        {
+          "findingId": "fd_9deq4b60",
+          "fingerprint": "fp_3aa7507552778b32",
+          "title": "Profile form accepts a phone number containing letters and an extension",
+          "kind": "bug",
+          "tier": "needs_review",
+          "category": "validation",
+          "route": "/profile",
+          "outcome": "unlabelled",
+          "why": "matches no rule; needs a label"
+        },
+        {
+          "findingId": "fd_5jc3co53",
+          "fingerprint": "fp_e9638a3d5b6b4bdd",
+          "title": "Profile form accepts a phone number that is too short",
+          "kind": "bug",
+          "tier": "needs_review",
+          "category": "validation",
+          "route": "/profile",
+          "outcome": "unlabelled",
+          "why": "matches no rule; needs a label"
+        },
+        {
+          "findingId": "fd_342ptez1",
+          "fingerprint": "fp_ec3facead619473a",
+          "title": "Sending a message through the contact form doesn't confirm it was sent",
+          "kind": "bug",
+          "tier": "needs_review",
+          "category": "functional",
+          "route": "/contact",
+          "outcome": "unlabelled",
+          "why": "matches no rule; needs a label"
+        },
+        {
+          "findingId": "fd_ykkrd5b6",
+          "fingerprint": "fp_bde51281a6cf251e",
+          "title": "Booking estimate doesn't mention GST while Quote page does",
+          "kind": "improvement",
+          "tier": "suggestion",
+          "category": "ux",
+          "route": "/book?service",
+          "label": "tp_unseeded",
+          "outcome": "tp",
+          "why": "labelled real (not seeded): True: /book shows only an estimate \"excl. GST\" and never says GST is added to the final price. Judgement call; flagged to Rohit."
+        },
+        {
+          "findingId": "fd_rgjovu2o",
+          "fingerprint": "fp_ca537fb10dfed8b6",
+          "title": "Booking summary shows empty dashes with no guidance on what's missing",
+          "kind": "improvement",
+          "tier": "suggestion",
+          "category": "ux",
+          "route": "/book",
+          "label": "tp_unseeded",
+          "outcome": "tp",
+          "why": "labelled real (not seeded): True on the clean bench: the booking summary shows only dashes before input, with no hint; a reasonable clarity improvement."
+        },
+        {
+          "findingId": "fd_z3mmq58w",
+          "fingerprint": "fp_93ef4fb1e3cee74f",
+          "title": "Login redirect gives no explanation for why login is required",
+          "kind": "improvement",
+          "tier": "suggestion",
+          "category": "ux",
+          "route": "/login?next",
+          "outcome": "unlabelled",
+          "why": "matches no rule; needs a label"
+        },
+        {
+          "findingId": "fd_9bxetdry",
+          "fingerprint": "fp_031bc07487cf3c29",
+          "title": "Missing X-Content-Type-Options: nosniff",
+          "kind": "improvement",
+          "tier": "evidence_based",
+          "category": "security",
+          "route": "/",
+          "label": "tp_unseeded",
+          "outcome": "tp",
+          "why": "labelled real (not seeded): The bench doesn't send X-Content-Type-Options: nosniff (P0 note); a hygiene improvement no seeded bug covers."
+        },
+        {
+          "findingId": "fd_2147kfdo",
+          "fingerprint": "fp_cf5703bdcd814b7c",
+          "title": "No Content-Security-Policy header",
+          "kind": "improvement",
+          "tier": "evidence_based",
+          "category": "security",
+          "route": "/",
+          "match": {
+            "kind": "bug",
+            "id": "B15",
+            "ruleIndex": 1,
+            "tentative": false
+          },
+          "label": "tp_unseeded",
+          "outcome": "tp",
+          "why": "labelled real (not seeded): The bench sends no CSP (P0 note). Not B15: it matched B15's keyword rule only via 'script' in its impact text."
+        },
+        {
+          "findingId": "fd_r1nfdso4",
+          "fingerprint": "fp_6cc1851db0e7ecdd",
+          "title": "Page can be embedded in other sites (no frame protection)",
+          "kind": "improvement",
+          "tier": "evidence_based",
+          "category": "security",
+          "route": "/",
+          "label": "tp_unseeded",
+          "outcome": "tp",
+          "why": "labelled real (not seeded): The bench sends no frame protection (P0 note); a hygiene improvement no seeded bug covers."
+        },
+        {
+          "findingId": "fd_h9iqkk98",
+          "fingerprint": "fp_5feb33a82b0e8a81",
+          "title": "Quote page has no way to proceed to booking",
+          "kind": "improvement",
+          "tier": "suggestion",
+          "category": "ux",
+          "route": "/quote",
+          "match": {
+            "kind": "decoy",
+            "id": "D03",
+            "ruleIndex": 1,
+            "tentative": false
+          },
+          "outcome": "fp",
+          "decoyId": "D03",
+          "why": "matches decoy D03 rule 2"
+        },
+        {
+          "findingId": "fd_uc0h0mt4",
+          "fingerprint": "fp_8a1b5addf9b47851",
+          "title": "Sold-out service still visible and selectable-looking in listing",
+          "kind": "improvement",
+          "tier": "suggestion",
+          "category": "ux",
+          "route": "/services",
+          "match": {
+            "kind": "bug",
+            "id": "B07",
+            "ruleIndex": 1,
+            "tentative": true
+          },
+          "label": "fp",
+          "outcome": "fp",
+          "why": "labelled false positive: Decoy D01: the sold-out service's Book button is disabled with an explanation; missed the rule only on \"Sold-out\" vs \"sold out\"."
+        }
+      ],
+      "found": {},
+      "recall": {
+        "confirmed": 0,
+        "confirmedLikely": 0,
+        "all": 0
+      },
+      "precision": {
+        "bugs": {
+          "confirmed": null,
+          "confirmedLikely": null,
+          "all": null
+        },
+        "improvements": {
+          "evidenceBased": 1,
+          "all": 0.7142857142857143
+        }
+      },
+      "cleanFalsePositives": 0,
+      "decoysFlagged": [
+        "D03"
+      ],
+      "tierAccuracy": null,
+      "unlabelled": 4,
+      "minutes": 5.2971,
+      "costUsd": 0.27994319999999995,
+      "llmCalls": 54
+    },
+    {
+      "runId": "run_20260927-125512_jhx0",
+      "pipeline": "deterministic",
+      "clean": false,
+      "findings": [
+        {
+          "findingId": "fd_u4rhc3b8",
+          "fingerprint": "fp_108e130b1258f658",
+          "title": "API returns private data without logging in",
+          "kind": "bug",
+          "tier": "confirmed",
+          "category": "security",
+          "route": "/bookings/:id",
+          "outcome": "unlabelled",
+          "why": "matches no rule; needs a label"
+        },
+        {
+          "findingId": "fd_uvliqi81",
+          "fingerprint": "fp_4807641267f25a31",
+          "title": "Stripe secret key exposed to the browser",
+          "kind": "bug",
+          "tier": "confirmed",
+          "category": "security",
+          "route": "/",
+          "outcome": "unlabelled",
+          "why": "matches no rule; needs a label"
+        },
+        {
+          "findingId": "fd_sp08tgbz",
+          "fingerprint": "fp_8ce12f5d69b8165f",
+          "title": "Database error details exposed — possible SQL injection",
+          "kind": "bug",
+          "tier": "confirmed",
+          "category": "security",
+          "route": "/services?q",
+          "match": {
+            "kind": "bug",
+            "id": "B15",
+            "ruleIndex": 1,
+            "tentative": false
+          },
+          "outcome": "tp",
+          "bugId": "B15",
+          "why": "matches B15 rule 2"
+        },
+        {
+          "findingId": "fd_m6edquab",
+          "fingerprint": "fp_b3f5826353bd1a23",
+          "title": "Text typed into the \"Search services\" search box is inserted into the page as HTML (XSS risk)",
+          "kind": "bug",
+          "tier": "confirmed",
+          "category": "security",
+          "route": "/services?q",
+          "match": {
+            "kind": "bug",
+            "id": "B15",
+            "ruleIndex": 0,
+            "tentative": false
+          },
+          "outcome": "tp",
+          "bugId": "B15",
+          "why": "matches B15 rule 1"
+        },
+        {
+          "findingId": "fd_o2kr5t94",
+          "fingerprint": "fp_67b897a090f8b356",
+          "title": "The page's JavaScript crashed: TypeError: Cannot read properties of undefined (reading 'links')",
+          "kind": "bug",
+          "tier": "confirmed",
+          "category": "crash",
+          "route": "/faq",
+          "match": {
+            "kind": "bug",
+            "id": "B11",
+            "ruleIndex": 0,
+            "tentative": false
+          },
+          "outcome": "tp",
+          "bugId": "B11",
+          "why": "matches B11 rule 1"
+        },
+        {
+          "findingId": "fd_nt1ufw4s",
+          "fingerprint": "fp_c6688d3c457c8c97",
+          "title": "\"Price: low to high\" doesn't sort the list on /services in that order",
+          "kind": "bug",
+          "tier": "confirmed",
+          "category": "functional",
+          "route": "/services",
+          "match": {
+            "kind": "bug",
+            "id": "B02",
+            "ruleIndex": 1,
+            "tentative": true
+          },
+          "label": "tp:B02",
+          "outcome": "tp",
+          "bugId": "B02",
+          "why": "labelled tp:B02: DET-SORT: \"Price: low to high\" doesn't put the services in price order."
+        },
+        {
+          "findingId": "fd_s5xhubc6",
+          "fingerprint": "fp_7b76efbe19cde62c",
+          "title": "Image doesn't load: \"Carpet shampoo\"",
+          "kind": "bug",
+          "tier": "confirmed",
+          "category": "broken-resource",
+          "route": "/services",
+          "match": {
+            "kind": "bug",
+            "id": "B09",
+            "ruleIndex": 0,
+            "tentative": false
+          },
+          "outcome": "tp",
+          "bugId": "B09",
+          "why": "matches B09 rule 1"
+        },
+        {
+          "findingId": "fd_a0xapgr7",
+          "fingerprint": "fp_d2cffea3ad040b42",
+          "title": "Link \"Terms\" goes to a missing page (/terms-and-conditions → 404)",
+          "kind": "bug",
+          "tier": "confirmed",
+          "category": "broken-resource",
+          "route": "/",
+          "match": {
+            "kind": "bug",
+            "id": "B10",
+            "ruleIndex": 0,
+            "tentative": false
+          },
+          "outcome": "tp",
+          "bugId": "B10",
+          "why": "matches B10 rule 1"
+        },
+        {
+          "findingId": "fd_ktt0wk9p",
+          "fingerprint": "fp_0fa71620b9c525c3",
+          "title": "Page scrolls sideways on a phone (605 px content in a 375 px screen)",
+          "kind": "bug",
+          "tier": "confirmed",
+          "category": "responsive",
+          "route": "/book",
+          "match": {
+            "kind": "bug",
+            "id": "B16",
+            "ruleIndex": 0,
+            "tentative": false
+          },
+          "outcome": "tp",
+          "bugId": "B16",
+          "why": "matches B16 rule 1"
+        },
+        {
+          "findingId": "fd_cj8f3d7l",
+          "fingerprint": "fp_47bcc5a3238b3d5f",
+          "title": "Accessibility: Buttons must have discernible text",
+          "kind": "improvement",
+          "tier": "evidence_based",
+          "category": "accessibility",
+          "route": "/contact",
+          "match": {
+            "kind": "bug",
+            "id": "B12",
+            "ruleIndex": 1,
+            "tentative": false
+          },
+          "outcome": "tp",
+          "bugId": "B12",
+          "why": "matches B12 rule 2"
+        },
+        {
+          "findingId": "fd_zaq1h53z",
+          "fingerprint": "fp_4b42d1f0cab26db3",
+          "title": "Accessibility: Elements must meet minimum color contrast ratio thresholds",
+          "kind": "improvement",
+          "tier": "evidence_based",
+          "category": "accessibility",
+          "route": "/",
+          "match": {
+            "kind": "bug",
+            "id": "B13",
+            "ruleIndex": 0,
+            "tentative": false
+          },
+          "outcome": "tp",
+          "bugId": "B13",
+          "why": "matches B13 rule 1"
+        },
+        {
+          "findingId": "fd_gspz3q8u",
+          "fingerprint": "fp_88181b5b01b2e3b0",
+          "title": "Accessibility: Form elements must have labels",
+          "kind": "improvement",
+          "tier": "evidence_based",
+          "category": "accessibility",
+          "route": "/contact",
+          "match": {
+            "kind": "bug",
+            "id": "B12",
+            "ruleIndex": 0,
+            "tentative": false
+          },
+          "outcome": "tp",
+          "bugId": "B12",
+          "why": "matches B12 rule 1"
+        },
+        {
+          "findingId": "fd_yfk79cas",
+          "fingerprint": "fp_031bc07487cf3c29",
+          "title": "Missing X-Content-Type-Options: nosniff",
+          "kind": "improvement",
+          "tier": "evidence_based",
+          "category": "security",
+          "route": "/",
+          "label": "tp_unseeded",
+          "outcome": "tp",
+          "why": "labelled real (not seeded): The bench doesn't send X-Content-Type-Options: nosniff (P0 note); a hygiene improvement no seeded bug covers."
+        },
+        {
+          "findingId": "fd_ve5cbzm2",
+          "fingerprint": "fp_cf5703bdcd814b7c",
+          "title": "No Content-Security-Policy header",
+          "kind": "improvement",
+          "tier": "evidence_based",
+          "category": "security",
+          "route": "/",
+          "match": {
+            "kind": "bug",
+            "id": "B15",
+            "ruleIndex": 1,
+            "tentative": false
+          },
+          "label": "tp_unseeded",
+          "outcome": "tp",
+          "why": "labelled real (not seeded): The bench sends no CSP (P0 note). Not B15: it matched B15's keyword rule only via 'script' in its impact text."
+        },
+        {
+          "findingId": "fd_a4q0c1jz",
+          "fingerprint": "fp_6cc1851db0e7ecdd",
+          "title": "Page can be embedded in other sites (no frame protection)",
+          "kind": "improvement",
+          "tier": "evidence_based",
+          "category": "security",
+          "route": "/",
+          "label": "tp_unseeded",
+          "outcome": "tp",
+          "why": "labelled real (not seeded): The bench sends no frame protection (P0 note); a hygiene improvement no seeded bug covers."
+        },
+        {
+          "findingId": "fd_28nyjhiy",
+          "fingerprint": "fp_fcb2c9f64fd53c70",
+          "title": "Slow API call: GET /api/bookings took 3.5 s",
+          "kind": "improvement",
+          "tier": "evidence_based",
+          "category": "performance",
+          "route": "/bookings",
+          "match": {
+            "kind": "bug",
+            "id": "B14",
+            "ruleIndex": 0,
+            "tentative": false
+          },
+          "outcome": "tp",
+          "bugId": "B14",
+          "why": "matches B14 rule 1"
+        }
+      ],
+      "found": {
+        "B15": "confirmed",
+        "B11": "confirmed",
+        "B02": "confirmed",
+        "B09": "confirmed",
+        "B10": "confirmed",
+        "B16": "confirmed",
+        "B12": "confirmed",
+        "B13": "confirmed",
+        "B14": "confirmed"
+      },
+      "recall": {
+        "confirmed": 0.5,
+        "confirmedLikely": 0.5,
+        "all": 0.5
+      },
+      "precision": {
+        "bugs": {
+          "confirmed": 1,
+          "confirmedLikely": 1,
+          "all": 1
+        },
+        "improvements": {
+          "evidenceBased": 1,
+          "all": 1
+        }
+      },
+      "cleanFalsePositives": null,
+      "decoysFlagged": [],
+      "tierAccuracy": 1,
+      "unlabelled": 2,
+      "minutes": 1.3460333333333334,
+      "costUsd": 0,
+      "llmCalls": 0
+    }
+  ]
+}

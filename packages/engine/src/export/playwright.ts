@@ -8,6 +8,8 @@
 import type { Check, Locator, NumExpr, TextExpr } from "../oracle/language";
 import type { Finding, RunResult, Step } from "../types";
 import { CONFIG_SOURCE, HELPERS_SOURCE } from "./helpers-source";
+import { DB_ERROR_SIGNATURES } from "../detectors/dberror";
+import { SECRET_PATTERNS } from "../detectors/secrets";
 
 export interface ExportedFile {
   name: string;
@@ -230,12 +232,22 @@ function unexportable(f: Finding, steps: Map<string, Step>): string | undefined 
   if (!r) return "no replay facts";
   if (r.stepIds.some((id) => !steps.has(id))) return "its steps weren't recorded";
   if (f.source.kind === "judgement") return "a judgement has no deterministic assertion";
+  if (f.source.kind === "requirement")
+    return "a feature missing from the app can't be a regression test (nothing to assert on)";
   if (!r.check) {
     const sig = r.signature;
     if (sig.kind === "check_failed") return "its check wasn't recorded";
     if (
       sig.kind === "detector" &&
-      !["DET-BROKENIMG", "DET-BROKENLINK", "DET-OVERFLOW", "DET-CONSOLE"].includes(sig.detectorId)
+      ![
+        "DET-BROKENIMG",
+        "DET-BROKENLINK",
+        "DET-OVERFLOW",
+        "DET-CONSOLE",
+        "DET-SECRETS",
+        "DET-DBERROR",
+        "DET-AUTHZ",
+      ].includes(sig.detectorId)
     )
       return `no exported assertion for ${sig.detectorId}`;
   }
@@ -279,6 +291,35 @@ function signatureLines(f: Finding): string[] {
           return [
             `const errors = w.consoleErrors.filter((e) => messagePrefix(e).startsWith(${q(sig.key)}));`,
             `expect(errors).toEqual([]);`,
+          ];
+        case "DET-SECRETS": {
+          // The pattern, never the key itself.
+          const pattern = SECRET_PATTERNS.find((p) => sig.key.startsWith(`${p.id}|`));
+          if (!pattern || !f.signals.request) return [];
+          return [
+            `const res = await page.request.get(BASE_URL + ${q(f.signals.request.path)});`,
+            `expect(await res.text(), "no ${pattern.label} in the file").not.toMatch(new RegExp(${q(pattern.re.source)}));`,
+          ];
+        }
+        case "DET-DBERROR": {
+          const any = DB_ERROR_SIGNATURES.map((d) => d.re.source).join("|");
+          const text = f.signals.request
+            ? [
+                `const res = await page.request.get(BASE_URL + ${q(f.signals.request.path)});`,
+                "const text = await res.text();",
+              ]
+            : [`const text = await page.locator("body").innerText();`];
+          return [
+            ...text,
+            `expect(text, "no database error is shown").not.toMatch(new RegExp(${q(any)}, "i"));`,
+          ];
+        }
+        case "DET-AUTHZ":
+          if (!f.signals.request) return [];
+          return [
+            "// Not logged in: the page's browser context has no cookies.",
+            `const res = await page.request.get(BASE_URL + ${q(f.signals.request.path)}, { maxRedirects: 0 });`,
+            `expect(res.status(), "the API refuses a request without a login").toBeGreaterThanOrEqual(400);`,
           ];
       }
       return [];

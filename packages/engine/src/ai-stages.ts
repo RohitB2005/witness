@@ -13,7 +13,7 @@ import type { StateRegistry } from "./explore/states";
 import { LlmCache } from "./llm/cache";
 import { LlmGateway } from "./llm/gateway";
 import type { Models } from "./llm/settings";
-import { planJourneys, type PlanMetrics } from "./plan/planner";
+import { planJourneys, type PlanMetrics, type ValidCriterion } from "./plan/planner";
 import { buildAppMapSummary } from "./plan/summary";
 import type { PreflightSuccess } from "./preflight/preflight";
 import type { EvidenceWriter } from "./record/evidence";
@@ -47,6 +47,8 @@ export interface AiStagesOutput {
   candidates: Candidate[];
   addedStates: PageState[];
   appModel?: RunResult["appModel"];
+  /** Acceptance criteria the Planner split the requirements into (quotes verified), when given. */
+  criteria?: ValidCriterion[];
   aiStagesSkipped?: string;
   capsHit: string[];
   metrics: Record<string, number>;
@@ -116,6 +118,7 @@ export async function runAiStages(i: AiStagesInput): Promise<AiStagesOutput> {
     return finish(out, gateway);
   }
   out.appModel = plan.appModel;
+  if (config.requirements?.trim()) out.criteria = plan.criteria;
   Object.assign(out.metrics, prefix("plan", plan.metrics as unknown as Record<string, number>));
   let journeys = plan.journeys.map((j) => ({ ...j, status: "approved" as Journey["status"] }));
   if (config.approvedJourneyIds?.length) {

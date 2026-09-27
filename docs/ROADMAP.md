@@ -86,13 +86,17 @@ Presentation: 7, 8 or 9 October 2026. Feature freeze: **Saturday 3 October**. Pr
 
 Spec: `docs/ADDENDUM_QA_COVERAGE.md` (approved by Rohit, 26 Sep). Build in this order. A2 and A6 moved to stretch on 27 Sep to protect the schedule (D47).
 
-- [ ] Bench additions **first**: `bench/bugs-v2.yaml` (same schema and matching rules as `bugs.yaml`) and `bench/SCOPE.md`; flags B19–B23 (B20 stays although A2 is now stretch, D47; B24 only if A6 is built), decoys D05–D06; fake secrets built from fragments at runtime (no realistic literal in the repo); bench Playwright tests for B19–B24 and D05–D06 (pass clean, fail when flagged). Commit, and record the hash in `DEVLOG.md` as the second freeze. `bugs.yaml` stays untouched
-- [ ] A1 — DET-SECRETS: secrets exposed to the browser (high-confidence patterns only; publishable keys aren't findings; always redacted to first 4 + last 4; never sent to the LLM)
-- [ ] A4 — DET-DBERROR: database error signatures in responses and page text (existing apostrophe edge inputs plus one quote-heavy string; no destructive payloads); group with a 5xx from the same request
-- [ ] A3 — DET-AUTHZ: GET JSON APIs seen only while logged in, replayed with no cookies or auth headers (GET only, so allowed in production mode)
-- [ ] A5 — Acceptance criteria: Planner splits `requirements` into numbered criteria mapped to journeys and checks; `requirement` grounding counts like `ui_text`; "Not found in the app" findings; Requirements coverage in the report; verdict counts failed and not-found criteria; CLI `--requirements <file>`
+- [x] Bench additions **first**: `bench/bugs-v2.yaml` (same schema and matching rules as `bugs.yaml`) and `bench/SCOPE.md`; flags B19–B23 (B20 stays although A2 is now stretch, D47; B24 only if A6 is built), decoys D05–D06; fake secrets built from fragments at runtime (no realistic literal in the repo); bench Playwright tests for B19–B24 and D05–D06 (pass clean, fail when flagged). Commit, and record the hash in `DEVLOG.md` as the second freeze. `bugs.yaml` stays untouched
+- [x] A1 — DET-SECRETS: secrets exposed to the browser (high-confidence patterns only; publishable keys aren't findings; always redacted to first 4 + last 4; never sent to the LLM)
+- [x] A4 — DET-DBERROR: database error signatures in responses and page text (existing apostrophe edge inputs plus one quote-heavy string; no destructive payloads); group with a 5xx from the same request
+- [x] A3 — DET-AUTHZ: GET JSON APIs seen only while logged in, replayed with no cookies or auth headers (GET only, so allowed in production mode)
+- [x] A5 — Acceptance criteria: Planner splits `requirements` into numbered criteria mapped to journeys and checks; `requirement` grounding counts like `ui_text`; "Not found in the app" findings; Requirements coverage in the report; verdict counts failed and not-found criteria; CLI `--requirements <file>`
 
 **Gate P3b:** B19 and B21–B23 detected on the buggy bench (B20 only if A2 is built, B24 only if A6 is); D05 and D06 not flagged; zero new Confirmed findings on the clean bench over 2 runs (D48); secrets redacted everywhere (test). Teach-back written.
+
+**Also (Rohit, 27 Sep):** on the clean runs every `SCOPE.md` criterion must be Verified or Not tested, never Failed or Not found; the new booking details page passes the clean-build audit. Planner and Explorer test-design guidance added first (D64), measured by a buggy run without requirements.
+
+**P3b gate — passed 27 Sep 2026.** Buggy + requirements: B19, B21, B22 Confirmed; B23 Likely (Not found in the app); B20 not built. D05/D06 never flagged. Clean ×2: 0 Confirmed and 0 Likely bugs; criteria only Verified or Not tested. Secrets redacted in every file (test, plus a grep of the real runs). Bench tests 61 pass, including the new page's audit. v1 recall C+L 83% with requirements, 72% without (B06 and B08 now found; B03 still missed). P3b cost $1.57 (total usage $6.81, balance $3.19). Labels proposed, not applied. Details in `DEVLOG.md` (D64–D74) and `eval/results/p3b-gate/`.
 
 ## P4 — Dashboard and server (Thu 1 – Fri 2 Oct)
 

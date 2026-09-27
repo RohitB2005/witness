@@ -16,7 +16,7 @@ export type CandidateDraft = Pick<
   | "summary"
   | "evidenceIds"
 > &
-  Partial<Pick<Candidate, "check" | "grounding">> & {
+  Partial<Pick<Candidate, "check" | "grounding" | "review">> & {
     source: { kind: "detector"; id: DetectorId };
   };
 
