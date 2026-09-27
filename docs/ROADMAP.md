@@ -113,6 +113,8 @@ Spec: `docs/ADDENDUM_QA_COVERAGE.md` (approved by Rohit, 26 Sep). Build in this 
 ## P5 — Evaluate and stabilise; FEATURE FREEZE (Sat 3 Oct)
 
 - [ ] Cut matrix (budget, D48): A0 as needed (free), A2 buggy ×3, A2 clean ×2, SauceDemo ×2 (one per account), Friction ×1; the injection comparison ×1 only if budget allows. A1 and A3 are derived from the A2 runs (`EVALUATION.md` §2). Label findings; `summary.json` + charts. Report the v1 set (B01–B18) and the v2 set (B19–B24) separately and combined; the ablation stays on v1 so earlier numbers remain comparable (addendum)
+- [ ] Combined v1+v2 scoring (Rohit, 28 Sep): one finding counts for at most one seeded bug across both files (the DB-error "possible SQL injection" finding is B22, not v1 B15, whose frozen keyword rule also matches it); precision is only reported combined
+- [ ] Clean-run rows show "–" for recall and precision (there's nothing to recall), not 0%
 - [ ] Fix only bugs that affect the demo or the numbers' validity
 - [ ] Offline replay tested with Wi-Fi off; screen recording made
 - [ ] README: what it is, how to run, architecture sketch, results, limitations

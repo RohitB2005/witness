@@ -4,7 +4,7 @@ import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import type { Browser, Page } from "playwright";
 import { launchBrowser } from "../browser/context";
 import { evaluateCheck, type EvalContext } from "./evaluate";
-import type { Check } from "./language";
+import type { Check, Locator } from "./language";
 
 let browser: Browser;
 let page: Page;
@@ -606,5 +606,57 @@ describe("typographic quotes (P3)", () => {
         })
       ).status,
     ).toBe("fail");
+  });
+});
+
+describe("removal checks target the item's own control or row (D64, revised in P4)", () => {
+  // A confirmation message that repeats the removed item's name is common; the check must not see it.
+  const list = (ids: number[], status?: string) => `
+    <h1>Invoices</h1>
+    <ul aria-label="Invoices">
+      ${ids.map((id) => `<li><span>Invoice ${id}</span> <button>Delete invoice ${id}</button></li>`).join("")}
+    </ul>
+    ${status ? `<p role="status">${status}</p>` : ""}`;
+  const removed = (target: Locator): Check => ({
+    type: "all",
+    checks: [
+      { type: "notVisible", target },
+      { type: "visible", target: { by: "role", role: "button", name: "Delete invoice 41" } },
+    ],
+  });
+  const byControl = { by: "role", role: "button", name: "Delete invoice 42", exact: true } as const;
+  const inList = {
+    by: "text",
+    text: "Invoice 42",
+    exact: true,
+    within: { by: "role", role: "list", name: "Invoices" },
+  } as const;
+
+  it.each([
+    ["its own control, by role and name", byControl],
+    ["its text within the list", inList],
+  ] as const)(
+    "%s: passes when the row is gone and a status message names the item",
+    async (_n, target) => {
+      const r = await run(list([41, 43], "Invoice 42 deleted."), removed(target));
+      expect(r.status).toBe("pass");
+    },
+  );
+
+  it.each([
+    ["its own control, by role and name", byControl],
+    ["its text within the list", inList],
+  ] as const)("%s: fails when the row is still there", async (_n, target) => {
+    const r = await run(list([41, 42, 43], "Invoice 42 deleted."), removed(target));
+    expect(r.status).toBe("fail");
+    expect(r.leaf).toBe("notVisible");
+  });
+
+  it("why: the item's text anywhere on the page also matches the confirmation message", async () => {
+    const r = await run(
+      list([41, 43], "Invoice 42 deleted."),
+      removed({ by: "text", text: "Invoice 42" }),
+    );
+    expect(r.status).toBe("fail");
   });
 });

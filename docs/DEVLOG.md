@@ -869,3 +869,52 @@ With requirements, v1 rises to 83% C+L: the SCOPE.md criteria pulled the past-da
 - **"Not found".** The Planner can pick words the app doesn't use for a feature it does have. The finding is then a Likely false bug that a person has to dismiss.
 
 *Say plainly in the talk.* A2 (served source maps) and A6 (prompt injection) aren't built. B20 is an honest miss. The bench's security bugs are easy for the detectors by design; the evidence that they generalise will be SauceDemo and Friction in P5.
+
+### P3b loose ends — 28 Sep 2026
+
+No paid runs. Tests: 32 files, all pass.
+
+**Labels applied** (23 new in `eval/labels.json`; re-scored into `eval/results/p3b-gate/labelled/{v1,v2}/`; the gate's own `summary.md` files are left as the record).
+- As proposed: `tp:B06` for `fp_a4abe8…` and `fp_8c961a…`; `tp:B08` for `fp_8e5d89…` and `fp_164ec3…`; `fp` for the five AI-guessed input rules, the two contact-form checks and the D44 canary suggestion.
+- **Rohit's changes:**
+  - `fp_6b42bd7cd3ba2655` → `fp`. It comes from clean run `…131858_a21a`, so it can't be B06: the booking was removed, and the Explorer read the "Booking HC-1001 cancelled." message as the booking still being there. Its check twin, `fp_2ea3c4d580491a45` (notVisible "HC-1001"), gets the same label and reason.
+  - `fp_5feb33a82b0e8a81` → `fp`. "Book this clean" appears after Calculate; the reviewer only saw /quote before a quote.
+- **The other UX suggestions, checked against the clean bench's source** (`bench/app/src/client/pages/`):
+  - `tp_unseeded` ×4:
+    - `fp_85e5cf…` and `fp_8c2541…`: /book's service dropdown drops the prices /quote shows.
+    - `fp_93ef4f…`: /login?next=… gives no reason for the redirect.
+    - `fp_61b812…`: /quote lists the sold-out service as normal; same as P3's `fp_8f54cc…`.
+  - `fp` ×4:
+    - `fp_5d1df8…`: "When" does fill in once a date is chosen.
+    - `fp_fcfdeb…`: Date is a native date input, which shows its own format.
+    - `fp_110f44…`: every price says "per hour" or "fixed price".
+    - `fp_7b1e72…`: the GST note states the rule, and the breakdown appears right after Calculate. **Judgement call, flagged to Rohit:** "easy to miss" is a styling claim the reviewer can't see.
+- **Effect:**
+  - Clean runs: 0 unlabelled; A1's false bugs at Confirmed stay at 3 per clean run, and the old A1 clean-row "6% recall" artifact is gone.
+  - Buggy v1: precision C+L 100% (A2), 88–89% (A1). The remaining 2–3 unlabelled are v2's true positives, the single-file limit already noted (combined scoring added to ROADMAP P5).
+
+**D75 — Removal checks target the removed item's own control or row, not its text anywhere** (Rohit, 28 Sep; revises D64).
+- **What went wrong.** In clean run a21a the cancel check was notVisible `{ by: "text", text: "HC-1001" }`. It failed on a correct app because the `role="status"` message "Booking HC-1001 cancelled." names the booking. Confirmation messages often repeat the item's name, so this happens in apps generally, not only the bench.
+- **Rejected: ignoring status and alert regions in the evaluator.** Errors, "Saved", loading and thank-you messages live in exactly those regions. "No error is shown", "invalid input doesn't show 'Saved'" and "the loading message goes away" would always pass, and so would their exported tests.
+- **The fix is where the check is written.**
+  - The Planner and Explorer removal habit now says: target the item's own control or row by role and accessible name (e.g. `{ by: "role", role: "button", name: "Delete invoice 42" }`), or its text `within` the list or table that holds the items. Never its text anywhere on the page.
+  - The Explorer is told to copy the name from the snapshot *before* removing, because the ref is gone afterwards.
+  - The check language already expresses both forms, so it wasn't extended.
+- **Test:** `oracle/evaluate.test.ts` "removal checks". Both forms pass when the row is gone and a status message names the item, and fail when the row is still there. A third case shows the bare-text form failing on the correct page.
+- **Not yet measured on a real run.** It's a prompt change, so the next buggy run with a cancel journey shows whether the Explorer follows it.
+
+**D76 — A replay that can't get through the steps is "couldn't repeat", not "didn't happen"** (Rohit, 28 Sep; consistent with D69).
+- **What went wrong.** In a21a, both replays failed at step 7: the first run had cancelled HC-1001, so its button was gone. The finding was still Discarded with "It didn't happen again when replayed". That reason was false: the replays never reached the check.
+- **The fix.**
+  - The replayer now records, per attempt, whether it stopped at a step before the candidate's check or signature, and which step.
+  - If *every* attempt stopped that way, the outcome is `couldnt_repeat`. The finding is Needs review with "Couldn't repeat the steps: step 7 (Click the "Cancel booking HC-1001" button) failed in both replays. The app's data may have changed after the first attempt, so a person needs to check this."
+  - If one attempt got through and didn't reproduce, that is real evidence, so it stays `not_reproduced` → Discarded.
+  - The verification funnel counts these separately (`verify.couldntRepeat`).
+- **Tests:** table rows in `verify/tier.test.ts`, and a fixture replay in `verify/replay.test.ts` where the button is gone on replay.
+- **Trade-off.** On an app whose first run changes shared data, more findings land in Needs review instead of vanishing. The count grows, but the report stops claiming what it didn't observe.
+
+**D77 — UX reviewer: snapshots are single moments** (Rohit, 28 Sep). Two false suggestions came from pages seen before a form was filled in (the quote before Calculate, the booking summary before a date). One generic line was added to its rules: content that appears only after the user fills in or submits a form may not be in the snapshot, so don't claim it's missing or never shown. The contamination test passes.
+
+**ROADMAP P5 additions** (not done now):
+- combined v1+v2 scoring where a finding counts for at most one seeded bug (the DB-error finding is B22, not B15);
+- clean-run rows show "–" for recall and precision.

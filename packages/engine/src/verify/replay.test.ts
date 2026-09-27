@@ -160,6 +160,29 @@ describe("replayTargets", () => {
     expect(r.get("flaky")).toMatchObject({ attempts: 3, reproduced: 2 });
   });
 
+  it("says which step failed when no attempt gets through the steps before the check", async () => {
+    // The first run removed the item, so its button is gone on every replay.
+    const [go, chk] = steps("/fixed", "jr_g", "ex_g");
+    const click: Step = {
+      ...go!,
+      id: newId("sp"),
+      index: 1,
+      action: { type: "click", target: { by: "role", role: "button", name: "Remove item 42" } },
+      description: 'Click the "Remove item 42" button',
+    };
+    const recorded = [go!, click, { ...chk!, index: 2 }];
+    const r = await replayTargets(
+      [{ key: "gone", candidate: checkCandidate("/fixed", recorded, "ex_g"), priority: 0 }],
+      deps(recorded),
+    );
+    expect(r.get("gone")).toMatchObject({
+      attempts: 2,
+      reproduced: 0,
+      stepFailures: 2,
+      failedStep: { index: 2, description: 'Click the "Remove item 42" button' },
+    });
+  });
+
   it("logs in before replaying a logged-in path (never reuses an old session)", async () => {
     const recorded = steps("/account", "jr_d", "ex_d");
     const logins = () => site.requests.filter((q) => q === "POST /session").length;

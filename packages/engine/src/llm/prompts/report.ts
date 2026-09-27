@@ -16,4 +16,5 @@ Rules
 - Each suggestion must point at something on one of the listed pages. quote: copy the element's text exactly as it appears in <page_content>.
 - route: one of the listed routes.
 - heuristic: the usability principle, in a few words (e.g. "visibility of system status", "consistency", "error prevention").
-- No bugs (things that are broken): only improvements. No accessibility audit items (a separate tool covers those).`;
+- No bugs (things that are broken): only improvements. No accessibility audit items (a separate tool covers those).
+- Each snapshot is one moment. Content that appears only after the user fills in or submits a form (a result, a summary, a next step) may not be in it, so don't claim it's missing or never shown.`;

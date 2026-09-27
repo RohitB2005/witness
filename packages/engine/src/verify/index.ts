@@ -178,6 +178,7 @@ export async function verify(input: VerifyInput): Promise<VerifyOutput> {
     "verify.discardedEvidence": 0,
     "verify.discardedReplay": 0,
     "verify.notReplayed": 0,
+    "verify.couldntRepeat": 0,
     "verify.intermittent": 0,
     "verify.downgradedSkeptic": 0,
     "verify.discardedJudge": 0,
@@ -193,6 +194,8 @@ export async function verify(input: VerifyInput): Promise<VerifyOutput> {
         attempts: replay.attempts,
         reproduced: replay.reproduced,
         static: g.rep.stepIds.length === 0,
+        stepFailures: replay.stepFailures,
+        failedStep: replay.failedStep,
         skipped:
           pipeline === "ai-no-verify" ? "unverified pipeline" : (replay.skipped ?? undefined),
       },
@@ -208,6 +211,8 @@ export async function verify(input: VerifyInput): Promise<VerifyOutput> {
       funnel["verify.discardedReplay"]!++;
     else if (outcome === "not_replayed" && pipeline !== "ai-no-verify")
       funnel["verify.notReplayed"]!++;
+    else if (outcome === "couldnt_repeat" && pipeline !== "ai-no-verify")
+      funnel["verify.couldntRepeat"]!++;
     else if (outcome === "intermittent") funnel["verify.intermittent"]!++;
     if (g.judge?.verdict === "not_bug") funnel["verify.discardedJudge"]!++;
     if (g.skeptic?.verdict === "benign_likely" && t.stageTiers.noSkeptic !== t.tier)

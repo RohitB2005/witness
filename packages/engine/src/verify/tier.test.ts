@@ -25,6 +25,49 @@ describe("replayOutcome (D49: two agreeing attempts; a third only when they disa
   });
 });
 
+describe("replayOutcome when the replays couldn't get through the steps", () => {
+  it.each([
+    [{ attempts: 2, reproduced: 0, stepFailures: 2 }, "couldnt_repeat"],
+    [{ attempts: 1, reproduced: 0, stepFailures: 1 }, "couldnt_repeat"],
+    // One attempt got through and didn't reproduce: that is real evidence.
+    [{ attempts: 2, reproduced: 0, stepFailures: 1 }, "not_reproduced"],
+    // One attempt got through and reproduced: intermittent, as before.
+    [{ attempts: 2, reproduced: 1, stepFailures: 1 }, "intermittent"],
+  ] as const)("%o → %s", (facts, want) => {
+    expect(replayOutcome(facts)).toBe(want);
+  });
+});
+
+it("a check whose replays all stopped at an earlier step is Needs review, and says why", () => {
+  const d = decideTier({
+    ...base,
+    source: check,
+    grounding: onPage,
+    replay: {
+      attempts: 2,
+      reproduced: 0,
+      stepFailures: 2,
+      failedStep: { index: 7, description: 'Click the "Remove item 42" button' },
+    },
+  });
+  expect(d.tier).toBe("needs_review");
+  expect(d.reason).toBe(
+    'Couldn\'t repeat the steps: step 7 (Click the "Remove item 42" button) failed in both replays. The app\'s data may have changed after the first attempt, so a person needs to check this.',
+  );
+  // Not the old, misleading reason.
+  expect(d.reason).not.toMatch(/didn't happen again/);
+});
+
+it("a judgement whose replays all stopped at an earlier step is Needs review too", () => {
+  const d = decideTier({
+    ...base,
+    source: flag,
+    replay: { attempts: 2, reproduced: 0, stepFailures: 2 },
+  });
+  expect(d).toMatchObject({ tier: "needs_review" });
+  expect(d.reason).toMatch(/^Couldn't repeat the steps: the steps failed in both replays\./);
+});
+
 it("a static finding (no steps) is reproduced by one fresh re-run (FR-8)", () => {
   expect(replayOutcome({ attempts: 1, reproduced: 1, static: true })).toBe("reproduced");
 });

@@ -74,6 +74,15 @@ export interface ReplayResult {
   notes: string[];
   /** Evidence recorded during the replays (check results, captured states). */
   evidenceIds: string[];
+  /** Attempts that stopped at a step before the candidate could be judged, and the last such step. */
+  stepFailures?: number;
+  failedStep?: FailedStep;
+}
+
+export interface FailedStep {
+  /** 1-based, as shown in the finding's steps. */
+  index: number;
+  description: string;
 }
 
 interface UnitTarget {
@@ -95,6 +104,8 @@ interface AttemptOutcome {
   ok: boolean;
   note?: string;
   evidenceId?: string;
+  /** The attempt couldn't get through the steps before the candidate's check or signature. */
+  failedStep?: FailedStep;
 }
 
 /** Couldn't even start (e.g. the login failed), or took too long: not counted as an attempt. */
@@ -301,6 +312,10 @@ async function runUnit(u: Unit, deps: ReplayDeps, results: Map<string, ReplayRes
       const o = outcome.get(t.target.key) ?? { ok: false, note: "not evaluated" };
       r.attempts++;
       if (o.ok) r.reproduced++;
+      if (o.failedStep) {
+        r.stepFailures = (r.stepFailures ?? 0) + 1;
+        r.failedStep = o.failedStep;
+      }
       if (o.note) r.notes.push(`Attempt ${attempt}: ${o.note}`);
       if (o.evidenceId) r.evidenceIds.push(o.evidenceId);
       deps.sink({
@@ -399,6 +414,7 @@ async function attemptPath(
               out.set(t.target.key, {
                 ok: false,
                 note: `step ${i + 1} ("${step.description}") failed: ${r.message}`,
+                failedStep: { index: i + 1, description: step.description },
               });
           break;
         }

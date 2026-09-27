@@ -16,6 +16,9 @@ export interface ReplayFacts {
   skipped?: string;
   /** A finding with no steps, re-run once on a fresh load (FR-8): one attempt is enough. */
   static?: boolean;
+  /** Attempts that stopped at a step before the check could run, and the last step that failed. */
+  stepFailures?: number;
+  failedStep?: { index: number; description: string };
 }
 
 export interface TierInput {
@@ -42,7 +45,12 @@ export interface TierDecision {
   reason: string;
 }
 
-export type ReplayOutcome = "reproduced" | "intermittent" | "not_reproduced" | "not_replayed";
+export type ReplayOutcome =
+  | "reproduced"
+  | "intermittent"
+  | "not_reproduced"
+  | "not_replayed"
+  | "couldnt_repeat";
 
 /** Judge verdicts below this confidence can't lift a finding above Needs review (FR-8). */
 export const JUDGE_MIN_CONFIDENCE = 0.7;
@@ -53,11 +61,20 @@ export function replayOutcome(r: ReplayFacts): ReplayOutcome {
   if (r.reproduced >= 2 || (r.static && r.attempts === 1 && r.reproduced === 1))
     return "reproduced";
   if (r.reproduced === 1) return "intermittent";
+  // Every attempt stopped before the check (e.g. the first run changed the app's data): the replay
+  // says nothing about the bug either way, so it isn't evidence that it didn't happen.
+  if (r.stepFailures !== undefined && r.stepFailures >= r.attempts) return "couldnt_repeat";
   return "not_reproduced";
 }
 
 export function replayText(r: ReplayFacts): string {
   if (r.attempts === 0) return `not replayed${r.skipped ? ` (${r.skipped})` : ""}`;
+  if (replayOutcome(r) === "couldnt_repeat") {
+    const n = r.attempts === 1 ? "the replay" : r.attempts === 2 ? "both replays" : `all ${r.attempts} replays`;
+    return r.failedStep
+      ? `step ${r.failedStep.index} (${r.failedStep.description}) failed in ${n}`
+      : `the steps failed in ${n}`;
+  }
   return `reproduced ${r.reproduced} of ${r.attempts} replay${r.attempts === 1 ? "" : "s"}`;
 }
 
@@ -112,6 +129,11 @@ export function decideTier(i: TierInput): TierDecision {
 
   if (outcome === "not_reproduced")
     return { tier: "discarded", reason: `It didn't happen again when replayed (${replay}).` };
+  if (outcome === "couldnt_repeat")
+    return {
+      tier: "needs_review",
+      reason: `Couldn't repeat the steps: ${replay}. The app's data may have changed after the first attempt, so a person needs to check this.`,
+    };
   if (outcome === "intermittent")
     return {
       tier: "needs_review",

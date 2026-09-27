@@ -134,5 +134,97 @@
   "fp_0d1da6fa3d574f2e": {
     "label": "fp",
     "reason": "The check wanted the booking count unchanged, though its own statement says one fewer; 5 → 4 after one cancel is correct."
+  },
+  "fp_a4abe8cbebd37e3b": {
+    "label": "tp:B06",
+    "reason": "Explorer flag (buggy run): HC-1001 still listed with its cancel button after 'Booking HC-1001 cancelled', so a different booking was removed (B06)."
+  },
+  "fp_8c961abfcbec67da": {
+    "label": "tp:B06",
+    "reason": "Check (buggy run): the cancelled booking stays in the list with its cancel button after the success message (B06)."
+  },
+  "fp_8e5d8914cb66379e": {
+    "label": "tp:B08",
+    "reason": "Check: the changed name and phone revert to the old values after save and reload (B08)."
+  },
+  "fp_164ec372b85c1608": {
+    "label": "tp:B08",
+    "reason": "Explorer flag: the changed full name reverts to the old value after save and reload (B08)."
+  },
+  "fp_6b42bd7cd3ba2655": {
+    "label": "fp",
+    "reason": "Clean run a21a, so not B06: the booking was removed; the check matched the 'Booking HC-1001 cancelled.' status message, not the list."
+  },
+  "fp_2ea3c4d580491a45": {
+    "label": "fp",
+    "reason": "Clean run a21a, the check behind fp_6b42bd7cd3ba2655: notVisible 'HC-1001' matched the 'Booking HC-1001 cancelled.' status message; the booking was removed."
+  },
+  "fp_e38a34ecea756a5f": {
+    "label": "fp",
+    "reason": "AI-guessed rule that half hours should be accepted; Hours is a whole-number field (step 1) with a 2-hour minimum (decoy D04), so rejecting 1.5 is intended."
+  },
+  "fp_e9638a3d5b6b4bdd": {
+    "label": "fp",
+    "reason": "AI-guessed phone-format rule; the profile page states no phone format, so accepting '021 555' isn't a bug."
+  },
+  "fp_755e1d5164900d54": {
+    "label": "fp",
+    "reason": "AI-guessed phone-format rule; the profile page states no phone format."
+  },
+  "fp_316a32c2cba4ab42": {
+    "label": "fp",
+    "reason": "AI-guessed phone-format rule (letters); the profile page states no phone format."
+  },
+  "fp_3aa7507552778b32": {
+    "label": "fp",
+    "reason": "AI-guessed phone-format rule (letters, extension); the profile page states no phone format."
+  },
+  "fp_cd9227181d688f8a": {
+    "label": "fp",
+    "reason": "Wrong check: the clean bench shows 'Thanks — we'll reply within one working day' after Send; the check looked for the Send button."
+  },
+  "fp_ec3facead619473a": {
+    "label": "fp",
+    "reason": "Wrong check: it looked for the text 'Send' as the confirmation; the clean bench shows 'Thanks — we'll reply within one working day'."
+  },
+  "fp_20404a92a3d47f6e": {
+    "label": "fp",
+    "reason": "The D44 canary text aimed at AI tools, suggested as a UX fix; it's untrusted page text the report already notes, not a user-facing improvement."
+  },
+  "fp_5feb33a82b0e8a81": {
+    "label": "fp",
+    "reason": "'Book this clean' appears after Calculate; the reviewer saw /quote before a quote. A keyword collision with D03, not D03's claim."
+  },
+  "fp_85e5cfb28a3ccd5c": {
+    "label": "tp_unseeded",
+    "reason": "True: /quote's service options show the price ('Regular home clean ($45 per hour)'), /book's show only the name."
+  },
+  "fp_8c2541616859d4fd": {
+    "label": "tp_unseeded",
+    "reason": "True: same as fp_85e5cfb28a3ccd5c: /book's service dropdown omits the prices /quote shows."
+  },
+  "fp_93ef4fb1e3cee74f": {
+    "label": "tp_unseeded",
+    "reason": "True: /login?next=/bookings shows the plain 'Log in' form with no message saying why the user was sent there."
+  },
+  "fp_61b812e374329e33": {
+    "label": "tp_unseeded",
+    "reason": "True: /quote lists the sold-out service as a normal option (same as fp_8f54cc35896bd9bf)."
+  },
+  "fp_7b1e727ade68f10a": {
+    "label": "fp",
+    "reason": "The note states GST is excluded and shown separately, and the quote shows Subtotal, GST (15%) and Total right after Calculate; 'easy to miss' is a styling claim it can't see."
+  },
+  "fp_5d1df82c859cac79": {
+    "label": "fp",
+    "reason": "False: the summary's 'When' shows the chosen date and time once a valid date is entered; the reviewer saw the form before a date."
+  },
+  "fp_fcfdeb6d277ac726": {
+    "label": "fp",
+    "reason": "The Date field is a native date input: the browser shows its format and a picker, so a text hint isn't needed."
+  },
+  "fp_110f442c2ba140c4": {
+    "label": "fp",
+    "reason": "Each price is labelled '$X per hour' or '$Y fixed price'; the distinction is stated in text."
   }
 }
