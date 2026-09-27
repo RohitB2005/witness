@@ -80,6 +80,8 @@ Presentation: 7, 8 or 9 October 2026. Feature freeze: **Saturday 3 October**. Pr
 
 **P3 gate — passed 27 Sep 2026.** Clean bench, 2 Standard A2 runs: 0 Confirmed and 0 Likely bugs. Buggy Standard run: 12 of 12 exported tests matched to seeded bugs fail with their flag on and pass with it off. Buggy recall at Confirmed+Likely 67%, bug precision 100% (before labelling 10 new fingerprints); A0 alone 44% (was 33%). New D46 detectors and probes validated on SauceDemo (sort: S2 and S6 found, standard_user clean; totals: no false positive at checkout). P3 cost $1.67 (total usage $4.93). Details in `DEVLOG.md` and `eval/results/p3-gate/`.
 
+**P3 wrap-up (27 Sep).** Labels applied: buggy recall C 61% / C+L 72%, precision 92%. A1 redefined as raw AI claims (D62): 1–2 false Confirmed bugs per clean run that A2 removes. Journey fixes (D63): the confirmation run completed 2 of 3 journeys (was 1 of 3); the third wandered. Total usage $5.24.
+
 ## P3b — QA coverage pack (after the P3 gate, before P4)
 
 Spec: `docs/ADDENDUM_QA_COVERAGE.md` (approved by Rohit, 26 Sep). Build in this order. A2 and A6 moved to stretch on 27 Sep to protect the schedule (D47).

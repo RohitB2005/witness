@@ -139,7 +139,7 @@ async function main(): Promise<void> {
   const scores = resolveRuns(positionals, values.clean!).flatMap(({ file, clean }) => {
     const result: RunResult = RunResultSchema.parse(JSON.parse(readFileSync(file, "utf8")));
     const derived =
-      result.config.pipeline === "full" && result.findings.some((f) => f.stageTiers)
+      result.config.pipeline === "full"
         ? (["aiNoVerify", "noSkeptic"] as const).map((stage) =>
             scoreRun(result, truth, labels, { clean, stage }),
           )

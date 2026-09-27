@@ -140,22 +140,17 @@ describe("decideTier", () => {
 });
 
 describe("stage tiers (D51) and the unverified pipeline (A1)", () => {
-  it("A1 claims what grounding alone gives; D46 cap still applies", () => {
-    expect(unverifiedTier({ kind: "bug", source: det }).tier).toBe("confirmed");
-    expect(unverifiedTier({ kind: "bug", source: check, grounding: onPage }).tier).toBe(
-      "confirmed",
-    );
-    expect(unverifiedTier({ kind: "bug", source: check, grounding: convention }).tier).toBe(
-      "likely",
-    );
-    expect(
-      unverifiedTier({
-        kind: "bug",
-        source: check,
-        grounding: { ...convention, aiGuessedRule: true },
-      }).tier,
-    ).toBe("needs_review");
-    expect(unverifiedTier({ kind: "bug", source: flag }).tier).toBe("likely");
+  it("A1 takes every bug candidate at face value, before caps, replay and skeptic (D62)", () => {
+    for (const i of [
+      { kind: "bug", source: det },
+      { kind: "bug", source: check, grounding: onPage },
+      { kind: "bug", source: check, grounding: convention },
+      { kind: "bug", source: check, grounding: { ...convention, aiGuessedRule: true } },
+      { kind: "bug", source: check, grounding: { ...onPage, selfReferential: true } },
+      { kind: "bug", source: flag },
+    ] as const)
+      expect(unverifiedTier(i).tier).toBe("confirmed");
+    expect(unverifiedTier({ kind: "improvement", source: det }).tier).toBe("evidence_based");
   });
 
   it("records every stage from one set of facts", () => {

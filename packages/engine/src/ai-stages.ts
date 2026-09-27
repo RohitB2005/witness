@@ -141,11 +141,17 @@ export async function runAiStages(i: AiStagesInput): Promise<AiStagesOutput> {
     assertErrors: 0,
     flags: 0,
     loopAborts: 0,
+    duplicateAsserts: 0,
   };
   let stopReason: string | undefined;
   const credentials = config.credentials;
   for (const [n, j] of journeys.entries()) {
     if (j.status === "skipped") continue;
+    // Each journey gets a fair share of the exploring time left (time a journey doesn't use carries over),
+    // so one slow journey can't starve the rest (P3 gate run: the third journey got 5 steps).
+    const left = journeys.slice(n).filter((x) => x.status !== "skipped").length;
+    const share = Math.max(0, exploreDeadline - Date.now()) / Math.max(1, left);
+    const journeyDeadline = Math.min(exploreDeadline, Date.now() + share);
     if (stopReason) {
       journeys[n] = { ...j, status: "skipped", incompleteReason: stopReason };
       continue;
@@ -176,7 +182,7 @@ export async function runAiStages(i: AiStagesInput): Promise<AiStagesOutput> {
       session: i.pre.session?.storageState,
       states,
       stepsPerJourney: budget.stepsPerJourney,
-      deadline: exploreDeadline,
+      deadline: journeyDeadline,
       siteMap,
     });
     runs.push(run);

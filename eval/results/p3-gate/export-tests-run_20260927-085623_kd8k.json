@@ -1,0 +1,95 @@
+{
+  "runId": "run_20260927-085623_kd8k",
+  "exported": 12,
+  "judged": 12,
+  "failOnBuggy": 12,
+  "passOnClean": 11,
+  "valid": 11,
+  "outcomes": [
+    {
+      "findingId": "fd_1zfrpl8x",
+      "testFile": "fd_1zfrpl8x.spec.ts",
+      "bugId": "B05",
+      "failsWithBug": true,
+      "passesWithoutBug": true
+    },
+    {
+      "findingId": "fd_vhqpn8ho",
+      "testFile": "fd_vhqpn8ho.spec.ts",
+      "bugId": "B17",
+      "failsWithBug": true,
+      "passesWithoutBug": true
+    },
+    {
+      "findingId": "fd_1eu36dzg",
+      "testFile": "fd_1eu36dzg.spec.ts",
+      "bugId": "B17",
+      "failsWithBug": true,
+      "passesWithoutBug": true
+    },
+    {
+      "findingId": "fd_ip30dkmb",
+      "testFile": "fd_ip30dkmb.spec.ts",
+      "bugId": "B01",
+      "failsWithBug": true,
+      "passesWithoutBug": true
+    },
+    {
+      "findingId": "fd_36t0pj3c",
+      "testFile": "fd_36t0pj3c.spec.ts",
+      "bugId": "B02",
+      "failsWithBug": true,
+      "passesWithoutBug": true
+    },
+    {
+      "findingId": "fd_7y0jqcob",
+      "testFile": "fd_7y0jqcob.spec.ts",
+      "bugId": "B11",
+      "failsWithBug": true,
+      "passesWithoutBug": true
+    },
+    {
+      "findingId": "fd_kj2np4et",
+      "testFile": "fd_kj2np4et.spec.ts",
+      "bugId": "B15",
+      "failsWithBug": true,
+      "passesWithoutBug": true
+    },
+    {
+      "findingId": "fd_71akhf1a",
+      "testFile": "fd_71akhf1a.spec.ts",
+      "bugId": "B16",
+      "failsWithBug": true,
+      "passesWithoutBug": true
+    },
+    {
+      "findingId": "fd_p4g51qhw",
+      "testFile": "fd_p4g51qhw.spec.ts",
+      "bugId": "B06",
+      "note": "    Error: expect(received).toBeLessThanOrEqual(expected) |     > 44 |   expect(Math.abs((await page.getByText(\"Cancel booking\").filter({ visible: true }).count()) - Number(captures[\"bookingsBefore\"]))).toBeLessThanOrEqual(0); |     Error Context: test-results/fd_p4g51qhw-Cancelling-one-4ded1--from-the-list-fd-p4g51qhw-/error-context.md",
+      "failsWithBug": true,
+      "passesWithoutBug": false
+    },
+    {
+      "findingId": "fd_gyhtlwb4",
+      "testFile": "fd_gyhtlwb4.spec.ts",
+      "bugId": "B18",
+      "failsWithBug": true,
+      "passesWithoutBug": true
+    },
+    {
+      "findingId": "fd_n250s0gb",
+      "testFile": "fd_n250s0gb.spec.ts",
+      "bugId": "B09",
+      "failsWithBug": true,
+      "passesWithoutBug": true
+    },
+    {
+      "findingId": "fd_5q2kk5fp",
+      "testFile": "fd_5q2kk5fp.spec.ts",
+      "bugId": "B10",
+      "failsWithBug": true,
+      "passesWithoutBug": true
+    }
+  ]
+}

@@ -258,3 +258,34 @@ describe("turn context", () => {
     ]);
   });
 });
+
+import { duplicateOf } from "./explorer";
+
+describe("duplicateOf (a result is recorded once)", () => {
+  const exp = (id: string, statement: string) =>
+    ({ id, statement }) as unknown as Parameters<typeof duplicateOf>[1][number];
+  const total = "The quote shows the correct total for the service rate and hours entered";
+  const status = new Map([
+    ["ex_1", "FAILED"],
+    ["ex_2", "passed"],
+    ["ex_3", "not checked yet"],
+  ]);
+  const list = [
+    exp("ex_1", total),
+    exp("ex_2", "The search finds the service by name"),
+    exp("ex_3", "Profile saves"),
+  ];
+  it("refuses an exact restatement of any decided expectation", () => {
+    expect(duplicateOf(`${total}.`, list, status)?.id).toBe("ex_1");
+    expect(duplicateOf("the search finds the SERVICE by name", list, status)?.id).toBe("ex_2");
+  });
+  it("refuses a wider restatement of a failed one, but allows a stricter version of a passed one", () => {
+    expect(duplicateOf(`${total}, with GST applied correctly`, list, status)?.id).toBe("ex_1");
+    expect(
+      duplicateOf("The search finds the service by name in any letter case", list, status),
+    ).toBeUndefined();
+  });
+  it("ignores expectations not decided yet", () => {
+    expect(duplicateOf("Profile saves", list, status)).toBeUndefined();
+  });
+});

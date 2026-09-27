@@ -150,8 +150,18 @@ export function scoreRun(
   opts: { clean: boolean; stage?: ScoreStage },
 ): RunScore {
   const stage = opts.stage ?? "final";
+  // A1 is the raw AI claims (D62): every bug at face value, including ones verification discarded. It is
+  // computed here from the findings themselves, so runs recorded before D62 are scored the same way.
   const tierAt = (f: Finding): Finding["tier"] =>
-    stage === "final" ? f.tier : (f.stageTiers?.[stage] ?? f.tier);
+    stage === "final"
+      ? f.tier
+      : stage === "aiNoVerify"
+        ? f.kind === "bug"
+          ? "confirmed"
+          : f.source.kind === "ux-review"
+            ? "suggestion"
+            : "evidence_based"
+        : (f.stageTiers?.[stage] ?? f.tier);
   const findings = result.findings
     .map((f) => ({ ...f, tier: tierAt(f) }))
     .filter((f) => f.tier !== "discarded")

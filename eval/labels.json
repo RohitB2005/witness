@@ -90,5 +90,49 @@
   "fp_ab96703e98ce5bf5": {
     "label": "fp",
     "reason": "Flags the injection-canary sentence as \"injected text\"; matched B15 only by keyword. Not the XSS bug; consistent with D44."
+  },
+  "fp_6bb97fda8af2347e": {
+    "label": "tp:B01",
+    "reason": "DET-TOTALS: the quote total isn't subtotal + GST on /quote (GST applied twice)."
+  },
+  "fp_c6688d3c457c8c97": {
+    "label": "tp:B02",
+    "reason": "DET-SORT: \"Price: low to high\" doesn't put the services in price order."
+  },
+  "fp_6d0eaec68b7f7a56": {
+    "label": "fp",
+    "reason": "Planner-guessed \"Booking summary\" text on the confirmation page (same as P2); the page never promised it."
+  },
+  "fp_8a1b5addf9b47851": {
+    "label": "fp",
+    "reason": "Decoy D01: the sold-out service's Book button is disabled with an explanation; missed the rule only on \"Sold-out\" vs \"sold out\"."
+  },
+  "fp_a6f5295f03639dd0": {
+    "label": "fp",
+    "reason": "The rate is on screen in the chosen dropdown option; the check needed that exact text elsewhere (the P3 dropdown-text issue)."
+  },
+  "fp_22654de7f32abf0e": {
+    "label": "fp",
+    "reason": "The booking summary does update (service and estimate shown after choosing); the check compared the dropdown's number."
+  },
+  "fp_ca537fb10dfed8b6": {
+    "label": "tp_unseeded",
+    "reason": "True on the clean bench: the booking summary shows only dashes before input, with no hint; a reasonable clarity improvement."
+  },
+  "fp_8f54cc35896bd9bf": {
+    "label": "tp_unseeded",
+    "reason": "True: /quote lists the sold-out service as a normal option while /book disables it; a reasonable consistency improvement."
+  },
+  "fp_fa20149c865c2a16": {
+    "label": "tp_unseeded",
+    "reason": "True: the default \"Recommended\" sort isn't explained anywhere; minor but reasonable."
+  },
+  "fp_bde51281a6cf251e": {
+    "label": "tp_unseeded",
+    "reason": "True: /book shows only an estimate \"excl. GST\" and never says GST is added to the final price. Judgement call; flagged to Rohit."
+  },
+  "fp_0d1da6fa3d574f2e": {
+    "label": "fp",
+    "reason": "The check wanted the booking count unchanged, though its own statement says one fewer; 5 → 4 after one cancel is correct."
   }
 }

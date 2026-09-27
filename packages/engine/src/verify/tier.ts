@@ -166,29 +166,19 @@ export function decideTier(i: TierInput): TierDecision {
 }
 
 /**
- * Ablation A1 (`ai-no-verify`, D29): what an unverified AI tester would claim from the same candidate —
- * no evidence validation, replay, judge or skeptic. Grounding still counts (it's part of the AI design),
- * including the D46 cap.
+ * Ablation A1 (`ai-no-verify`, DEVLOG D62, replacing D29's rule): the raw AI claims. Every bug candidate is
+ * taken at face value — no grounding cap, evidence validation, replay, judge or skeptic — so A1 vs A2 answers
+ * "what does verification add over trusting the AI?".
  */
 export function unverifiedTier(i: Pick<TierInput, "kind" | "source" | "grounding">): TierDecision {
-  const why = "Unverified pipeline (ablation A1): reported without replay or skeptic.";
+  const why =
+    "Unverified pipeline (ablation A1): every candidate is reported as the AI claimed it.";
   if (i.kind === "improvement")
     return {
       tier: i.source.kind === "ux-review" ? "suggestion" : "evidence_based",
       reason: `${why} Measured directly on the page.`,
     };
-  if (i.source.kind === "detector")
-    return { tier: "confirmed", reason: `${why} Found by ${i.source.id}.` };
-  if (i.source.kind === "check") {
-    if (isGrounded(i.grounding))
-      return { tier: "confirmed", reason: `${why} Grounded on the page.` };
-    if (i.grounding?.aiGuessedRule)
-      return { tier: "needs_review", reason: `${why} An AI-guessed rule the page doesn't state.` };
-    if (i.grounding?.selfReferential)
-      return { tier: "needs_review", reason: `${why} It expected text from another page here.` };
-    return { tier: "likely", reason: `${why} Grounded in convention.` };
-  }
-  return { tier: "likely", reason: `${why} The Explorer's judgement.` };
+  return { tier: "confirmed", reason: why };
 }
 
 /** Final tier plus the tiers at earlier stages (D51), for the pipeline that actually ran. */

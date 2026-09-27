@@ -63,6 +63,8 @@ export interface ExplorerMetrics {
   assertErrors: number;
   flags: number;
   loopAborts: number;
+  /** New expectations refused because they restated one already decided. */
+  duplicateAsserts: number;
 }
 
 export interface JourneyRun {
@@ -95,6 +97,7 @@ export async function exploreJourney(input: Journey, deps: ExploreDeps): Promise
     assertErrors: 0,
     flags: 0,
     loopAborts: 0,
+    duplicateAsserts: 0,
   };
   const candidates: Candidate[] = [];
   const status = new Map<string, Status>(
@@ -178,7 +181,7 @@ export async function exploreJourney(input: Journey, deps: ExploreDeps): Promise
         break;
       }
       if (Date.now() > deps.deadline) {
-        finish("incomplete", "Time limit reached.");
+        finish("incomplete", "Its share of the exploring time ran out.");
         break;
       }
       metrics.turns++;
@@ -422,6 +425,21 @@ export async function exploreJourney(input: Journey, deps: ExploreDeps): Promise
           }
           if (a.check) exp.check = await ex.storedCheck(a.check);
         } else {
+          // A result is recorded once (P3 gate run: the Explorer restated a failed rule four times and ran
+          // out of turns before finishing). Refuse restatements of decided expectations, and stop the
+          // journey if it keeps trying.
+          const dup = duplicateOf(a.statement!, journey.expectations, status);
+          if (dup) {
+            metrics.duplicateAsserts++;
+            if (metrics.duplicateAsserts >= 3) {
+              finish("incomplete", "Stopped: kept re-checking results that were already recorded.");
+              finished = true;
+            }
+            return {
+              ok: true,
+              message: `Already recorded as ${status.get(dup.id)}: "${dup.statement}" (${dup.id}). Don't check it again: carry on towards the goal, or finish.`,
+            };
+          }
           const snapshot = ex.current?.capture.snapshot ?? "";
           const g = a.grounding!;
           exp = {
@@ -502,6 +520,33 @@ export async function exploreJourney(input: Journey, deps: ExploreDeps): Promise
     if (journey.status === "running") finish("incomplete", "Stopped unexpectedly.");
     deps.sink({ t: "journey", journeyId: journey.id, status: journey.status });
   }
+}
+
+const normalise = (s: string) =>
+  s
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, " ")
+    .trim();
+
+/**
+ * The decided expectation a new statement restates, if any: the same statement as any decided expectation,
+ * or a wider restatement of one that FAILED (its failure is already recorded). A stricter version of one
+ * that passed is allowed: a weak check may have passed where a precise one would fail.
+ */
+export function duplicateOf(
+  statement: string,
+  expectations: Expectation[],
+  status: Map<string, string>,
+): Expectation | undefined {
+  const s = normalise(statement);
+  if (!s) return undefined;
+  return expectations.find((e) => {
+    const st = status.get(e.id);
+    if (st !== "passed" && st !== "FAILED") return false;
+    const t = normalise(e.statement);
+    if (t === s) return true;
+    return st === "FAILED" && t.length >= 30 && s.includes(t);
+  });
 }
 
 function toAction(name: string, input: unknown): AgentAction {

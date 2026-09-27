@@ -684,3 +684,73 @@ Balance: $5.07. Per Standard run now: about $0.14–0.38 (the Explorer's cache r
 - **Duplicate B01 findings** (the Explorer's own checks plus DET-TOTALS on the same breakdown) aren't merged. Harmless for recall, noisy in a report.
 - **Quick** replays only what fits in about 45 s. For the demo, use a Standard run or a cached one.
 - **P4** needs the same `writeRunExports` for the dashboard's downloads, and the server needs `caffeinate` too.
+
+### P3 wrap-up — 27 Sep 2026
+
+**Approved by Rohit:** D50/D60 (Standard = 3 journeys, the new time split), D52, D53, D56 and D59. On D59: SauceDemo influenced the crawler, so it's no longer a fully held-out test. That is noted in `EVALUATION.md`, and the **Friction app stays completely untouched (no runs, no tuning) until P5**.
+
+**Labels applied** (15 new in `eval/labels.json`). Rohit gave four:
+- DET-TOTALS → `tp:B01`;
+- DET-SORT → `tp:B02`;
+- the "Booking summary" guess → `fp`;
+- the sold-out UX suggestion → `fp`: it's decoy D01, and missed D01's rule only on "Sold-out" vs "sold out".
+
+I checked the other six against the clean bench:
+- `fp`: "$45 per hour" (the dropdown-text issue fixed in P3), and "booking summary doesn't update" (it does update; the check compared the dropdown's number).
+- `tp_unseeded`: the empty booking summary before input, the sold-out service not marked on /quote, and the unexplained "Recommended" sort. All three are true on the clean bench.
+- **Judgement call, flagged to Rohit:** "GST note not repeated on the booking page", labelled `tp_unseeded`. True: /book shows only "excl. GST" next to the estimate and never says GST is added. One run's wording overstated it.
+
+One more, found in the confirmation run below: `fp` for a check that wanted the booking count unchanged after a cancel. Its own statement said "one fewer", and 5 → 4 is correct.
+
+**Were the derived ablation rows broken? No: verification genuinely changed almost nothing *measurable* in these runs.** The stored stage tiers show why:
+- replay discarded nothing (the bench is deterministic);
+- the old A1 kept the D46/D56 grounding caps, so A1 had the same Needs-review items as A2;
+- the skeptic's two downgrades fell on findings that were still unlabelled, which the scorer leaves out.
+
+So A1 was measuring the wrong thing, not failing to measure.
+
+**D62 — A1 is the raw AI claims** (Rohit, 27 Sep; replaces D29's A1 rule). Every bug candidate counts at face value (Confirmed), including ones verification later discarded, before the grounding caps, evidence validation, replay, judge and skeptic. `verify/tier.ts → unverifiedTier` records it that way. The scorer also computes it directly from the findings, so the gate runs are scored under the new definition without new runs.
+
+Result (`eval/results/p3-gate/summary.md`):
+
+| Run | A1 raw claims | A3 no skeptic | A2 full |
+| --- | --- | --- | --- |
+| Buggy gate `…053847` | recall C 78%, bug precision C+L 81% | recall C 61%, precision 86% | recall C 61% / C+L 72%, precision **92%** |
+| Buggy confirmation `…085623` | recall C 78%, precision 81% | 61%, 92% | 61% / 72%, **92%** |
+| Clean `…075935` | **1** false bug at Confirmed | 0 | **0** |
+| Clean `…080410` | **2** false bugs at Confirmed | 0 | **0** |
+
+In words: trusting the AI would put every guess at Confirmed. That gives more Confirmed recall (78%: B04 and AI-guessed rules count), but it reports false bugs on a clean app and loses 11 points of precision. Verification removes those false bugs, at the cost of B04 dropping to Needs review (the agreed D46 trade-off).
+
+**Discard funnel (bug findings; `run.json` tier reasons):**
+
+| Run | Candidates → groups → bugs | Evidence invalid | Not reproduced | Judge "not a bug" | AI-guessed cap (D46) | Text from another page (D56) | Skeptic ↓ | Not replayed / intermittent | Convention (Likely) | Final C / L / NR |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| `…053847` buggy | 35 → 23 → 16 | 0 | 0 | 0 | 1 | (1 at Likely: before D56) | 2 | 0 | 4 | 8 / 5 / 3 |
+| `…085623` buggy | 33 → 23 → 16 | 0 | 0 | 0 | 0 | 1 | 0 | 3 | 4 | 8 / 4 / 4 |
+| `…075935` clean | 4 → 4 → 1 | 0 | 0 | 0 | 1 | 0 | 0 | 0 | 0 | 0 / 0 / 1 |
+| `…080410` clean | 5 → 5 → 2 | 0 | 0 | 0 | 1 | 1 | 0 | 0 | 0 | 0 / 0 / 2 |
+
+On this bench, the work is done by grounding and the skeptic, not by replay: every bug reproduces. Replay's value (dropping flaky or environmental failures) will only show on apps with non-deterministic behaviour (P5: SauceDemo, Friction). Say so plainly in the talk.
+
+**Why only 1 of 3 journeys completed in the gate run (diagnosed from its step logs).**
+1. **"Get a price quote" used all 25 turns after its goal was done.** Once its total check failed (the B01 bug), the Explorer restated the same failing rule as new expectations: "…the correct total price…, with GST applied correctly", four times. Each was accepted as a new expectation, so it never finished.
+2. **"Manage account and bookings" hit the time limit after 5 steps.** Nothing was wrong with it; the two journeys before it used the whole exploring window. It is the journey that holds B06 and B08. The search journey that holds B03 wasn't planned in this run.
+
+**D63 — A result is recorded once, and journeys share exploring time fairly.** Both generic:
+- **Restatements.** A new expectation that restates a decided one is refused, with "already recorded as FAILED/passed; carry on or finish". That means the same statement as any decided expectation, or a wider restatement of one that FAILED. A *stricter* version of one that passed is still allowed, because a weak check can pass where a precise one fails (B01's history). Three refusals stop the journey. The Explorer prompt says the same.
+- **Time.** Each journey gets a fair share of the exploring time left, and time a journey doesn't use carries over, so one slow journey can't starve the rest.
+- Tests: `duplicateOf` in `explore/edge.test.ts`.
+
+**Confirmation run** (`run_20260927-085623_kd8k`, final code, buggy, Standard). 470 s, 67 LLM calls, $0.28.
+- **Journeys: 2 of 3 completed** (gate run: 1 of 3). "Get a price quote" completed in 11 steps with no restatements, and "Manage account and bookings" completed (17 steps).
+- **"Book a cleaning service" ran out of its time share for a different reason.** After confirming a booking, the Explorer went back and made a second one. That's the agent wandering, not the causes fixed here. I recorded it rather than tuning on the bench.
+- **B03, B06 and B08 are still missed, now because of the checks the Explorer wrote**, not because journeys didn't finish:
+  - its cancel check compared booking *counts*, which B06 doesn't change;
+  - its profile check saved without editing anything, so B08 can't show;
+  - no search journey was planned.
+
+  The agent's choice of check remains the main recall limit (P2 teach-back).
+- **E3:** 12 tests; 11 of 11 real seeded bugs behave. The 12th is the count-check false positive above. Its test fails on a correct app too, which is right, since the test encodes the wrong expectation.
+
+**Spend.** OpenRouter total usage **$5.24** (after the P3 gate: $4.93). This wrap-up (one Standard run) cost $0.31. Balance: $4.76.
