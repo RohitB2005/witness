@@ -6,7 +6,7 @@
 import type { Locator as PwLocator, Page } from "playwright";
 import type { Check, Locator, NumExpr, TextExpr } from "./language";
 import { describeLocator, toPlaywright } from "./locate";
-import { fmt, normaliseText, parseAmount } from "./parse";
+import { amounts, fmt, normaliseText, parseAmount } from "./parse";
 
 export type Captured = number | string;
 
@@ -153,7 +153,8 @@ async function evaluate(
       const texts = await Promise.all(items.map((i) => innerText(i)));
       const keys: (number | string)[] = texts.map((t, i) => {
         if (check.read === "text") return normaliseText(t.split("\n")[0] ?? t);
-        const a = parseAmount(t);
+        // In a list of products, the price is the money amount; other numbers ("3-pack") come first.
+        const a = amounts(t).find((x) => x.isMoney && !x.isPercent) ?? parseAmount(t);
         if (!a) throw new EvalError(`Item ${i + 1} ("${clip(t)}") has no number to compare.`);
         return a.value;
       });
@@ -221,6 +222,42 @@ async function evaluate(
         signal
           ? `The form refused the value: ${signal}.`
           : `The form accepted the value for ${describeLocator(check.field)}: no error was shown and the submission went through.`,
+      );
+    }
+    case "notPresent": {
+      const n = await toPlaywright(ctx.page, check.target)
+        .count()
+        .catch(() => 0);
+      observed.count = n;
+      return done(
+        n === 0,
+        n === 0
+          ? `${cap(describeLocator(check.target))} isn't on the page.`
+          : `${cap(describeLocator(check.target))} is on the page (${n} element${n === 1 ? "" : "s"}).`,
+      );
+    }
+    case "linkWorks": {
+      const link = toPlaywright(ctx.page, check.link).first();
+      const href = await link
+        .getAttribute("href", { timeout: ctx.waitMs ?? DEFAULT_WAIT_MS })
+        .catch(() => null);
+      if (href === null)
+        throw new MissingError(`Couldn't find ${describeLocator(check.link)} on the page.`);
+      const target = new URL(href, ctx.page.url());
+      if (target.origin !== new URL(ctx.page.url()).origin)
+        throw new EvalError(
+          `${cap(describeLocator(check.link))} leads to another site (${target.origin}).`,
+        );
+      const res = await ctx.page.request
+        .get(target.href, { maxRedirects: 5 })
+        .catch(() => undefined);
+      const status = res?.status() ?? 0;
+      observed.href = target.pathname;
+      observed.status = status;
+      const ok = status > 0 && status < 400;
+      return done(
+        ok,
+        `${cap(describeLocator(check.link))} leads to ${target.pathname}, which ${ok ? "opens" : "returned"} ${status ? `HTTP ${status}` : "no response"}.`,
       );
     }
     case "noNewErrors": {
@@ -398,23 +435,72 @@ async function visibleCount(
   mode: "appear" | "disappear",
 ): Promise<number> {
   const loc = toPlaywright(ctx.page, target).filter({ visible: true });
+  const loose = quoteLoose(ctx, target);
   const deadline = Date.now() + (ctx.waitMs ?? DEFAULT_WAIT_MS);
-  let n = await loc.count();
+  const count = async () =>
+    ((await loc.count()) || (loose ? await loose.count() : 0)) +
+    (await selectedOptionMatches(ctx, target));
+  let n = await count();
   while (Date.now() < deadline && (mode === "appear" ? n === 0 : n > 0)) {
     await new Promise((r) => setTimeout(r, 100));
-    n = await loc.count();
+    n = await count();
   }
   return n;
+}
+
+/**
+ * The same text locator, with straight and typographic quotes treated as one character ("x" = “x”, it's =
+ * it’s). No user tells them apart; a P3 run reported "No services match "deep clean"" as missing while the
+ * page showed it with curly quotes. Undefined when the text has no quotes.
+ */
+function quoteLoose(ctx: EvalContext, target: Locator): PwLocator | undefined {
+  if (target.by !== "text" || !/["'“”‘’„]/.test(target.text)) return undefined;
+  const body = target.text
+    .replace(/[.*+?^${}()|[\]\\]/g, "\\$&")
+    .replace(/["“”„]/g, '["“”„]')
+    .replace(/['‘’]/g, "['‘’]")
+    .replace(/\s+/g, "\\s+");
+  const re = target.exact ? new RegExp(`^\\s*${body}\\s*$`) : new RegExp(body, "i");
+  const scope = target.within ? toPlaywright(ctx.page, target.within).first() : ctx.page;
+  const loc = scope.getByText(re);
+  return (target.nth !== undefined ? loc.nth(target.nth) : loc).filter({ visible: true });
+}
+
+/**
+ * A closed dropdown shows its chosen option, but its <option> text isn't "visible" to the text locator. For a
+ * text locator with no scope, count the visible <select>s whose chosen option shows that text (found while
+ * labelling P2: "the rate is shown" failed while the rate was on screen in the dropdown).
+ */
+async function selectedOptionMatches(ctx: EvalContext, target: Locator): Promise<number> {
+  if (target.by !== "text" || target.within || target.nth !== undefined) return 0;
+  const want = { text: target.text, exact: !!target.exact };
+  return ctx.page
+    .evaluate((w) => {
+      const norm = (s: string) => s.replace(/\s+/g, " ").trim().toLowerCase();
+      const needle = norm(w.text);
+      return Array.from(document.querySelectorAll("select")).filter((sel) => {
+        const shown = (sel as HTMLSelectElement).selectedOptions[0]?.text ?? "";
+        if (!(sel as HTMLElement).offsetParent) return false;
+        return w.exact ? norm(shown) === needle : norm(shown).includes(needle);
+      }).length;
+    }, want)
+    .catch(() => 0);
 }
 
 async function innerText(loc: PwLocator): Promise<string> {
   return loc.evaluate((el) => (el as HTMLElement).innerText ?? el.textContent ?? "");
 }
 
+/** Status codes that mean "the server refused this input" (not "missing" or "not allowed"). */
+const REFUSAL_STATUS = new Set([400, 409, 413, 422]);
+
 /**
  * Why the form refused the field's value, or undefined if it didn't. Signals, in order: the field is
- * aria-invalid; the browser's own validation failed; an associated error message is visible; the form's
- * success signature didn't appear after submitting.
+ * aria-invalid; the browser's own validation failed; an associated error message is visible; the server
+ * answered the submit with a refusal status (400/409/413/422); an alert with error wording is showing
+ * (a form-level message, not tied to the field); the form's success signature didn't appear after
+ * submitting. The two form-level signals were added in P3 after a P2 run reported "accepted" for a value
+ * the app refused with a 400 and an alert.
  */
 async function rejectionSignal(ctx: EvalContext, field: Locator): Promise<string | undefined> {
   const loc = toPlaywright(ctx.page, field).first();
@@ -446,6 +532,26 @@ async function rejectionSignal(ctx: EvalContext, field: Locator): Promise<string
     });
     if (s) return s;
   }
+  const refused = (ctx.requestsSince?.() ?? []).find(
+    (r) => r.status !== undefined && REFUSAL_STATUS.has(r.status),
+  );
+  if (refused)
+    return `the server refused it (${refused.method} ${refused.path} → ${refused.status})`;
+  const alert = await ctx.page
+    .evaluate((errorish) => {
+      const re = new RegExp(errorish, "i");
+      const nodes = Array.from(
+        document.querySelectorAll('[role="alert"], [aria-live="assertive"], [aria-live="polite"]'),
+      ) as HTMLElement[];
+      for (const n of nodes) {
+        if (!n.offsetParent) continue;
+        const text = (n.innerText || "").replace(/\s+/g, " ").trim();
+        if (text && text.length <= 300 && re.test(text)) return text;
+      }
+      return undefined;
+    }, FORM_ERROR_WORDS)
+    .catch(() => undefined);
+  if (alert) return `an error message is shown ("${alert.slice(0, 100)}")`;
   if (ctx.successCheck) {
     const success = await evaluateCheck(ctx.successCheck, {
       ...ctx,
@@ -456,6 +562,10 @@ async function rejectionSignal(ctx: EvalContext, field: Locator): Promise<string
   }
   return undefined;
 }
+
+/** Error wording in a form-level alert (generic UI language). */
+const FORM_ERROR_WORDS =
+  "\\b(required|invalid|must|please|can't|cannot|not valid|enter a valid|too (long|short)|maximum|minimum|at most|at least|exceeds?|not allowed|error|failed|went wrong|try again)\\b";
 
 // ---------------------------------------------------------------------------------------------
 // Small helpers

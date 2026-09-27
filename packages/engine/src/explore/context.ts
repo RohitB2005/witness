@@ -67,22 +67,15 @@ export function labelledAmounts(snapshot: string, max = 8): string[] {
   return out;
 }
 
-export function buildTurnPrompt(c: TurnContext): string {
-  const amounts = labelledAmounts(c.snapshot);
-  const exp = c.expectations.length
-    ? c.expectations
-        .map(({ exp, status }) => {
-          const when = exp.when ? ` — when: ${exp.when}` : "";
-          const planned =
-            status === "not checked yet" || status === "couldn't evaluate"
-              ? `\n  planned check: ${JSON.stringify(exp.check)}`
-              : "";
-          return `- ${exp.id} [${status}] "${exp.statement}"${when}${planned}`;
-        })
-        .join("\n")
-    : "(none planned; assert your own if you see something checkable)";
-  const path = safePath(c.url);
-  return [
+/**
+ * One turn's prompt in two parts. `brief` is the same on every turn of a journey (the journey, and the
+ * checks planned before it started): the gateway sends it as a separately cached block, so with the tools
+ * and system prompt it clears the model's minimum cacheable length (4,096 tokens on the fast model; P2
+ * never got a cache hit without it). `turn` is everything that changes.
+ */
+export function buildTurnParts(c: TurnContext): { brief: string; turn: string } {
+  const planned = c.expectations.filter(({ exp }) => exp.origin === "plan");
+  const brief = [
     `<journey id="${c.journey.id}" priority="${c.journey.priority}">`,
     `Title: ${c.journey.title}`,
     `Goal: ${c.journey.goal}`,
@@ -91,6 +84,41 @@ export function buildTurnPrompt(c: TurnContext): string {
       : "",
     `You are ${c.loggedIn ? "logged in with the test account" : "not logged in"}. Today's date is ${c.today}.`,
     `</journey>`,
+    planned.length
+      ? `<planned_checks hint="the check planned for each expectation; use it when you assert the expectation">\n${planned
+          .map(({ exp }) => `- ${exp.id}: ${JSON.stringify(exp.check)}`)
+          .join("\n")}\n</planned_checks>`
+      : "",
+  ]
+    .filter(Boolean)
+    .join("\n");
+  return { brief, turn: turnText(c) };
+}
+
+/** The whole turn prompt as one string (brief + turn). */
+export function buildTurnPrompt(c: TurnContext): string {
+  const { brief, turn } = buildTurnParts(c);
+  return `${brief}\n${turn}`;
+}
+
+function turnText(c: TurnContext): string {
+  const amounts = labelledAmounts(c.snapshot);
+  const exp = c.expectations.length
+    ? c.expectations
+        .map(({ exp, status }) => {
+          const when = exp.when ? ` — when: ${exp.when}` : "";
+          // A planned check is in <planned_checks>; show it here only if it has changed or failed to evaluate.
+          const planned =
+            status === "couldn't evaluate" ||
+            (status === "not checked yet" && exp.origin !== "plan")
+              ? `\n  planned check: ${JSON.stringify(exp.check)}`
+              : "";
+          return `- ${exp.id} [${status}] "${exp.statement}"${when}${planned}`;
+        })
+        .join("\n")
+    : "(none planned; assert your own if you see something checkable)";
+  const path = safePath(c.url);
+  return [
     `<expectations>\n${exp}\n</expectations>`,
     `<recent_steps>\n${c.history.slice(-8).join("\n") || "(none yet)"}\n</recent_steps>`,
     c.lastResult ? `<last_result>${c.lastResult}</last_result>` : "",

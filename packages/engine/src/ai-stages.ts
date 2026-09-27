@@ -2,18 +2,19 @@
 // the crawl. Any failure here degrades: the scan still reports its deterministic findings and says which
 // AI stage was skipped and why (NFR-3).
 import type { Browser } from "playwright";
-import type { Budget } from "./config/budgets";
+import { TIME_SPLIT, type Budget } from "./config/budgets";
 import type { SafetyPolicy } from "./browser/policy";
 import type { SecretVault } from "./browser/vault";
 import type { CrawlResult } from "./crawl/crawler";
 import { log, type EventSink } from "./events";
 import { runEdgeInputs, type EdgeMetrics } from "./explore/edge";
 import { exploreJourney, type ExplorerMetrics, type JourneyRun } from "./explore/explorer";
-import { StateRegistry } from "./explore/states";
+import type { StateRegistry } from "./explore/states";
 import { LlmCache } from "./llm/cache";
 import { LlmGateway } from "./llm/gateway";
 import type { Models } from "./llm/settings";
 import { planJourneys, type PlanMetrics } from "./plan/planner";
+import { buildAppMapSummary } from "./plan/summary";
 import type { PreflightSuccess } from "./preflight/preflight";
 import type { EvidenceWriter } from "./record/evidence";
 import type { RunStore } from "./store/run-store";
@@ -32,6 +33,8 @@ export interface AiStagesInput {
   sink: EventSink;
   pre: PreflightSuccess;
   crawled: CrawlResult;
+  /** Page states seen so far (shared with the automatic probes that run alongside). */
+  states: StateRegistry;
   crawlCandidates: Candidate[];
   models: Models;
   cacheDir: string;
@@ -49,12 +52,19 @@ export interface AiStagesOutput {
   metrics: Record<string, number>;
   llm: { calls: number; inputTokens: number; outputTokens: number; costUsd: number };
   steps: number;
+  /** The run's gateway: verification and the report make their LLM calls through the same one. */
+  gateway: LlmGateway;
+  /** The state registry (crawl + agent states), for verification. */
+  states: StateRegistry;
+  /** Resolves when every LLM call so far is written to llm-calls.ndjson (NFR-6). */
+  flushLogs: () => Promise<void>;
 }
 
 export async function runAiStages(i: AiStagesInput): Promise<AiStagesOutput> {
   const { config, budget, sink } = i;
   const phase = (p: "plan" | "explore") =>
     sink({ t: "phase", phase: p, at: new Date().toISOString() });
+  const logs: Promise<void>[] = [];
   const gateway = new LlmGateway({
     models: { smart: i.models.smart, fast: i.models.fast },
     modelIds: i.models.ids,
@@ -62,8 +72,11 @@ export async function runAiStages(i: AiStagesInput): Promise<AiStagesOutput> {
     cache: new LlmCache(i.cacheDir, config.llmCache),
     costCapUsd: i.costCapUsd,
     promptCaching: true,
-    onCall: (e) => void i.store.appendLlmCall(i.runId, { ...e }).catch(() => undefined),
+    onCall: (e) => {
+      logs.push(i.store.appendLlmCall(i.runId, { ...e }).catch(() => undefined));
+    },
   });
+  const states = i.states;
   const out: AiStagesOutput = {
     journeys: [],
     candidates: [],
@@ -72,10 +85,15 @@ export async function runAiStages(i: AiStagesInput): Promise<AiStagesOutput> {
     metrics: {},
     llm: { calls: 0, inputTokens: 0, outputTokens: 0, costUsd: 0 },
     steps: 0,
+    gateway,
+    states,
+    flushLogs: async () => {
+      await Promise.all(logs);
+    },
   };
   const wall = budget.wallClockMs;
-  const exploreDeadline = i.started + Math.round(wall * 0.68);
-  const edgeDeadline = i.started + wall - 35_000;
+  const exploreDeadline = i.started + Math.round(wall * TIME_SPLIT.exploreEnd);
+  const edgeDeadline = i.started + Math.round(wall * TIME_SPLIT.edgeEnd);
 
   // ---- Plan
   phase("plan");
@@ -111,7 +129,7 @@ export async function runAiStages(i: AiStagesInput): Promise<AiStagesOutput> {
 
   // ---- Explore
   phase("explore");
-  const states = new StateRegistry(i.crawled.states);
+  const siteMap = buildAppMapSummary(pages, 12_000);
   const runs: JourneyRun[] = [];
   const totals: ExplorerMetrics = {
     turns: 0,
@@ -159,6 +177,7 @@ export async function runAiStages(i: AiStagesInput): Promise<AiStagesOutput> {
       states,
       stepsPerJourney: budget.stepsPerJourney,
       deadline: exploreDeadline,
+      siteMap,
     });
     runs.push(run);
     journeys[n] = run.journey;

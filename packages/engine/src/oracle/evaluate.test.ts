@@ -499,3 +499,112 @@ describe("noNewErrors, maxRequests and all", () => {
     expect(r.status).toBe("error");
   });
 });
+
+describe("P3 evaluator additions", () => {
+  const field = { by: "label", text: "Hours", exact: true } as const;
+  const form = (extra = "") =>
+    `<form><label for="h">Hours</label><input id="h" type="number" value="1000"><button>Go</button></form>${extra}`;
+
+  it("fieldRejected: a form-level alert with error wording counts as a refusal", async () => {
+    const r = await run(form('<div role="alert">Maximum booking is 12 hours</div>'), {
+      type: "fieldRejected",
+      field,
+    });
+    expect(r.status).toBe("pass");
+    expect(r.message).toContain("Maximum booking is 12 hours");
+  });
+
+  it("fieldRejected: a refusal status on the submit's request counts as a refusal", async () => {
+    const r = await run(
+      form(),
+      { type: "fieldRejected", field },
+      { requestsSince: () => [{ method: "GET", path: "/api/quote", status: 400 }] },
+    );
+    expect(r.status).toBe("pass");
+    expect(r.message).toContain("400");
+  });
+
+  it("fieldRejected: a success message in a live region or a 404 elsewhere is not a refusal", async () => {
+    const r = await run(
+      form('<div aria-live="polite">Saved</div>'),
+      { type: "fieldRejected", field },
+      { requestsSince: () => [{ method: "GET", path: "/favicon.ico", status: 404 }] },
+    );
+    expect(r.status).toBe("fail");
+  });
+
+  it("visible: a closed dropdown's chosen option counts as visible text", async () => {
+    const html = `<label for="s">Service</label><select id="s"><option>Choose</option><option selected>Home clean ($45 per hour)</option></select>`;
+    expect(
+      (await run(html, { type: "visible", target: { by: "text", text: "$45 per hour" } })).status,
+    ).toBe("pass");
+    expect(
+      (await run(html, { type: "visible", target: { by: "text", text: "$50 per hour" } })).status,
+    ).toBe("fail");
+    expect(
+      (await run(html, { type: "notVisible", target: { by: "text", text: "$45 per hour" } }))
+        .status,
+    ).toBe("fail");
+  });
+
+  it("ordered: reads each item's money amount, not the first number", async () => {
+    const html = `<ul id="l">
+      <li>Onesie. Reinforced 3-snap closure. $7.99</li>
+      <li>Bike light. 2 modes. $9.99</li>
+      <li>Backpack. $29.99</li></ul>`;
+    const r = await run(html, {
+      type: "ordered",
+      items: { by: "role", role: "listitem", within: { by: "css", selector: "#l" } },
+      read: "number",
+      direction: "asc",
+    });
+    expect(r.status).toBe("pass");
+    expect(r.observed.values).toEqual([7.99, 9.99, 29.99]);
+  });
+
+  it("notPresent: fails when the canary became an element, passes when it's text", async () => {
+    const target = { by: "css", selector: '[data-witness-canary="t1"]' } as const;
+    expect(
+      (
+        await run(`<h2>Results for <i data-witness-canary="t1"></i></h2>`, {
+          type: "notPresent",
+          target,
+        })
+      ).status,
+    ).toBe("fail");
+    expect(
+      (
+        await run(`<h2>Results for "&gt;&lt;i data-witness-canary="t1"&gt;</h2>`, {
+          type: "notPresent",
+          target,
+        })
+      ).status,
+    ).toBe("pass");
+  });
+});
+
+describe("typographic quotes (P3)", () => {
+  it("treats straight and curly quotes as the same character in text checks", async () => {
+    const html = `<p>No services match “deep clean”.</p><p>It’s done</p>`;
+    expect(
+      (
+        await run(html, {
+          type: "visible",
+          target: { by: "text", text: 'No services match "deep clean"' },
+        })
+      ).status,
+    ).toBe("pass");
+    expect(
+      (await run(html, { type: "visible", target: { by: "text", text: "It's done", exact: true } }))
+        .status,
+    ).toBe("pass");
+    expect(
+      (
+        await run(html, {
+          type: "visible",
+          target: { by: "text", text: 'No services match "window"' },
+        })
+      ).status,
+    ).toBe("fail");
+  });
+});

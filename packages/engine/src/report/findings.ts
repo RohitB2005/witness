@@ -1,77 +1,26 @@
 // Candidates → findings: group duplicates, assign severity and a tier, write deterministic repro steps.
 //
-// Tiers here are *provisional* until replay verification exists (verify/, P3), which replaces
-// `provisionalTier` with verify/tier.ts (D17, D29):
-// - full / full-no-skeptic / deterministic: bugs cap at Likely ("not yet replayed"); an Explorer flag
-//   (judgement) is Needs review; improvements are Evidence-based.
-// - ai-no-verify (ablation A1): the tier the grounding alone would give, with no replay and no skeptic —
-//   what an unverified AI tester would claim.
+// Tiers come from verify/tier.ts. The verifier (verify/index.ts) decides each group's facts (evidence,
+// replay, judge, skeptic, suppression) and passes them in as a GroupVerdict; a group without one is
+// reported as not verified (Needs review for bugs), except in the unverified pipeline (A1), which reports
+// what grounding alone would give (D29).
 import { newId } from "../ids";
-import type {
-  Candidate,
-  Expectation,
-  Finding,
-  ImprovementTier,
-  Journey,
-  Pipeline,
-  Step,
-  Tier,
-} from "../types";
+import type { Candidate, Expectation, Finding, Journey, Pipeline, Step } from "../types";
+import { tierWithStages, type AnyTier, type TierInput } from "../verify/tier";
 import { fingerprint } from "./fingerprint";
 import { compareSeverity, maxSeverity, severityFor } from "./severity";
 
-export interface ProvisionalTier {
-  tier: Tier | ImprovementTier;
-  reason: string;
-}
-
-export function provisionalTier(
-  c: Pick<Candidate, "kind" | "source">,
-  opts: { pipeline?: Pipeline; expectation?: Expectation } = {},
-): ProvisionalTier {
-  if (c.kind === "improvement") {
-    return {
-      tier: "evidence_based",
-      reason: "Measured directly on the page by a deterministic check.",
-    };
-  }
-  const g = opts.expectation?.grounding;
-  const grounded = !!g && g.kind !== "convention" && g.verified;
-  const groundingWords = !g
-    ? ""
-    : g.kind === "convention"
-      ? " Its expectation is grounded in convention, not on-screen text."
-      : grounded
-        ? ` Grounded in ${g.kind === "ui_text" ? "on-screen text" : "the requirements"}: "${g.quote}".`
-        : "";
-  if (opts.pipeline === "ai-no-verify") {
-    const unverified = "Unverified pipeline (ablation A1): reported without replay or skeptic.";
-    if (c.source.kind === "detector")
-      return { tier: "confirmed", reason: `${unverified} Found by ${c.source.id}.` };
-    if (c.source.kind === "check")
-      return { tier: grounded ? "confirmed" : "likely", reason: `${unverified}${groundingWords}` };
-    return { tier: "likely", reason: `${unverified} The Explorer's judgement.` };
-  }
-  if (c.source.kind === "detector") {
-    return {
-      tier: "likely",
-      reason: `Found by ${c.source.id}, a check for something that is always wrong; not yet replayed (replay verification arrives in P3), so capped at Likely.`,
-    };
-  }
-  if (c.source.kind === "check") {
-    return {
-      tier: "likely",
-      reason: `A deterministic check failed.${groundingWords} Not yet replayed (replay verification arrives in P3), so capped at Likely.`,
-    };
-  }
-  if (c.source.kind === "judgement") {
-    return {
-      tier: "needs_review",
-      reason:
-        "The Explorer (an LLM) flagged this; no check confirmed it and it hasn't been judged or replayed yet.",
-    };
-  }
-  return { tier: "needs_review", reason: "Not yet verified." };
+/** What verification decided about one group of candidates (one finding). */
+export interface GroupVerdict {
+  tier: AnyTier;
+  tierReason: string;
+  stageTiers?: Finding["stageTiers"];
+  replay: Finding["replay"];
+  skeptic?: Finding["skeptic"];
+  judge?: Finding["judge"];
+  suppressed?: Finding["suppressed"];
+  /** Evidence recorded while verifying (replay check results and states). */
+  extraEvidenceIds?: string[];
 }
 
 export interface BuildContext {
@@ -81,6 +30,8 @@ export interface BuildContext {
   pipeline?: Pipeline;
   /** Journeys (with their steps and expectations), for severity, grounding and repro steps. */
   journeys?: Journey[];
+  /** Verification results by group key (verify/index.ts). */
+  verdicts?: Map<string, GroupVerdict>;
 }
 
 interface Lookups {
@@ -114,18 +65,56 @@ function lookups(ctx: BuildContext): Lookups {
   return l;
 }
 
-export function buildFindings(candidates: Candidate[], ctx: BuildContext): Finding[] {
-  const l = lookups(ctx);
+/**
+ * Candidates with the same group key are one problem. Each group is sorted so its first candidate (the
+ * representative, which is replayed and reported) is the lexically first route: stable across crawl orders.
+ */
+export function groupCandidates(candidates: Candidate[]): Candidate[][] {
   const groups = new Map<string, Candidate[]>();
   for (const c of candidates) {
     const g = groups.get(c.groupKey);
     if (g) g.push(c);
     else groups.set(c.groupKey, [c]);
   }
+  return [...groups.values()].map((g) =>
+    g.sort((a, b) => a.route.localeCompare(b.route) || a.url.localeCompare(b.url)),
+  );
+}
+
+/** The facts about a representative candidate that the tier rules use (before verification adds its own). */
+export function tierFacts(c: Candidate): Pick<TierInput, "kind" | "source" | "grounding"> {
+  return {
+    kind: c.kind,
+    source: c.source,
+    grounding: c.grounding
+      ? {
+          kind: c.grounding.kind,
+          verified: c.grounding.verified,
+          selfReferential: c.grounding.selfReferential,
+          aiGuessedRule: c.grounding.aiGuessedRule,
+        }
+      : c.source.kind === "detector"
+        ? undefined
+        : { kind: "convention", verified: false },
+  };
+}
+
+/** Tier for a group nobody verified: A1 reports grounding alone; any other pipeline says "not verified". */
+function unverifiedVerdict(c: Candidate, pipeline: Pipeline = "full"): GroupVerdict {
+  const replay = { attempts: 0, reproduced: 0, skipped: "not verified" };
+  const t = tierWithStages({ ...tierFacts(c), evidenceValid: true, replay }, pipeline);
+  return {
+    tier: t.tier,
+    tierReason: t.reason,
+    stageTiers: t.stageTiers,
+    replay: { attempts: 0, reproduced: 0, notes: "Not replayed." },
+  };
+}
+
+export function buildFindings(candidates: Candidate[], ctx: BuildContext): Finding[] {
+  const l = lookups(ctx);
   const findings: Finding[] = [];
-  for (const group of groups.values()) {
-    // Deterministic order: the primary instance is the lexically first route (stable across crawl orders).
-    group.sort((a, b) => a.route.localeCompare(b.route) || a.url.localeCompare(b.url));
+  for (const group of groupCandidates(candidates)) {
     const first = group[0]!;
     const severity = group
       .map((c) =>
@@ -142,11 +131,7 @@ export function buildFindings(candidates: Candidate[], ctx: BuildContext): Findi
         }),
       )
       .reduce(maxSeverity);
-    const { tier, reason } = provisionalTier(first, {
-      pipeline: ctx.pipeline,
-      expectation:
-        first.source.kind === "check" ? l.expectations.get(first.source.expectationId) : undefined,
-    });
+    const v = ctx.verdicts?.get(first.groupKey) ?? unverifiedVerdict(first, ctx.pipeline);
     const instances = dedupeBy(
       group.map((c) => ({ route: c.route, url: c.url, evidenceIds: c.evidenceIds })),
       (i) => i.url,
@@ -166,8 +151,8 @@ export function buildFindings(candidates: Candidate[], ctx: BuildContext): Findi
         request: req ? { method: req.method, path: req.path } : undefined,
       }),
       kind: first.kind,
-      tier,
-      tierReason: reason,
+      tier: v.tier,
+      tierReason: v.tierReason,
       severity,
       category: first.category,
       source: first.source,
@@ -184,18 +169,39 @@ export function buildFindings(candidates: Candidate[], ctx: BuildContext): Findi
               .map((i) => i.route)
               .join(", ")}${instances.length > 5 ? ", …" : ""}.`
           : first.detail.actual,
-      evidenceIds: [...new Set(group.flatMap((c) => c.evidenceIds))],
+      evidenceIds: [
+        ...new Set([...group.flatMap((c) => c.evidenceIds), ...(v.extraEvidenceIds ?? [])]),
+      ],
       instances,
       candidateIds: group.map((c) => c.id),
-      replay: { attempts: 0, reproduced: 0, notes: "Replay verification arrives in P3." },
+      replay: v.replay,
+      ...(v.skeptic ? { skeptic: v.skeptic } : {}),
+      ...(v.judge ? { judge: v.judge } : {}),
+      ...(v.suppressed ? { suppressed: v.suppressed } : {}),
+      ...(v.stageTiers ? { stageTiers: v.stageTiers } : {}),
       signals: first.signals,
+      repro: {
+        session: first.session,
+        viewport: first.viewport,
+        url: first.url,
+        journeyId: first.journeyId,
+        stepIds: first.stepIds,
+        signature: first.signature,
+        ...(first.check ? { check: first.check } : {}),
+        ...(first.successCheck ? { successCheck: first.successCheck } : {}),
+      },
+      wording: "template",
     });
   }
-  return findings.sort(
-    (a, b) =>
-      (a.kind === b.kind ? 0 : a.kind === "bug" ? -1 : 1) ||
-      compareSeverity(a.severity, b.severity) ||
-      a.title.localeCompare(b.title),
+  return findings.sort(compareFindings);
+}
+
+/** Report order: bugs before improvements, then by severity, then by title. */
+export function compareFindings(a: Finding, b: Finding): number {
+  return (
+    (a.kind === b.kind ? 0 : a.kind === "bug" ? -1 : 1) ||
+    compareSeverity(a.severity, b.severity) ||
+    a.title.localeCompare(b.title)
   );
 }
 

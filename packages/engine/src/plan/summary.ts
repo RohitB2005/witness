@@ -6,7 +6,10 @@ import { createHash } from "node:crypto";
 import type { PageState } from "../types";
 
 export interface MapPage {
-  state: Pick<PageState, "id" | "url" | "routePattern" | "title" | "session" | "status">;
+  state: Pick<
+    PageState,
+    "id" | "url" | "routePattern" | "title" | "session" | "status" | "appRendered"
+  >;
   snapshot: string;
 }
 
@@ -138,7 +141,7 @@ function list(label: string, items: string[], max: number): string {
 
 /** The summary text. `maxChars` ≈ 4 chars per token; default keeps it under ~12k tokens. */
 export function buildAppMapSummary(pages: MapPage[], maxChars = 45_000): string {
-  const ok = pages.filter((p) => (p.state.status ?? 200) < 400);
+  const ok = pages.filter((p) => (p.state.status ?? 200) < 400 || p.state.appRendered);
   const parsed = ok.map((p) => ({ page: p, parsed: parseSnapshot(p.snapshot) }));
 
   // Links present on (almost) every page are site navigation: list them once.

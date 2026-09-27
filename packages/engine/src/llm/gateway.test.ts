@@ -184,3 +184,62 @@ describe("guards", () => {
     expect(t.gateway.budgetExhausted).toBe(true);
   });
 });
+
+describe("prompt prefix (Explorer prompt caching, P3)", () => {
+  it("sends a stable prefix as its own block with a cache breakpoint, redacted like the rest", async () => {
+    const t = await testGateway(
+      [{ tool: "finish", input: { outcome: "completed", note: "ok" } }],
+      undefined,
+      {
+        promptCaching: true,
+      },
+    );
+    t.vault.set("pw", "prefix-secret-123");
+    const r = await t.gateway.toolCall({
+      role: "explorer",
+      tier: "fast",
+      instructions: "Be an explorer.",
+      promptPrefix: "<journey>Brief with prefix-secret-123</journey>",
+      prompt: "Turn 1",
+      tools: {
+        finish: {
+          description: "End.",
+          schema: z.object({ outcome: z.string(), note: z.string() }),
+        },
+      },
+    });
+    expect(r.ok).toBe(true);
+    const messages = t.fast.raw[0] as { role: string; content: unknown }[];
+    const user = messages.find((m) => m.role === "user")!.content as {
+      type: string;
+      text: string;
+      providerOptions?: { openrouter?: { cacheControl?: unknown } };
+    }[];
+    expect(user[0]!.text).toContain("{{secret:pw}}");
+    expect(user[0]!.text).not.toContain("prefix-secret-123");
+    expect(user[0]!.providerOptions?.openrouter?.cacheControl).toEqual({ type: "ephemeral" });
+    expect(user[1]!.text).toBe("Turn 1");
+    expect(user[1]!.providerOptions?.openrouter?.cacheControl).toBeUndefined();
+  });
+});
+
+describe("concurrent calls (P3)", () => {
+  it("logs every call when several run at once", async () => {
+    const t = await testGateway([{ json: { ok: true } }]);
+    const schema = z.object({ ok: z.boolean() });
+    await Promise.all(
+      [1, 2, 3, 4].map((n) =>
+        t.gateway.structured({
+          role: "skeptic",
+          tier: "smart",
+          instructions: "x",
+          prompt: `call ${n}`,
+          schema,
+          schemaName: "s",
+        }),
+      ),
+    );
+    expect(t.calls).toHaveLength(4);
+    expect(t.gateway.totals.calls).toBe(4);
+  });
+});

@@ -29,9 +29,9 @@ import { PageRecorder, type NetworkEntry } from "../record/recorder";
 import type { RunStore } from "../store/run-store";
 import type { Action, Candidate, Expectation, Journey, ScanMode, Step } from "../types";
 import { checkCandidate } from "./candidates";
-import { Executor, type AgentAction } from "./executor";
+import { Executor, toAgentAction } from "./executor";
 import type { JourneyRun } from "./explorer";
-import { indexSnapshot } from "./locators";
+import { indexSnapshot, messageLocator } from "./locators";
 import type { StateRegistry } from "./states";
 import type { StorageState } from "../preflight/preflight";
 
@@ -78,7 +78,7 @@ export async function findForms(
       const a = s.action;
       if (!s.ok) continue;
       if (a.type === "fill" || a.type === "select") {
-        if (s.target?.inputType === "password") continue; // never vary passwords
+        // Password fields are kept (a login variant needs the password to mean anything) but never varied.
         const key = s.target?.formKey ?? `page:${pathOf(s.urlBefore)}`;
         if (!open || open.key !== key) open = { key, first: i, fields: new Map() };
         const locKey = JSON.stringify(a.target);
@@ -242,7 +242,9 @@ export function fixedVariants(form: FormRun, today: Date): { first: Variant[]; r
     source: "fixed",
     ...x,
   });
-  const textFields = form.fields.filter((f) => f.kind === "fill" && TEXTISH.has(f.inputType));
+  const textFields = form.fields.filter(
+    (f) => f.kind === "fill" && TEXTISH.has(f.inputType) && !isSecret(f),
+  );
   const nameField = textFields.find((f) => /name/i.test(f.label)) ?? textFields[0];
   if (textFields[0]) {
     const token = Math.random().toString(36).slice(2, 10);
@@ -280,7 +282,7 @@ export function fixedVariants(form: FormRun, today: Date): { first: Variant[]; r
     });
   }
   for (const f of form.fields) {
-    if (f.kind !== "fill") continue;
+    if (f.kind !== "fill" || f.inputType === "password") continue;
     if (f.required) {
       rest.push(
         v({
@@ -406,7 +408,15 @@ export function fixedVariants(form: FormRun, today: Date): { first: Variant[]; r
       );
     }
   }
+  // A login detail (the account's username/email) can't be swapped for another value and still be
+  // "accepted": the account wouldn't match. Such variants still run, for crashes only.
+  for (const v of [...first, ...rest]) if (v.field && isSecret(v.field)) v.expectation = "none";
   return { first, rest };
+}
+
+/** The happy value is a login detail from the vault ({{secret:…}}), or the field is a password. */
+export function isSecret(f: FormField): boolean {
+  return f.inputType === "password" || /\{\{secret:/.test(f.happy);
 }
 
 const AiVariantsSchema = z.object({
@@ -428,12 +438,14 @@ export async function aiVariants(
   form: FormRun,
   today: Date,
 ): Promise<{ variants: Variant[]; proposed: number; error?: string }> {
-  const fields = form.fields.map((f) => ({
-    name: f.label,
-    type: f.inputType,
-    required: f.required,
-    happyValue: /\{\{secret:/.test(f.happy) ? "(login detail)" : JSON.stringify(f.happy),
-  }));
+  const fields = form.fields
+    .filter((f) => f.inputType !== "password")
+    .map((f) => ({
+      name: f.label,
+      type: f.inputType,
+      required: f.required,
+      happyValue: /\{\{secret:/.test(f.happy) ? "(login detail)" : JSON.stringify(f.happy),
+    }));
   const res = await gateway.structured({
     role: "edge",
     tier: "smart",
@@ -453,7 +465,9 @@ export async function aiVariants(
   const out: Variant[] = [];
   for (const p of res.value.variants) {
     const field = form.fields.find((f) => f.label === p.field);
-    if (!field || /\{\{secret:/.test(p.value)) continue;
+    // Never a secret value, and never a guess at another account's login details (P2: variants that
+    // swapped the account's email for an unknown one could only ever "fail").
+    if (!field || isSecret(field) || /\{\{secret:/.test(p.value)) continue;
     out.push({
       id: newId("cd").replace("cd_", "vr_"),
       field,
@@ -598,6 +612,19 @@ export async function runEdgeInputs(runs: JourneyRun[], deps: EdgeDeps): Promise
     const queue = planned.flatMap(({ form, variants }) =>
       variants.map((variant) => ({ form, variant })),
     );
+    // The login-message comparison is Witness's own fixed check and takes seconds: it runs alongside the
+    // variants (its own browser, anonymous) so a short edge phase can't squeeze it out (P3).
+    const loginPair =
+      deps.loginUrl && deps.credentials && Date.now() < deps.deadline
+        ? runLoginPair(deps).catch((err: unknown) => {
+            log(
+              deps.sink,
+              "warn",
+              `Login-message comparison failed to run: ${String(err).split("\n")[0]}`,
+            );
+            return undefined;
+          })
+        : Promise.resolve(undefined);
     const workers = Array.from({ length: Math.max(1, deps.concurrency ?? 2) }, async () => {
       for (let job = queue.shift(); job; job = queue.shift()) {
         if (Date.now() > deps.deadline) {
@@ -621,20 +648,11 @@ export async function runEdgeInputs(runs: JourneyRun[], deps: EdgeDeps): Promise
       }
     });
     await Promise.all(workers);
-    if (deps.loginUrl && deps.credentials && Date.now() < deps.deadline) {
-      const pair = await runLoginPair(deps).catch((err: unknown) => {
-        log(
-          deps.sink,
-          "warn",
-          `Login-message comparison failed to run: ${String(err).split("\n")[0]}`,
-        );
-        return undefined;
-      });
-      if (pair) {
-        metrics.loginPairRun = 1;
-        result.loginJourney = pair.journey;
-        result.candidates.push(...pair.candidates);
-      }
+    const pair = await loginPair;
+    if (pair) {
+      metrics.loginPairRun = 1;
+      result.loginJourney = pair.journey;
+      result.candidates.push(...pair.candidates);
     }
   });
   metrics.candidates = result.candidates.length;
@@ -770,17 +788,6 @@ async function probeFormFields(form: FormRun, deps: EdgeDeps): Promise<FormField
   }
 }
 
-function toAgentAction(a: Action): AgentAction | undefined {
-  switch (a.type) {
-    case "check":
-      return undefined;
-    case "click":
-      return { type: "click", target: a.target, clickCount: a.clickCount };
-    default:
-      return a;
-  }
-}
-
 async function runVariant(
   form: FormRun,
   variant: Variant,
@@ -894,7 +901,11 @@ async function runVariant(
           detectorId: "DET-XSS",
           key: `${form.route}|${variant.field?.label ?? ""}`,
         },
-        groupKey: `xss|${form.route}|${variant.field?.label ?? ""}`,
+        check: {
+          type: "notPresent",
+          target: { by: "css", selector: `[data-witness-canary="${variant.canary}"]` },
+        },
+        groupKey: xssGroupKey(form.route, variant.field?.label ?? ""),
         signals: {},
         detail: {
           title: `Text typed into "${variant.field?.label}" is inserted into the page as HTML (XSS risk)`,
@@ -937,6 +948,7 @@ async function runVariant(
         impact: variant.kind === "double-submit" ? "data-loss" : "wrong-info",
         category: variant.kind === "double-submit" ? "functional" : "validation",
         origin: "edge",
+        ...(variant.source === "ai" ? { aiGuessed: true } : {}),
       };
       const r = await ex.check(check, {
         expectationId: expectation.id,
@@ -949,6 +961,7 @@ async function runVariant(
           checkCandidate({
             exp: expectation,
             result: r.result,
+            successCheck: form.success,
             url: page.url(),
             state: cur?.state,
             session: form.session,
@@ -967,42 +980,42 @@ async function runVariant(
 
 /**
  * Unknown account vs. known account with a wrong password: if the two error messages differ, the login
- * form tells an attacker which accounts exist (convention grounding). One failed attempt per account.
+ * form tells an attacker which accounts exist (convention grounding). One failed attempt per account, in
+ * one browser, recorded as one replayable sequence: capture the unknown account's message, then compare the
+ * known account's message with it (`equalsCaptured`), so a replay or an exported test compares the live
+ * messages instead of a message recorded from the buggy build.
  */
 async function runLoginPair(
   deps: EdgeDeps,
 ): Promise<{ journey: Journey; candidates: Candidate[] } | undefined> {
   const journeyId = newId("jr");
   const loginPath = pathOf(deps.loginUrl!);
-  const attempt = async (username: string) => {
-    const context = await createContext(deps.browser, {
+  const context = await createContext(deps.browser, {
+    policy: deps.policy,
+    viewport: deps.viewport,
+  });
+  try {
+    const page = await context.newPage();
+    const recorder = new PageRecorder(page, deps.policy);
+    const ex = new Executor({
+      page,
+      recorder,
+      evidence: deps.evidence,
+      vault: deps.vault,
       policy: deps.policy,
+      mode: deps.mode,
+      journeyId,
+      kind: "edge",
+      session: "anonymous",
+      states: deps.states,
       viewport: deps.viewport,
+      mobileViewport: deps.mobileViewport,
+      credentials: deps.credentials,
+      detectors: "log",
     });
-    const fail = async () => {
-      await context.close().catch(() => undefined);
-      return undefined;
-    };
-    try {
-      const page = await context.newPage();
-      const recorder = new PageRecorder(page, deps.policy);
-      const ex = new Executor({
-        page,
-        recorder,
-        evidence: deps.evidence,
-        vault: deps.vault,
-        policy: deps.policy,
-        mode: deps.mode,
-        journeyId,
-        kind: "edge",
-        session: "anonymous",
-        states: deps.states,
-        viewport: deps.viewport,
-        mobileViewport: deps.mobileViewport,
-        credentials: deps.credentials,
-        detectors: "log",
-      });
-      await ex.act({ type: "goto", path: loginPath });
+    /** One failed login; returns the first message that appeared (not the typed account name). */
+    const attempt = async (username: string): Promise<string | undefined> => {
+      if (!(await ex.act({ type: "goto", path: loginPath })).ok) return undefined;
       const index = indexSnapshot(ex.current?.capture.snapshot ?? "");
       const boxes = [...index.entries()].filter(([, n]) => n.role === "textbox");
       const pw = boxes.find(([, n]) => /pass/i.test(n.name));
@@ -1012,70 +1025,56 @@ async function runLoginPair(
       const submit = [...index.entries()].find(
         ([, n]) => n.role === "button" && /(log ?in|sign ?in|submit|continue)/i.test(n.name),
       );
-      if (!pw || !user || !submit) return fail();
+      if (!pw || !user || !submit) return undefined;
       const before = ex.current?.capture.snapshot ?? "";
       // The executor re-resolves refs against a fresh snapshot, so refs from `index` stay valid here.
       if (!(await ex.act({ type: "fill", target: { ref: user[0] }, value: username })).ok)
-        return fail();
+        return undefined;
       if (
         !(await ex.act({ type: "fill", target: { ref: pw[0] }, value: "Wrong-passw0rd-witness" }))
           .ok
       )
-        return fail();
-      const sub = await ex.act({ type: "click", target: { ref: submit[0] } });
-      if (!sub.ok) return fail();
+        return undefined;
+      if (!(await ex.act({ type: "click", target: { ref: submit[0] } })).ok) return undefined;
       const after = ex.current?.capture.snapshot ?? "";
       const old = new Set(textLines(before));
       const shown =
         username === "{{secret:username}}" ? (deps.credentials?.username ?? "") : username;
-      const messages = textLines(after).filter(
+      return textLines(after).find(
         (l) => !old.has(l) && !(shown && l.toLowerCase().includes(shown.toLowerCase())),
       );
-      return { ex, messages, url: page.url(), page }; // the caller closes the context after its checks
-    } catch {
-      return fail();
-    }
-  };
-  const unknown = await attempt(
-    `witness.nobody.${Math.random().toString(36).slice(2, 8)}@example.invalid`,
-  );
-  const known = await attempt("{{secret:username}}");
-  const close = async () => {
-    await unknown?.page
-      .context()
-      .close()
-      .catch(() => undefined);
-    await known?.page
-      .context()
-      .close()
-      .catch(() => undefined);
-  };
-  try {
-    if (!unknown || !known || !unknown.messages.length || !known.messages.length) return undefined;
-    const a = unknown.messages[0]!;
-    const b = known.messages[0]!;
+    };
+
+    const a = await attempt(
+      `witness.nobody.${Math.random().toString(36).slice(2, 8)}@example.invalid`,
+    );
+    if (!a) return undefined;
+    const locA = await messageLocator(page, a);
+    if (!locA) return undefined;
+    const name = "unknownAccountMessage";
+    const captured = await ex.check({ type: "capture", name, value: { text: locA } });
+    if (captured.result.status !== "pass") return undefined;
+    const b = await attempt("{{secret:username}}");
+    if (!b) return undefined;
+    const locB = (await messageLocator(page, b)) ?? locA;
+
     const journey: Journey = {
       id: journeyId,
       title: "Login error messages (edge inputs)",
       goal: "Compare the login error for an unknown account with the error for a known account and a wrong password.",
       priority: "secondary",
+      automatic: true,
       startRoute: loginPath,
       suggestedSteps: [],
       expectations: [],
       status: "completed",
-      steps: [...unknown.ex.steps, ...known.ex.steps],
+      steps: ex.steps,
     };
-    if (normaliseText(a).toLowerCase() === normaliseText(b).toLowerCase())
-      return { journey, candidates: [] };
     const exp: Expectation = {
       id: newId("ex"),
       journeyId,
       statement: "A failed login shows the same message whether or not the account exists",
-      check: {
-        type: "textMatches",
-        target: { by: "text", text: b, exact: true },
-        pattern: `^${a.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}$`,
-      },
+      check: { type: "equalsCaptured", name, value: { text: locB } },
       grounding: {
         kind: "convention",
         rationale:
@@ -1086,21 +1085,18 @@ async function runLoginPair(
       origin: "edge",
     };
     journey.expectations.push(exp);
-    const r = await known.ex.check(exp.check, { expectationId: exp.id, statement: exp.statement });
-    journey.steps = [...unknown.ex.steps, ...known.ex.steps];
+    const r = await ex.check(exp.check, { expectationId: exp.id, statement: exp.statement });
+    journey.steps = ex.steps;
     if (r.result.status !== "fail") return { journey, candidates: [] };
     const cand = checkCandidate({
       exp,
       result: r.result,
-      url: known.url,
-      state: known.ex.current?.state,
+      url: page.url(),
+      state: ex.current?.state,
       session: "anonymous",
       journeyId,
-      stepIds: known.ex.steps.map((s) => s.id),
-      evidenceIds: [
-        r.evidenceId,
-        ...(known.ex.current ? [known.ex.current.capture.evidence.screenshot] : []),
-      ],
+      stepIds: ex.steps.map((s) => s.id),
+      evidenceIds: [r.evidenceId, ...(ex.current ? [ex.current.capture.evidence.screenshot] : [])],
     });
     cand.category = "security";
     cand.detail = {
@@ -1112,9 +1108,16 @@ async function runLoginPair(
       actual: `Unknown account: "${a}". Known account, wrong password: "${b}".`,
     };
     return { journey, candidates: [cand] };
+  } catch {
+    return undefined;
   } finally {
-    await close();
+    await context.close().catch(() => undefined);
   }
+}
+
+/** One XSS problem per page path and field, whoever found it (edge inputs or the reflected probe). */
+export function xssGroupKey(route: string, field: string): string {
+  return `xss|${route.split("?")[0]}|${field.toLowerCase()}`;
 }
 
 function pathOf(url: string): string {

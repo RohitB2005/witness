@@ -76,3 +76,17 @@ describe("followable", () => {
     [link("http://a.test/logout", "Bye"), undefined],
   ])("%o → %s", (l, expected) => expect(followable(l, origin)).toBe(expected));
 });
+
+import { rendersAppPage } from "./crawler";
+
+describe("rendersAppPage (an error status with a working app page)", () => {
+  it("a real not-found page is an error page", () => {
+    expect(rendersAppPage(`- main:\n  - heading "Not found" [level=1]\n  - link "Home"`)).toBe(
+      false,
+    );
+  });
+  it("a single-page app answering a deep link with 404 but rendering its page is not", () => {
+    const snap = `- main:\n  - heading "Products" [level=2]\n  - combobox "Sort products"\n${'  - button "Add to cart"\n'.repeat(6)}`;
+    expect(rendersAppPage(snap)).toBe(true);
+  });
+});

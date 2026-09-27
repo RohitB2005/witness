@@ -57,26 +57,28 @@ Presentation: 7, 8 or 9 October 2026. Feature freeze: **Saturday 3 October**. Pr
 
 **Added 27 Sep from P2 misses** (Rohit; why each one exists: `DEVLOG.md` D46). Generic: no app names, routes, labels or bug knowledge in code or prompts. Validate each on SauceDemo where it applies.
 
-- [ ] DET-TOTALS: on any page with a money breakdown (subtotal, tax/GST/VAT, shipping, discount, total), check the parts add up to the total within 1 cent
-- [ ] DET-SORT: for any sort control, apply each option on the unfiltered list and check the order
-- [ ] Safe interaction sweep (staging mode only): click each collapsed accordion, disclosure or tab once, with no links or submits, and watch for page errors
-- [ ] Reflected-input probe: put the inert XSS canary into GET query parameters and GET search forms, then run DET-XSS
-- [ ] Cap AI-guessed input rules (convention grounding, not stated on the page) at Needs review
-- [ ] When Witness ignores page text aimed at AI tools (D44), say so in a short note on the report
-- [ ] Wrap long runs in `caffeinate` so the Mac can't sleep mid-run (macOS only; runs the command unchanged elsewhere)
+- [x] DET-TOTALS: on any page with a money breakdown (subtotal, tax/GST/VAT, shipping, discount, total), check the parts add up to the total within 1 cent
+- [x] DET-SORT: for any sort control, apply each option on the unfiltered list and check the order
+- [x] Safe interaction sweep (staging mode only): click each collapsed accordion, disclosure or tab once, with no links or submits, and watch for page errors
+- [x] Reflected-input probe: put the inert XSS canary into GET query parameters and GET search forms, then run DET-XSS
+- [x] Cap AI-guessed input rules (convention grounding, not stated on the page) at Needs review
+- [x] When Witness ignores page text aimed at AI tools (D44), say so in a short note on the report
+- [x] Wrap long runs in `caffeinate` so the Mac can't sleep mid-run (macOS only; runs the command unchanged elsewhere)
 
 **Planned P3 scope:**
 
-- [ ] Evidence validation; replayer (fresh context, preamble, locators, signatures, no LLM); 3 attempts
-- [ ] **A0 uses replay too** (Rohit, 26 Sep): once replay exists, the deterministic pipeline replays its detector candidates as well (static detectors re-run on a fresh load, FR-8), so its findings can reach Confirmed. This replaces D17's provisional "Likely at most" cap
-- [ ] Judge (fallback); skeptic; `verify/tier.ts` pure function with table-driven tests
-- [ ] Grouping + fingerprints; severity rules; readiness verdict; "what wasn't tested"
-- [ ] Reporter writer with fact check + template fallback; UX reviewer
-- [ ] Playwright test exporter + helpers; secrets test
-- [ ] HTML (self-contained, escaped) + Markdown + JSON exporters
-- [ ] Suppressions
+- [x] Evidence validation; replayer (fresh context, preamble, locators, signatures, no LLM); 3 attempts
+- [x] **A0 uses replay too** (Rohit, 26 Sep): once replay exists, the deterministic pipeline replays its detector candidates as well (static detectors re-run on a fresh load, FR-8), so its findings can reach Confirmed. This replaces D17's provisional "Likely at most" cap
+- [x] Judge (fallback); skeptic; `verify/tier.ts` pure function with table-driven tests
+- [x] Grouping + fingerprints; severity rules; readiness verdict; "what wasn't tested"
+- [x] Reporter writer with fact check + template fallback; UX reviewer
+- [x] Playwright test exporter + helpers; secrets test
+- [x] HTML (self-contained, escaped) + Markdown + JSON exporters
+- [x] Suppressions (CLI `witness suppress`; the dashboard's "Not a bug" button is P4)
 
 **Gate P3:** A2 on the clean bench: zero Confirmed findings (2 runs: budget, D48); every exported test from a buggy run fails with its flag on and passes with it off. Teach-back written.
+
+**P3 gate — passed 27 Sep 2026.** Clean bench, 2 Standard A2 runs: 0 Confirmed and 0 Likely bugs. Buggy Standard run: 12 of 12 exported tests matched to seeded bugs fail with their flag on and pass with it off. Buggy recall at Confirmed+Likely 67%, bug precision 100% (before labelling 10 new fingerprints); A0 alone 44% (was 33%). New D46 detectors and probes validated on SauceDemo (sort: S2 and S6 found, standard_user clean; totals: no false positive at checkout). P3 cost $1.67 (total usage $4.93). Details in `DEVLOG.md` and `eval/results/p3-gate/`.
 
 ## P3b — QA coverage pack (after the P3 gate, before P4)
 

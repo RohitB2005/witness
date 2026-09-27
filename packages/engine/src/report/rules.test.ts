@@ -1,7 +1,7 @@
 // Table-driven tests for the pure report rules: severity, verdict, fingerprints, provisional tier, grouping.
 import { describe, expect, it } from "vitest";
-import type { Candidate, CandidateSource, Expectation, Finding } from "../types";
-import { buildFindings, provisionalTier, reproSteps } from "./findings";
+import type { Candidate, CandidateSource, Finding } from "../types";
+import { buildFindings, reproSteps } from "./findings";
 import { fingerprint } from "./fingerprint";
 import { severityFor, type SeverityInput } from "./severity";
 import { readinessVerdict } from "./verdict";
@@ -196,40 +196,6 @@ function candidate(over: Partial<Candidate>): Candidate {
   };
 }
 
-describe("provisionalTier (until replay exists in P3; D17, D29)", () => {
-  const ex = (grounding: Expectation["grounding"]): Expectation => ({
-    id: "ex_1",
-    journeyId: "jr_1",
-    statement: "s",
-    check: { type: "noNewErrors" },
-    grounding,
-    impact: "money",
-  });
-  const uiText = ex({ kind: "ui_text", quote: "Total", verified: true });
-  const unverified = ex({ kind: "ui_text", quote: "Total", verified: false });
-  const convention = ex({ kind: "convention", rationale: "r" });
-  const requirement = ex({ kind: "requirement", quote: "q", verified: true });
-  const judgement = { kind: "judgement", confidence: 0.5 } as const;
-  it.each([
-    // pipeline, candidate, expectation → tier
-    ["full", { kind: "bug", source: det("DET-HTTP5XX") }, undefined, "likely"],
-    ["full", { kind: "improvement", source: det("DET-A11Y") }, undefined, "evidence_based"],
-    ["full", { kind: "bug", source: check }, uiText, "likely"],
-    ["full", { kind: "bug", source: check }, convention, "likely"],
-    ["full", { kind: "bug", source: judgement }, undefined, "needs_review"],
-    ["deterministic", { kind: "bug", source: det("DET-BROKENIMG") }, undefined, "likely"],
-    ["ai-no-verify", { kind: "bug", source: det("DET-HTTP5XX") }, undefined, "confirmed"],
-    ["ai-no-verify", { kind: "bug", source: check }, uiText, "confirmed"],
-    ["ai-no-verify", { kind: "bug", source: check }, requirement, "confirmed"],
-    ["ai-no-verify", { kind: "bug", source: check }, unverified, "likely"],
-    ["ai-no-verify", { kind: "bug", source: check }, convention, "likely"],
-    ["ai-no-verify", { kind: "bug", source: judgement }, undefined, "likely"],
-    ["ai-no-verify", { kind: "improvement", source: det("DET-PERF") }, undefined, "evidence_based"],
-  ] as const)("%s: %o with %o → %s", (pipeline, c, expectation, tier) =>
-    expect(provisionalTier(c, { pipeline, expectation }).tier).toBe(tier),
-  );
-});
-
 describe("buildFindings", () => {
   const ctx = { mobileViewport: { width: 375, height: 667 } };
   it("groups candidates with the same group key into one finding with instances", () => {
@@ -251,9 +217,31 @@ describe("buildFindings", () => {
     expect(f!.instances.map((i) => i.route)).toEqual(["/services", "/services/:id"]);
     expect(f!.candidateIds.sort()).toEqual(["cd_a", "cd_b"]);
     expect(f!.actual).toContain("Seen on 2 pages");
-    expect(f!.tier).toBe("likely");
+    expect(f!.tier).toBe("needs_review"); // not verified: no replay ran
+    expect(f!.repro).toMatchObject({ session: "anonymous", stepIds: [] });
     expect(f!.severity).toBe("low");
     expect(f!.fingerprint).toMatch(/^fp_[0-9a-f]{16}$/);
+  });
+  it("applies the verifier's verdict for a group, and reports A1 tiers when nothing was verified", () => {
+    const c = candidate({ id: "cd_v", groupKey: "g1" });
+    const verdicts = new Map([
+      [
+        "g1",
+        {
+          tier: "confirmed" as const,
+          tierReason: "It reproduced 2 of 2 replays.",
+          replay: { attempts: 2, reproduced: 2 },
+          stageTiers: { aiNoVerify: "confirmed" as const, noSkeptic: "confirmed" as const },
+          extraEvidenceIds: ["ev_replay"],
+        },
+      ],
+    ]);
+    const [f] = buildFindings([c], { ...ctx, verdicts });
+    expect(f!.tier).toBe("confirmed");
+    expect(f!.replay).toEqual({ attempts: 2, reproduced: 2 });
+    expect(f!.evidenceIds).toContain("ev_replay");
+    const [a1] = buildFindings([c], { ...ctx, pipeline: "ai-no-verify" });
+    expect(a1!.tier).toBe("confirmed");
   });
   it("gives the same fingerprint regardless of crawl order", () => {
     const a = candidate({ id: "cd_1" });

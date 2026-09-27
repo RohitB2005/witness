@@ -26,6 +26,8 @@ export interface PreflightSuccess {
     storageState: StorageState; // in memory only
     loginRequest?: WriteAllowance;
     signal: string;
+    /** Where the login landed (often a dashboard the start page doesn't link to). */
+    landingUrl: string;
   };
 }
 
@@ -111,12 +113,18 @@ export async function preflight(deps: PreflightDeps): Promise<PreflightResult> {
           screenshotEvidenceId: await evidence.screenshot(page, { label: "start page" }),
         };
       }
-      const login = await logIn(page, recorder, deps, loginUrl);
+      const login = await logIn(
+        page,
+        recorder,
+        { policy, vault: deps.vault, evidence, credentials: config.credentials },
+        loginUrl,
+      );
       if (!login.ok) return login;
       result.session = {
         storageState: await context.storageState(),
         loginRequest: policy.loginRequest,
         signal: login.signal,
+        landingUrl: page.url(),
       };
     }
     result.cookies = (await context.cookies(config.url)).map((c) => ({
@@ -149,14 +157,25 @@ async function findLoginPage(page: Page): Promise<string | undefined> {
   return match?.href;
 }
 
-async function logIn(
+export interface LoginDeps {
+  policy: SafetyPolicy;
+  vault: SecretVault;
+  evidence: EvidenceWriter;
+  credentials: NonNullable<ScanConfig["credentials"]>;
+}
+
+/**
+ * Logs in on `loginUrl` with the vault's password. Used by preflight and, as the preamble, by every replay
+ * of a logged-in candidate (a replay never depends on a session captured earlier, D37).
+ */
+export async function logIn(
   page: Page,
   recorder: PageRecorder,
-  deps: PreflightDeps,
+  deps: LoginDeps,
   loginUrl: string,
 ): Promise<{ ok: true; signal: string } | PreflightFailure> {
-  const { config, policy, vault, evidence } = deps;
-  const creds = config.credentials!;
+  const { policy, vault, evidence } = deps;
+  const creds = deps.credentials;
   const fail = async (detail?: string): Promise<PreflightFailure> => ({
     ok: false,
     message: `Couldn't log in with the details provided.${detail ? ` ${detail}` : ""}`,

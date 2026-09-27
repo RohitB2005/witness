@@ -49,7 +49,7 @@ describe("scan config", () => {
     });
     expect(BUDGETS.standard).toMatchObject({
       pages: 40,
-      journeys: 5,
+      journeys: 3, // was 5: fits replay into 8 minutes (D50)
       stepsPerJourney: 25,
       llmUsd: 2,
     });

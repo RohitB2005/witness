@@ -211,6 +211,29 @@ describe("recording", () => {
     await context.close();
   });
 
+  it("re-locates a value the agent located by its own digits (the value changes when the bug is fixed)", async () => {
+    const { ex, context } = await executor("staging");
+    const stored = await ex.storedCheck({
+      type: "numericRelation",
+      left: { read: { by: "text", text: "$12.50" } },
+      op: "gt",
+      right: { const: 0 },
+    });
+    expect(stored).toEqual({
+      type: "numericRelation",
+      left: { read: { by: "testId", id: "total" } },
+      op: "gt",
+      right: { const: 0 },
+    });
+    // A visible-text target is what's being checked, so it stays as written.
+    const visible = await ex.storedCheck({
+      type: "visible",
+      target: { by: "text", text: "$12.50" },
+    });
+    expect(visible).toEqual({ type: "visible", target: { by: "text", text: "$12.50" } });
+    await context.close();
+  });
+
   it("converts refs to stable locators: role+name to act, test id to read a value, list items for order", async () => {
     const { ex, page, context } = await executor("staging");
     const snap = await page.ariaSnapshot({ mode: "ai" });

@@ -74,11 +74,17 @@ function renderMarkdown(
       `| ${b.id} | ${b.found.map((f) => (f ? "✓" : "·")).join(" ") || "–"} | ${b.bestTier ?? "not found"} | ${b.expectedTier} |`,
     );
   }
-  const tentative = scores.flatMap((s) =>
-    s.findings.filter((f) => f.match?.tentative && !f.label).map((f) => ({ s, f })),
+  // One line per fingerprint: a label covers every run, and derived A1/A3 rows repeat the same findings.
+  const seen = new Set<string>();
+  const once = (items: { s: RunScore; f: RunScore["findings"][number] }[]) =>
+    items.filter(({ f }) => !seen.has(f.fingerprint) && !!seen.add(f.fingerprint));
+  const tentative = once(
+    scores.flatMap((s) =>
+      s.findings.filter((f) => f.match?.tentative && !f.label).map((f) => ({ s, f })),
+    ),
   );
-  const unmatched = scores.flatMap((s) =>
-    s.findings.filter((f) => !f.match && !f.label).map((f) => ({ s, f })),
+  const unmatched = once(
+    scores.flatMap((s) => s.findings.filter((f) => !f.match && !f.label).map((f) => ({ s, f }))),
   );
   L.push("", `## Needs a label (${tentative.length + unmatched.length})`, "");
   L.push(
@@ -129,9 +135,16 @@ async function main(): Promise<void> {
   } catch {
     benchCommit = undefined;
   }
-  const scores = resolveRuns(positionals, values.clean!).map(({ file, clean }) => {
+  // Each `full` run that recorded stage tiers is also scored as A1 and A3 (derived ablation, D51).
+  const scores = resolveRuns(positionals, values.clean!).flatMap(({ file, clean }) => {
     const result: RunResult = RunResultSchema.parse(JSON.parse(readFileSync(file, "utf8")));
-    return scoreRun(result, truth, labels, { clean });
+    const derived =
+      result.config.pipeline === "full" && result.findings.some((f) => f.stageTiers)
+        ? (["aiNoVerify", "noSkeptic"] as const).map((stage) =>
+            scoreRun(result, truth, labels, { clean, stage }),
+          )
+        : [];
+    return [scoreRun(result, truth, labels, { clean }), ...derived];
   });
   const summary = summarise(scores, truth, { bugsYamlHash: sha256, benchCommit });
   const md = renderMarkdown(scores, summary, values.verbose!);

@@ -13,6 +13,7 @@ import { overflowDetector } from "./overflow";
 import { pageErrorDetector } from "./pageerror";
 import { perfDetector } from "./perf";
 import { reqfailDetector } from "./reqfail";
+import { totalsDetector } from "./totals";
 import type { CandidateDraft, DetectorContext, PageDetector } from "./types";
 
 export const PAGE_DETECTORS: readonly PageDetector[] = [
@@ -23,6 +24,7 @@ export const PAGE_DETECTORS: readonly PageDetector[] = [
   brokenImgDetector,
   a11yDetector,
   perfDetector,
+  totalsDetector,
   overflowDetector,
 ];
 

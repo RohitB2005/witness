@@ -90,6 +90,17 @@ export type CheckOf<L> =
       tolerance?: number;
     }
   | { type: "fieldRejected"; field: L }
+  /**
+   * No element matches at all, visible or not (P3, DEVLOG D52): the inert XSS canary must never become a
+   * real element. Stored checks only; not described to the LLM.
+   */
+  | { type: "notPresent"; target: L }
+  /**
+   * The link, as it is on the page now, leads to a working page (status < 400). Stored checks only (P3):
+   * a fixed link may point somewhere new, so a replay or test must follow it rather than re-request the
+   * old broken URL.
+   */
+  | { type: "linkWorks"; link: L }
   | { type: "noNewErrors" }
   /**
    * At most `max` same-origin requests with this method and path (regex) completed successfully (2xx/3xx)
@@ -170,6 +181,8 @@ function build<L>(loc: z.ZodType<L>) {
         tolerance,
       }),
       z.strictObject({ type: z.literal("fieldRejected"), field: loc }),
+      z.strictObject({ type: z.literal("notPresent"), target: loc }),
+      z.strictObject({ type: z.literal("linkWorks"), link: loc }),
       z.strictObject({ type: z.literal("noNewErrors") }),
       z.strictObject({
         type: z.literal("maxRequests"),
@@ -225,6 +238,7 @@ export async function mapCheckLocators<A, B>(
   switch (check.type) {
     case "visible":
     case "notVisible":
+    case "notPresent":
       return { type: check.type, target: await mapLoc(check.target, "single") };
     case "textMatches":
     case "textNotMatches":
@@ -239,6 +253,8 @@ export async function mapCheckLocators<A, B>(
       return { ...check, value: await value(check.value) };
     case "fieldRejected":
       return { type: "fieldRejected", field: await mapLoc(check.field, "single") };
+    case "linkWorks":
+      return { type: "linkWorks", link: await mapLoc(check.link, "single") };
     case "all": {
       const checks: CheckOf<B>[] = [];
       for (const c of check.checks) checks.push(await mapCheckLocators(c, mapLoc));
@@ -247,6 +263,38 @@ export async function mapCheckLocators<A, B>(
     case "urlMatches":
     case "noNewErrors":
     case "maxRequests":
+      return check;
+  }
+}
+
+/**
+ * Rewrites only the locators a check *reads a value from* (`read` in numbers, `text` in captured values),
+ * leaving targets of visible/notVisible/textMatches alone: their text is the thing being checked.
+ */
+export async function mapValueReads(
+  check: Check,
+  fn: (loc: Locator) => Promise<Locator>,
+): Promise<Check> {
+  const num = async (e: NumExpr): Promise<NumExpr> => {
+    if ("read" in e) return { read: await fn(e.read) };
+    if ("op" in e) return { op: e.op, a: await num(e.a), b: await num(e.b) };
+    return e;
+  };
+  const value = async (v: NumExpr | TextExpr): Promise<NumExpr | TextExpr> =>
+    "text" in v ? { text: await fn(v.text) } : "capturedText" in v ? v : num(v);
+  switch (check.type) {
+    case "numericRelation":
+      return { ...check, left: await num(check.left), right: await num(check.right) };
+    case "capture":
+      return { ...check, value: await value(check.value) };
+    case "equalsCaptured":
+      return { ...check, value: await value(check.value) };
+    case "all": {
+      const checks: Check[] = [];
+      for (const c of check.checks) checks.push(await mapValueReads(c, fn));
+      return { type: "all", checks };
+    }
+    default:
       return check;
   }
 }

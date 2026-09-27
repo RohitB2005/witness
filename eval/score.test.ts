@@ -300,3 +300,41 @@ describe("labels file", () => {
     expect(LabelsFileSchema.safeParse(raw).error).toBeUndefined();
   });
 });
+
+describe("P3: derived ablation stages and template matching (D51, D53)", () => {
+  it("scores a run at its recorded A1 / A3 stages, counting findings verification discarded", () => {
+    const f = finding({
+      source: { kind: "detector", id: "DET-HTTP5XX" },
+      category: "crash",
+      route: "/book",
+      signals: { request: { method: "POST", path: "/api/bookings", status: 500 } },
+      tier: "discarded",
+      stageTiers: { aiNoVerify: "confirmed", noSkeptic: "discarded" },
+    });
+    const r = run([f]);
+    expect(scoreRun(r, truth, {}, { clean: false }).found).toEqual({});
+    const a1 = scoreRun(r, truth, {}, { clean: false, stage: "aiNoVerify" });
+    expect(a1.found).toEqual({ B05: "confirmed" });
+    expect(a1.pipeline).toBe("ai-no-verify (derived)");
+    expect(scoreRun(r, truth, {}, { clean: false, stage: "noSkeptic" }).found).toEqual({});
+  });
+
+  it("matches keywords on the deterministic template, not the writer's words", () => {
+    const f = finding({
+      category: "state",
+      route: "/bookings",
+      title: "Cancelling removes a different booking", // writer wording would match B06 rule 1
+      impact: "x",
+      expected: "x",
+      actual: "x",
+      template: {
+        title: "Failed check: cancel",
+        impact: "i",
+        expected: "e",
+        actual: "It is still visible",
+      },
+    });
+    const s = scoreRun(run([f]), truth, {}, { clean: false });
+    expect(s.findings[0]!.outcome).toBe("unlabelled"); // only the manual rule (keyword "cancel") matches
+  });
+});

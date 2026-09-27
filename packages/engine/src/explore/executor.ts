@@ -18,6 +18,7 @@ import { evaluateCheck, type Captured, type CheckResult } from "../oracle/evalua
 import {
   isRef,
   mapCheckLocators,
+  mapValueReads,
   type AgentCheck,
   type AgentLoc,
   type Check,
@@ -28,7 +29,13 @@ import { captureState, type EvidenceWriter, type StateCapture } from "../record/
 import type { PageRecorder, RecorderMark } from "../record/recorder";
 import type { Action, Candidate, PageState, ScanMode, Step } from "../types";
 import { describeAction } from "./describe";
-import { RefError, stableLocatorForRef, type LocatorPurpose, type StepTarget } from "./locators";
+import {
+  cssPath,
+  RefError,
+  stableLocatorForRef,
+  type LocatorPurpose,
+  type StepTarget,
+} from "./locators";
 import { ALLOWED_KEYS, destructiveBlock } from "./safety";
 import type { StateRegistry } from "./states";
 
@@ -64,6 +71,11 @@ export interface ExecutorOptions {
   limiter?: RateLimiter;
   /** Cap on the network-quiet wait after each action (ms). */
   quietCapMs?: number;
+  /**
+   * Record the evidence bundle (screenshot, snapshot, logs) after every step (default). Replays turn this
+   * off: they act through stored locators, need no snapshot, and capture evidence once at the end.
+   */
+  captureSteps?: boolean;
 }
 
 export interface StepResult {
@@ -248,11 +260,32 @@ export class Executor {
     return { step, result, evidenceId };
   }
 
-  /** Converts every ref in an agent check to a stable locator (so it can be stored and replayed). */
+  /**
+   * Converts every ref in an agent check to a stable locator (so it can be stored and replayed). A value
+   * the agent located by its own text ("$238.05") is re-located by test id or position instead: that text
+   * is exactly what changes when the bug is fixed, so the replay and the exported test would break (P2).
+   */
   async storedCheck(check: AgentCheck): Promise<Check> {
-    return mapCheckLocators(check, async (loc: AgentLoc, use) =>
+    const stored = await mapCheckLocators(check, async (loc: AgentLoc, use) =>
       isRef(loc) ? (await this.resolve(loc, use === "items" ? "items" : "read")).locator : loc,
     );
+    return mapValueReads(stored, (loc) => this.#stableRead(loc));
+  }
+
+  async #stableRead(loc: Locator): Promise<Locator> {
+    if (loc.by !== "text" || !/\d/.test(loc.text) || loc.within) return loc;
+    const pw = toPlaywright(this.#o.page, loc);
+    if ((await pw.count().catch(() => 0)) !== 1) return loc;
+    const handle = await pw.elementHandle({ timeout: 1_000 }).catch(() => null);
+    if (!handle) return loc;
+    try {
+      const testId = await handle.getAttribute("data-testid").catch(() => null);
+      if (testId && (await this.#o.page.getByTestId(testId).count()) === 1)
+        return { by: "testId", id: testId };
+      return { by: "css", selector: await cssPath(handle) };
+    } finally {
+      await handle.dispose().catch(() => undefined);
+    }
   }
 
   /** Resolves a ref (or checks a given locator is present) for the given purpose. */
@@ -397,7 +430,7 @@ export class Executor {
     happy: boolean,
   ): Promise<{ candidates: Candidate[]; capture?: StateCapture; state?: PageState }> {
     const { page, recorder, evidence, states, session } = this.#o;
-    if (page.isClosed()) return { candidates: [] };
+    if (page.isClosed() || this.#o.captureSteps === false) return { candidates: [] };
     let capture: StateCapture;
     const proposedId = newId("st");
     try {
@@ -441,6 +474,18 @@ export class Executor {
       session,
     }));
     return { candidates, capture, state };
+  }
+}
+
+/** A recorded action as the executor accepts it again (replays, edge variants). Checks go through check(). */
+export function toAgentAction(a: Action): AgentAction | undefined {
+  switch (a.type) {
+    case "check":
+      return undefined;
+    case "click":
+      return { type: "click", target: a.target, clickCount: a.clickCount };
+    default:
+      return a;
   }
 }
 

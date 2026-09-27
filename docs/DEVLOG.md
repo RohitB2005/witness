@@ -519,3 +519,168 @@ The rule for all of them: generic code, with no app names, routes, labels or bug
 **D50 — Journeys stay sequential; Standard gets fewer journeys (Rohit, 27 Sep).** Alternative: two journeys at once, each in its own browser. Rejected because they'd share one test account's data (one journey cancels a booking while another lists them), which produces exactly the false positives verification exists to remove. Instead, the Standard preset's journey count is reduced until a run with replay fits in 8 minutes; the number is set in P3 from a measured run.
 
 **D51 — Derived ablation.** A1 (`ai-no-verify`) and A3 (`full-no-skeptic`) are scored from each A2 run's recorded stage tiers instead of separate runs (`EVALUATION.md` §2). Better control (same exploration, only verification differs) and no extra cost. What it can't show: a standalone A1 run would spend verification's time on more exploring.
+
+### P3 decisions (27 Sep 2026)
+
+**D52 — Two stored-only check types: `notPresent` and `linkWorks`.** `notPresent` (no element matches, visible or not) is what DET-XSS proves: the inert canary must never become an element. `linkWorks` follows a link *as it is on the page now* and expects a status below 400. A broken-link replay or test must not re-request the old URL: a fixed link may point somewhere new (found when the first B10 test kept failing after the fix). Neither is described to the LLM (the prompts are unchanged); they're written by code only.
+
+**D53 — The scorer never reads the writer's words.** The reporter (LLM) rephrases each finding after a code fact check. The deterministic wording is kept in `finding.template`, and the scorer's keyword rules search that. Alternative: score the text people read. Rejected because recall and precision would then move with an LLM's word choice (e.g. "still visible" vs "remains" decides B06's firm rule).
+
+**D54 — The automatic probes run beside the AI stages, in their own read-only browsers.** DET-SORT, the interaction sweep and the reflected-input probe need no LLM. They run in parallel with planning and exploring, which is free time in a Standard run. Each uses a separate write-blocking policy and production-strict destructive-verb rules, *even in staging*, so nothing they click or type can change data, and they can't disturb a journey's data. The sweep runs in staging mode only; the other two (GET only) run in both modes. The deterministic pipeline (A0) runs them too.
+
+**D55 — How replay is scheduled.**
+- **Path sharing.** Candidates from one recorded path share a replay: the longest path runs once per attempt, and each candidate is judged at its own step.
+- **Order.** Replays run in priority bands: what could reach Confirmed first, then Likely, then the rest, and improvements last. Within a band, read-only paths run three at a time, then paths that wrote data run one at a time, so no two replays change the same account's data at once (D50's reasoning).
+- **Limits.** Every attempt logs in afresh (D37), and has a hard cap: 45 s static, 90 s path. A SauceDemo run hung for about 3 minutes without it.
+- **Attempts.** A static finding needs one fresh re-run (FR-8). A path needs two agreeing attempts (D49), so a path that only got one attempt before time ran out is Needs review, not Confirmed.
+- **Judge and skeptic.** They start as each finding's replay finishes. They're fed through a queue to workers created outside the replay's no-LLM context, so the replay guard stays absolute. The guard caught the first version of this, which called the skeptic from inside a replay.
+
+**D56 — A check that expects text from another page is capped at Needs review.** If an expectation's only grounding is a quote from a different page ("Booking summary" from the booking form, asserted on the confirmation page), the check can never pass on the page where it runs: it's a guess about where text will appear. Like D46's cap on AI-guessed rules, this applies in the derived A1 tiers too. Alternative: leave it to the skeptic. In the gate run the skeptic said "unclear", which left a critical false positive at Likely.
+
+**D57 — Explorer prompt caching: the site map and the journey brief are cached blocks.** Haiku 4.5 only caches a prefix of at least 4,096 tokens (checked in Anthropic's docs). The Explorer's tools and system prompt are about 2,700, which is why P2 never got a cache hit. Each turn now starts with two stable blocks, each with a cache breakpoint:
+- the crawl's site map: the same one the Planner sees, wrapped as untrusted page content, and useful to the Explorer for finding its way;
+- the journey brief: the goal, plus the planned checks, fixed at the journey's first turn.
+
+Result: cache reads went from 0 to about 107k tokens per Quick run, and Explorer cost from $0.146 to $0.069 per Quick run. The gateway also fixed a real bug this exposed: the call log kept one shared "current entry", so calls running concurrently (writer, UX reviewer, judge, skeptic) overwrote each other's log lines. Each call now has its own entry, with a regression test.
+
+**D58 — DET-TOTALS, DET-SORT and DET-XSS findings carry an equivalent check.** Replay and the test exporter then treat them exactly like failed expectations. Their grounding is the on-screen labels (a sort option's own text, the breakdown's labels), so they can reach Confirmed.
+- A DET-SORT finding's route is the control's page (`/services`), not the URL after sorting (`/services?sort`). The finding is about the control, and apps that don't put the choice in the URL then get the same fingerprint.
+- Honesty note: under the frozen rules, B01 and B02 name only check types (`numericRelation`, `ordered`) in their firm rules. So DET-TOTALS and DET-SORT findings match B01/B02 only through the `confirm: manual` rules, and they need a human label. The rules weren't changed and the findings weren't renamed to fit them.
+
+**D59 — Pages with an error status that render a working app page are crawled as pages.**
+- **The cause.** SauceDemo answers a direct load of `/inventory.html` with 404 and then renders the app (a single-page app on a static host).
+- **The rule.** An error-status document with no error wording in its headings and at least 5 controls in its main content is crawled, probed and planned like a page (`appRendered`, real status kept). A link to it isn't a broken link.
+- **Also.** The logged-in crawl pass now also starts from wherever the login landed, which the start page may not link to.
+
+Both came from validating the probes on SauceDemo; both are generic. The bench's real "Not found" page is unaffected (B10 is still found).
+
+**D60 — Time split and Standard journeys (measured, D50).** First Standard run with 5 journeys: 453 s. Edge inputs skipped 23 of 29 variants, including the login-message comparison and double submit, and 3 of 5 journeys completed.
+- **Now.** Standard plans **3 journeys**. Exploring stops starting turns at 50% of the budget, edge inputs at 64%, and replays and the judge/skeptic at 25 s before the end; the writer and UX reviewer use the rest. The login-message comparison runs alongside the edge variants.
+- **Gate runs.** 444 s buggy (the last before the final 50/64 split), 274 s and 216 s clean.
+- **Quick** keeps 3 minutes and 2 journeys; its verification window is tight (below).
+
+**D61 — Exported tests.**
+- **Shape.** One Playwright spec per Confirmed or Likely bug with replayable steps, plus `witness-helpers.ts` and a config. The helpers use the engine's own reading rules (amount parsing, D35's label → value rule, list reading, rejection signals, route patterns, message prefixes).
+- **Secrets** come only from `WITNESS_TEST_USER` / `WITNESS_TEST_PASSWORD` (test). Judgements aren't exported (no deterministic assertion).
+- **A bug found by E3.** `waitForLoadState("networkidle")` returns at once if the page reached that state earlier, so the first B05 and B15 tests asserted before the request finished and passed with the bug on. `settle()` now tracks in-flight same-origin requests, like the engine's recorder.
+- **New command.** `pnpm witness export <run>` rewrites a finished run's reports and tests without scanning again.
+
+### Dependencies added in P3
+
+| Package | Where | Why |
+| --- | --- | --- |
+| @playwright/test 1.63.0 | root (dev) | Exported regression tests import it, so they must run from the repo (E3, the exporter's round-trip test). Same pinned version the bench already had, so nothing new was downloaded |
+
+### P3 — 27 Sep 2026
+
+**Built.**
+- `verify/`:
+  - evidence validation;
+  - the **replayer** (D55);
+  - the **judge** and **skeptic** (one structured call each, zod-validated, downgrade-only);
+  - `tier.ts`, a pure function with table tests, recording each finding's tier at every stage (D51).
+
+  The deterministic pipeline (A0) replays too (D26).
+- `probes/`: **DET-SORT**, the **interaction sweep**, the **reflected-input probe** (D54). `detectors/totals.ts`: **DET-TOTALS**.
+- Fixes found while labelling P2 (all generic):
+  - `fieldRejected` counts a form-level alert or a 400/409/413/422 on the submit;
+  - a dropdown's chosen option counts as visible text;
+  - `ordered` reads each item's money amount;
+  - login-form variants keep the password and never expect a changed login detail to be "accepted";
+  - `ui_text` self-reference (D56);
+  - value locators the agent wrote with digits are re-located by test id or position.
+- Also generic:
+  - typographic quotes match straight quotes in text checks;
+  - the D46 cap on AI-guessed input rules;
+  - the D44 report note (code finds page text addressed to automated tools and says it was ignored).
+- `report/`:
+  - the **writer**, with a fact check and template fallback;
+  - the **UX reviewer** (quotes verified on the page);
+  - severity rules for the new detectors;
+  - Markdown and **self-contained escaped HTML**;
+  - `export/`, the **Playwright test exporter**.
+- CLI:
+  - HTML output by default and tests in `runs/<id>/tests/`;
+  - `witness suppress <fp> --origin --reason` (FR-12; suppressed findings are Discarded);
+  - `witness export <run>`;
+  - `caffeinate` on macOS for the length of a scan.
+- `eval/`:
+  - derived A1/A3 scoring from stage tiers (D51);
+  - template-based keyword matching (D53);
+  - `pnpm eval:tests` (E3).
+- Tests: 469 (from 379).
+
+**How data flows now.** The crawl is as in P1. Then:
+1. **In parallel:**
+   - the probes (sort, sweep, reflected input);
+   - the AI stages: plan, explore (site map + journey brief cached), edge inputs, and the login-message comparison.
+2. **Verify.** For each group of candidates:
+   - check its evidence;
+   - replay it without the LLM;
+   - as each replay finishes: the judge for a flag, the skeptic for an arguable failure;
+   - suppression;
+   - tier (with the A1/A3 stage tiers).
+3. **Report.** Findings; then, side by side, the writer (fact-checked; the template is kept) and the UX reviewer (skipped on Quick); then the verdict, "what wasn't tested" and notes.
+4. **Export.** JSON, Markdown, HTML, and one regression test per exportable bug.
+
+**How a replay decides (for Q&A).** Take B06 from the gate run. The Explorer cancelled HC-1002 and asserted it disappeared. The check failed: HC-1002 was still listed, because the bug deletes the next booking. The candidate carries its steps (go to /login, log in, go to /bookings, click "Cancel booking HC-1002", click "Yes, cancel", the check).
+1. The replayer opens a fresh browser and logs in with the vault's password (never the session recorded earlier).
+2. It clicks through the same stored locators, then evaluates the same check at the same step.
+3. It fails again, so that's attempt 1 reproduced. Attempt 2 reproduces too, so it stops (D49).
+4. The skeptic argues the innocent case and says "bug_likely". The expectation's grounding is verified on-screen text ("Cancel booking HC-1002" is the button being tested), so the tier is **Confirmed**.
+
+The same finding on a fixed app: the first click removes HC-1002, the check passes, 0 of 2, and the finding is Discarded. That is exactly what the exported test encodes: it fails with B06 on and passes with it off (E3).
+
+**Key decision + alternative.** Detectors produce *checks* (D58), and probes run in their own read-only browsers (D54). Alternative: special-case each new detector in replay and export. Rejected: one mechanism (steps + a check) now covers every finding type, so each new detector got replay and a regression test for free. On the bench, all 12 exported tests matched to seeded bugs behave, including DET-TOTALS (B01), DET-SORT (B02) and the probes' XSS (B15).
+
+**Most likely failure mode.** Journey completion is noisy, and it decides the journey-only bugs (B03, B06, B08). The gate's buggy run completed 1 of 3 journeys (step budget, then time) and missed all three; the same code completed 3 of 3 on both clean runs, and 3 of 5 in the first Standard run (which found B06 at Confirmed and B08 at Likely). The probes and DET-TOTALS made the rest far less dependent on the agent: A0 alone went from 33% to 44% recall at C+L (+B02, B11, B15). Second risk: Quick's verification window (about 45 s) is too short to replay everything. Findings not replayed are honestly marked Needs review, but a Quick report has fewer Confirmed than the same findings would reach on Standard.
+
+**Problems hit** (all fixed, with tests):
+- **The call log dropped entries under concurrency** (D57).
+- **The replay guard fired on the pipelined skeptic** (D55). The guard was right; the fix was a queue, not an exception to the guard.
+- **Exported tests asserted too early** (`networkidle`, D61), and the **broken-link test re-requested the old URL** (D52).
+- **A replay attempt hung for about 3 minutes** on SauceDemo, which led to the per-attempt caps (D55).
+- **SauceDemo's 404-status app pages**, and the login landing page not linked from the start page (D59).
+- **One XSS reported twice**: the edge inputs and the reflected probe used different group keys. It's now one key per page path and field.
+- **Double work and "not replayed" on Quick**: read-only improvement re-runs queued ahead of high-priority write paths. Fixed by the priority bands (D55).
+- **A curly-quote false positive**: "No services match "deep clean"" vs “deep clean”. Fixed in the evaluator; no user tells those quotes apart.
+- **A bench port in a comment of the generated test config**, caught by the contamination test and made generic.
+
+**Validation on SauceDemo (D46: "where they apply"; A0, staging mode, no LLM).**
+
+| Item | Result |
+| --- | --- |
+| DET-SORT, `problem_user` (S2) | "Name (Z to A)", "Price (low to high)" and "Price (high to low)" flagged, all Confirmed by replay; "Name (A to Z)" (the default, correct) not flagged (`run_20260927-042918_r0zc`) |
+| DET-SORT, `error_user` (S6) | The same three flagged; the "Sorting is broken!" alerts were dismissed and logged (`run_20260927-053440_ip1m`, 30 s) |
+| DET-SORT, `standard_user` | 0 bugs (`run_20260927-043003_lrjt`) |
+| DET-TOTALS, checkout overview (`standard_user`, reached by a scripted flow; the crawl can't get there) | Real page (Item total $39.98 + Tax $3.20 = Total $43.18): no finding. Same page with the total altered to $99.99: one finding, and its check fails |
+| Interaction sweep / reflected input | Ran; nothing to find (no collapsed sections that crash; no GET search form) |
+
+**Gate P3 results (27 Sep 2026, macOS, production bench on :5180, Standard budget, test account, Sonnet 5 + Haiku 4.5).** Results in `eval/results/p3-gate/` (runs.jsonl, summary.{json,md}, export-tests-*.json).
+
+| Gate criterion | Result |
+| --- | --- |
+| A2 on the clean bench: zero Confirmed findings (2 runs, D48) | **Pass.** `…075935_ps4l` (274 s, $0.25) and `…080410_mmbp` (216 s, $0.14): 0 Confirmed and 0 Likely bugs in both; only AI-guessed items at Needs review (decimal hours; "booking summary doesn't update"). 3 of 3 journeys completed in both |
+| Every exported test from a buggy run fails with its flag on and passes with it off | **Pass.** `…053847_3ih8`: 13 tests exported; **12 of 12** matched to seeded bugs behave (B01 ×3, B02, B05, B09, B10, B11, B15, B16, B17, B18). The 13th is the "Booking summary" false positive (no flag to test; D56 now keeps such findings out of exports). Earlier runs: 10/10 (Standard), 6/6 (A0) |
+| Teach-back written | Yes (above) |
+
+Buggy gate run `…053847_3ih8`: 444 s, 70 LLM calls, $0.376. Before labelling: recall C 50% / C+L 67% / all 72%, bug precision C+L 100%. Missed: B03, B06 and B08 (journey completion, above), and B07. The A1/A3 derived rows equal A2 in this run, because everything verification removed was unlabelled. A0 on the same code: recall C+L 44% (P2: 33%), and 0 bug findings on the clean bench.
+
+**Needs a label (10 fingerprints, `summary.md`).** DET-TOTALS (B01) and DET-SORT (B02) are tentative matches under the frozen rules (D58). Plus: the "Booking summary" false positive, "$45 per hour", "booking summary doesn't update", and five UX suggestions. One UX suggestion ("no feedback after clicking Calculate") matched decoy D03 by keyword; it's an improvement, so it doesn't touch bug precision. I haven't labelled any (D25).
+
+**Spend.** OpenRouter total usage **$4.93** (P2 wrap-up: $3.26), so P3 cost **$1.67**:
+- development: 3 Quick runs and 1 Standard run;
+- gate: 1 buggy and 2 clean Standard runs.
+
+Balance: $5.07. Per Standard run now: about $0.14–0.38 (the Explorer's cache reads are most of the saving).
+
+**Other checks.** `pnpm test` 469 passed; `pnpm typecheck`, `pnpm lint`, `prettier --check .` clean. Contamination tests pass for prompts and all engine source. Secrets: exported specs contain only environment lookups (test), and runs are redacted on write.
+
+### Notes for later phases (from P3)
+
+- **P3b** starts with the bench additions and the second freeze, then A1 → A4 → A3 → A5 (A2 and A6 are stretch, D47).
+- **Labels:** Rohit to label the 10 fingerprints above (B01/B02 via DET-TOTALS/DET-SORT need `tp:` labels to count).
+- **Journey completion** is the biggest recall variable (B03/B06/B08). Worth watching in P5; don't tune on the bench.
+- **Duplicate B01 findings** (the Explorer's own checks plus DET-TOTALS on the same breakdown) aren't merged. Harmless for recall, noisy in a report.
+- **Quick** replays only what fits in about 45 s. For the demo, use a Standard run or a cached one.
+- **P4** needs the same `writeRunExports` for the dashboard's downloads, and the server needs `caffeinate` too.

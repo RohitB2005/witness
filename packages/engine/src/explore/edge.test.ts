@@ -88,6 +88,21 @@ describe("fixed variants", () => {
     expect([...v.first, ...v.rest]).toEqual([]);
   });
 
+  it("login forms: the password is never varied, and a login detail is never expected to be accepted", () => {
+    const v = fixedVariants(
+      form([
+        f("Email", "email", true, "{{secret:username}}"),
+        f("Password", "password", true, "{{secret:password}}"),
+      ]),
+      new Date(),
+    );
+    const all = [...v.first, ...v.rest];
+    expect(all.some((x) => x.field?.label === "Password")).toBe(false);
+    expect(all.filter((x) => x.field?.label === "Email").length).toBeGreaterThan(0);
+    expect(all.every((x) => x.expectation !== "accept")).toBe(true);
+    expect(all.some((x) => x.canary)).toBe(false); // the canary never goes into a login detail
+  });
+
   it("dates are ISO strings relative to today", () => {
     const v = fixedVariants(form([f("Date", "date")]), new Date(2026, 9, 1, 12)); // local noon
     expect(v.rest.map((x) => x.value)).toEqual(["2026-09-30", "2031-09-30", "2026-10-01"]);

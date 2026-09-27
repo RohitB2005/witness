@@ -12,7 +12,8 @@ import type { Rule, Truth } from "./truth";
 export type MatchableFinding = Pick<
   Finding,
   "source" | "category" | "route" | "signals" | "title" | "impact" | "expected" | "actual"
->;
+> &
+  Partial<Pick<Finding, "template">>;
 
 export interface MatchResult {
   kind: "bug" | "decoy";
@@ -27,8 +28,13 @@ export function sourceId(f: MatchableFinding): string | undefined {
 }
 
 /** Text the keyword fields search: title + description (the plain-language impact) + expected + actual. */
+/**
+ * The text keyword rules search. When the writer rephrased a finding, its deterministic wording (`template`)
+ * is used, so scores don't depend on an LLM's word choice (DEVLOG D53).
+ */
 export function searchableText(f: MatchableFinding): string {
-  return [f.title, f.impact, f.expected, f.actual].join(" \n ").toLowerCase();
+  const t = f.template ?? f;
+  return [t.title, t.impact, t.expected, t.actual].join(" \n ").toLowerCase();
 }
 
 /** Every present field must hold. Returns the name of the first field that fails (for explanations). */

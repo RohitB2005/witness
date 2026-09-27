@@ -38,6 +38,8 @@ export interface CrawlDeps {
   pageBudget: number;
   deadline: number; // epoch ms: stop starting new visits after this
   session?: StorageState;
+  /** Where the login landed: the logged-in pass starts there too (P3, found on an external app). */
+  landingUrl?: string;
 }
 
 export interface CrawlResult {
@@ -102,6 +104,10 @@ export async function crawl(deps: CrawlDeps): Promise<CrawlResult> {
       const queue: string[] = [start];
       if (pass.session === "authenticated") {
         for (const [url, v] of visits) if (v.gated) queue.push(url);
+        if (deps.landingUrl && new URL(deps.landingUrl).origin === origin) {
+          const landing = canonicalUrl(deps.landingUrl);
+          if (!queue.includes(landing)) queue.splice(1, 0, landing);
+        }
       }
 
       while (queue.length) {
@@ -110,7 +116,8 @@ export async function crawl(deps: CrawlDeps): Promise<CrawlResult> {
         if (pass.session === "authenticated" && url !== start) {
           if (AUTH_PAGE.test(new URL(url).pathname)) continue; // login/sign-up pages: nothing new when logged in
           const anon = visits.get(url);
-          if (anon && !anon.gated) continue; // same page as when logged out: already covered
+          const landing = deps.landingUrl ? canonicalUrl(deps.landingUrl) : undefined;
+          if (anon && !anon.gated && url !== landing) continue; // same page as when logged out: covered
         }
         if (budget.pages <= 0) {
           addCap(out, "pages");
@@ -151,7 +158,13 @@ export async function crawl(deps: CrawlDeps): Promise<CrawlResult> {
           finalUrl,
           gated: !isAuthPage && (hasLoginForm || redirected),
         };
-        if (isBrokenStatus(status)) {
+        const snapshot = await ariaSnapshot(page);
+        const pattern = routePattern(finalUrl);
+        // An error status with a working app page (SPA deep link on a static host) counts as a page, and
+        // a link to it isn't a broken link: people reach it inside the app.
+        const appRendered = status >= 400 && rendersAppPage(snapshot);
+        const errorPage = status >= 400 && !appRendered;
+        if (isBrokenStatus(status) && !appRendered) {
           visit.evidenceId = await deps.evidence.put("network", {
             kind: "link-target",
             url,
@@ -159,12 +172,10 @@ export async function crawl(deps: CrawlDeps): Promise<CrawlResult> {
           });
         }
         if (pass.session === "anonymous") visits.set(url, visit);
-        recordLinkStatus(linkGraph, url, status, visit.evidenceId);
+        recordLinkStatus(linkGraph, url, appRendered ? 200 : status, visit.evidenceId);
 
         // Dedupe states: same route pattern + same structure = same state.
-        const snapshot = await ariaSnapshot(page);
-        const pattern = routePattern(finalUrl);
-        const key = `${pattern}|${structureHash(snapshot)}|${status >= 400 ? status : ""}`;
+        const key = `${pattern}|${structureHash(snapshot)}|${errorPage ? status : ""}`;
         if (stateKeys.has(key)) continue;
         stateKeys.add(key);
         budget.pages--;
@@ -178,6 +189,7 @@ export async function crawl(deps: CrawlDeps): Promise<CrawlResult> {
           structureHash: structureHash(capture.snapshot),
           title: capture.title,
           status,
+          ...(appRendered ? { appRendered: true } : {}),
           session: pass.session,
           // screenshot first: candidates cite it as the page's picture
           evidenceIds: [
@@ -211,7 +223,7 @@ export async function crawl(deps: CrawlDeps): Promise<CrawlResult> {
             evidence: deps.evidence,
             mobileViewport: deps.mobileViewport,
           },
-          { desktopViewport: deps.viewport, errorDocument: status >= 400 },
+          { desktopViewport: deps.viewport, errorDocument: errorPage },
         );
         out.detectorErrors.push(...detected.errors);
         for (const c of detected.candidates) {
@@ -223,7 +235,7 @@ export async function crawl(deps: CrawlDeps): Promise<CrawlResult> {
             summary: c.summary,
           });
         }
-        if (status >= 400) continue; // don't follow links out of an error page
+        if (errorPage) continue; // don't follow links out of an error page
 
         for (const link of await extractLinks(page)) {
           const target = followable(link, origin);
@@ -244,6 +256,27 @@ export async function crawl(deps: CrawlDeps): Promise<CrawlResult> {
   out.links = [...linkGraph.values()].filter((l) => l.status > 0 && l.sources.length > 0);
   out.notVisited = [...new Set(out.notVisited)];
   return out;
+}
+
+const ERROR_WORDS =
+  /\b(not found|404|page (doesn'?t|does not|cannot be found|could not be found)|error|forbidden|unavailable)\b/i;
+
+/**
+ * An error-status document that still shows a working app page: no error wording in its headings, and at
+ * least 5 interactive controls in the main content. (A real "Not found" page has the wording, or little else.)
+ */
+export function rendersAppPage(snapshot: string): boolean {
+  const lines = snapshot.split("\n");
+  const headings = lines.filter((l) => /^\s*- heading\b/.test(l)).join(" ");
+  if (ERROR_WORDS.test(headings)) return false;
+  const main = snapshot.includes("- main") ? snapshot.slice(snapshot.indexOf("- main")) : snapshot;
+  if (ERROR_WORDS.test(main.split("\n").slice(0, 8).join(" "))) return false;
+  const controls = main
+    .split("\n")
+    .filter((l) =>
+      /^\s*- (button|link|textbox|combobox|checkbox|searchbox|spinbutton|radio)\b/.test(l),
+    );
+  return controls.length >= 5;
 }
 
 async function extractLinks(page: Page): Promise<PageLink[]> {

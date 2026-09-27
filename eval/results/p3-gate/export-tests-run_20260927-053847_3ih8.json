@@ -1,0 +1,101 @@
+{
+  "runId": "run_20260927-053847_3ih8",
+  "exported": 13,
+  "judged": 12,
+  "failOnBuggy": 12,
+  "passOnClean": 12,
+  "valid": 12,
+  "outcomes": [
+    {
+      "findingId": "fd_hllg1m5r",
+      "testFile": "fd_hllg1m5r.spec.ts",
+      "note": "not matched (matches no rule; needs a label)"
+    },
+    {
+      "findingId": "fd_uz6jmvt7",
+      "testFile": "fd_uz6jmvt7.spec.ts",
+      "bugId": "B05",
+      "failsWithBug": true,
+      "passesWithoutBug": true
+    },
+    {
+      "findingId": "fd_u58ru0h2",
+      "testFile": "fd_u58ru0h2.spec.ts",
+      "bugId": "B17",
+      "failsWithBug": true,
+      "passesWithoutBug": true
+    },
+    {
+      "findingId": "fd_38zh71qi",
+      "testFile": "fd_38zh71qi.spec.ts",
+      "bugId": "B01",
+      "failsWithBug": true,
+      "passesWithoutBug": true
+    },
+    {
+      "findingId": "fd_0kxcrvkt",
+      "testFile": "fd_0kxcrvkt.spec.ts",
+      "bugId": "B01",
+      "failsWithBug": true,
+      "passesWithoutBug": true
+    },
+    {
+      "findingId": "fd_uorf5q8a",
+      "testFile": "fd_uorf5q8a.spec.ts",
+      "bugId": "B01",
+      "note": "tentative match",
+      "failsWithBug": true,
+      "passesWithoutBug": true
+    },
+    {
+      "findingId": "fd_58szhcd7",
+      "testFile": "fd_58szhcd7.spec.ts",
+      "bugId": "B02",
+      "note": "tentative match",
+      "failsWithBug": true,
+      "passesWithoutBug": true
+    },
+    {
+      "findingId": "fd_lb4ip67y",
+      "testFile": "fd_lb4ip67y.spec.ts",
+      "bugId": "B11",
+      "failsWithBug": true,
+      "passesWithoutBug": true
+    },
+    {
+      "findingId": "fd_16e9x7ea",
+      "testFile": "fd_16e9x7ea.spec.ts",
+      "bugId": "B15",
+      "failsWithBug": true,
+      "passesWithoutBug": true
+    },
+    {
+      "findingId": "fd_llv1evkd",
+      "testFile": "fd_llv1evkd.spec.ts",
+      "bugId": "B16",
+      "failsWithBug": true,
+      "passesWithoutBug": true
+    },
+    {
+      "findingId": "fd_umjeodye",
+      "testFile": "fd_umjeodye.spec.ts",
+      "bugId": "B09",
+      "failsWithBug": true,
+      "passesWithoutBug": true
+    },
+    {
+      "findingId": "fd_mbfn9vbt",
+      "testFile": "fd_mbfn9vbt.spec.ts",
+      "bugId": "B18",
+      "failsWithBug": true,
+      "passesWithoutBug": true
+    },
+    {
+      "findingId": "fd_ozzyl0b5",
+      "testFile": "fd_ozzyl0b5.spec.ts",
+      "bugId": "B10",
+      "failsWithBug": true,
+      "passesWithoutBug": true
+    }
+  ]
+}

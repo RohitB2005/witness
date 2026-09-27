@@ -18,13 +18,17 @@ export interface MockModel {
   model: MockLanguageModelV4;
   /** Every prompt the model received (system + user text, flattened). */
   prompts: string[];
+  /** The raw prompt messages of every call (to check message parts and provider options). */
+  raw: unknown[];
 }
 
 export function mockModel(replies: MockReply[], costPerCall = 0.001): MockModel {
   const prompts: string[] = [];
+  const raw: unknown[] = [];
   let i = 0;
   const model = new MockLanguageModelV4({
     doGenerate: async (options) => {
+      raw.push(options.prompt);
       const flat = options.prompt
         .map((m) =>
           typeof m.content === "string"
@@ -70,7 +74,7 @@ export function mockModel(replies: MockReply[], costPerCall = 0.001): MockModel 
       };
     },
   });
-  return { model, prompts };
+  return { model, prompts, raw };
 }
 
 export interface TestGateway {

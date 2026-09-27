@@ -24,6 +24,9 @@ export function severityFor(input: SeverityInput): Severity {
   if (source.kind === "detector") {
     if (CRASH_DETECTORS.has(source.id)) return core ? "critical" : "high";
     if (source.id === "DET-XSS") return "high";
+    // A wrong total is a money error (FR-9: critical in a core journey); a wrong sort order is wrong info.
+    if (source.id === "DET-TOTALS") return core ? "critical" : "high";
+    if (source.id === "DET-SORT") return core || input.onCoreJourneyPage ? "high" : "medium";
     if (source.id === "DET-OVERFLOW" || source.id === "DET-CONSOLE") {
       return core || input.onCoreJourneyPage ? "medium" : "low";
     }

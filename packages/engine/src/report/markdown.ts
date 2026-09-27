@@ -1,5 +1,6 @@
-// Minimal Markdown report (P1). The full exporters (HTML/MD/JSON with evidence) arrive in P3.
+// Markdown report (SPEC FR-10). Page-controlled text is escaped; severity and tier are written as words.
 import type { Finding, RunResult } from "../types";
+import { replayText } from "../verify/tier";
 
 const VERDICT_LABEL = {
   ready: "READY",
@@ -22,7 +23,7 @@ export function mdEscape(text: string): string {
 
 export function renderMarkdown(r: RunResult): string {
   const bugs = r.findings.filter((f) => f.kind === "bug" && f.tier !== "discarded");
-  const improvements = r.findings.filter((f) => f.kind === "improvement");
+  const improvements = r.findings.filter((f) => f.kind === "improvement" && f.tier !== "discarded");
   const discarded = r.findings.filter((f) => f.tier === "discarded");
   const mins = (r.stats.durationMs / 60_000).toFixed(1);
   const lines: string[] = [
@@ -39,6 +40,10 @@ export function renderMarkdown(r: RunResult): string {
   if (r.stats.capsHit.length) lines.push(`- Budget caps hit: ${r.stats.capsHit.join(", ")}`);
   if (r.aiStagesSkipped) lines.push(`- AI stages skipped: ${mdEscape(r.aiStagesSkipped)}`);
   if (r.error) lines.push(`- **Scan error:** ${mdEscape(r.error)}`);
+  if (r.notes?.length) {
+    lines.push("", "## Notes", "");
+    for (const n of r.notes) lines.push(`- ${mdEscape(n)}`);
+  }
   lines.push("", "## What wasn't tested", "");
   for (const n of r.notTested.length ? r.notTested : ["Nothing noted."])
     lines.push(`- ${mdEscape(n)}`);
@@ -46,7 +51,7 @@ export function renderMarkdown(r: RunResult): string {
     lines.push("", "## What Witness understood the app to be", "", mdEscape(r.appModel.purpose));
   }
   if (r.journeys.length) {
-    lines.push("", `## Journeys (${r.journeys.length})`, "");
+    lines.push("", `## Journeys and automatic checks (${r.journeys.length})`, "");
     const failedExp = new Set(
       r.findings.flatMap((f) => (f.source.kind === "check" ? [f.source.expectationId] : [])),
     );
@@ -59,7 +64,7 @@ export function renderMarkdown(r: RunResult): string {
           ? "completed"
           : `${j.status}${j.incompleteReason ? ` (${j.incompleteReason})` : ""}`;
       lines.push(
-        `- **${mdEscape(j.title)}** (${j.priority}): ${mdEscape(status)}. ${happy} step${happy === 1 ? "" : "s"}${edge ? ` + ${edge} edge-input steps` : ""}; ${j.expectations.length} expectation${j.expectations.length === 1 ? "" : "s"}, ${failed} failed.`,
+        `- **${mdEscape(j.title)}** (${j.automatic ? "automatic" : j.priority}): ${mdEscape(status)}. ${happy} step${happy === 1 ? "" : "s"}${edge ? ` + ${edge} ${j.automatic ? "" : "edge-input "}steps` : ""}; ${j.expectations.length} expectation${j.expectations.length === 1 ? "" : "s"}, ${failed} failed.`,
       );
     }
   }
@@ -90,6 +95,13 @@ function card(f: Finding, n: number): string[] {
     `- **Why flagged:** ${mdEscape(f.whyFlagged)}`,
     `- **Expected:** ${mdEscape(f.expected)}`,
     `- **Actual:** ${mdEscape(f.actual)}`,
+    `- **Replay:** ${mdEscape(replayText(f.replay))}${f.replay.notes ? ` (${mdEscape(f.replay.notes)})` : ""}`,
+    ...(f.skeptic ? [`- **Skeptic:** ${f.skeptic.verdict}: ${mdEscape(f.skeptic.reason)}`] : []),
+    ...(f.judge
+      ? [`- **Judge:** ${f.judge.verdict} (${Math.round(f.judge.confidence * 100)}% confident)`]
+      : []),
+    ...(f.likelyCause ? [`- **Likely cause (hypothesis):** ${mdEscape(f.likelyCause.text)}`] : []),
+    ...(f.testFile ? [`- **Regression test:** \`tests/${f.testFile}\``] : []),
     "",
     "Steps to reproduce:",
     "",

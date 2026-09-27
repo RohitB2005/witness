@@ -22,14 +22,17 @@
     "demo:check": "node scripts/demo-check.mjs",
     "dev": "node scripts/not-yet.mjs \"pnpm dev\" P4",
     "scan": "tsx apps/cli/src/index.ts scan",
+    "witness": "tsx apps/cli/src/index.ts",
     "eval": "node scripts/not-yet.mjs \"pnpm eval\" P5",
     "demo:up": "node scripts/not-yet.mjs \"pnpm demo:up\" P4",
     "demo:test": "node scripts/not-yet.mjs \"pnpm demo:test\" P4",
     "demo:replay": "node scripts/not-yet.mjs \"pnpm demo:replay\" P4",
-    "eval:score": "tsx eval/score.ts"
+    "eval:score": "tsx eval/score.ts",
+    "eval:tests": "tsx eval/export-tests.ts"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",
+    "@playwright/test": "1.63.0",
     "@types/node": "^22.20.4",
     "eslint": "^10.11.0",
     "eslint-config-prettier": "^10.1.8",

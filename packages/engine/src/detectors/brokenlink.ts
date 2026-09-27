@@ -36,5 +36,14 @@ export function brokenLinkCandidate(target: LinkTarget): CandidateDraft {
     },
     summary: `Broken link ${target.path} (${target.status})`,
     evidenceIds: target.evidenceId ? [target.evidenceId] : [],
+    // Replays and exported tests follow the link as it is on the page, so a fixed link passes.
+    ...(first?.linkText
+      ? {
+          check: {
+            type: "linkWorks" as const,
+            link: { by: "role" as const, role: "link", name: first.linkText, exact: true },
+          },
+        }
+      : {}),
   };
 }

@@ -152,3 +152,6 @@ blob-report/
 
 # Witness user data (suppressions)
 data/
+
+# Exporter tests write generated specs here (inside the repo so @playwright/test resolves)
+.witness-export-test/

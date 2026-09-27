@@ -38,6 +38,7 @@ export interface LlmCallLogEntry {
   inputTokens: number;
   outputTokens: number;
   cacheReadTokens: number;
+  cacheWriteTokens: number;
   costUsd: number;
   costEstimated: boolean;
   latencyMs: number;
@@ -104,6 +105,12 @@ export interface ToolRequest {
   role: LlmRole;
   tier: ModelTier;
   instructions: string;
+  /**
+   * Leading parts of the user message that stay the same across many calls (e.g. the run's site map, then
+   * one journey's brief). With prompt caching on, each is sent as its own block with a cache breakpoint
+   * (at most 3: with the system prompt's that's Anthropic's limit of 4).
+   */
+  promptPrefix?: string | string[];
   prompt: string;
   tools: Record<string, ToolSpec>;
   temperature?: number;
@@ -121,6 +128,11 @@ export class SecretLeakError extends Error {
 }
 
 class BudgetError extends Error {}
+
+/** The log entry of one in-flight call. */
+interface EntryRef {
+  entry?: LlmCallLogEntry;
+}
 
 export interface GatewayTotals {
   calls: number;
@@ -161,12 +173,13 @@ export class LlmGateway {
     const llmSchema = req.llmSchema ?? toJsonSchema(req.schema);
     let previous: { raw: string; error: string } | undefined;
     for (let attempt = 0; attempt < 2; attempt++) {
+      const ref: EntryRef = {};
       const prompt = previous
         ? repairPrompt(req.prompt, previous.raw, previous.error, "JSON")
         : req.prompt;
       let raw: string;
       try {
-        const res = await this.#call(req.role, req.tier, req.instructions, prompt, attempt, {
+        const res = await this.#call(ref, req.role, req.tier, req.instructions, prompt, attempt, {
           kind: "structured",
           schemaName: req.schemaName,
           llmSchema,
@@ -176,18 +189,18 @@ export class LlmGateway {
         });
         raw = res.text ?? "";
       } catch (err) {
-        return this.#failure(err);
+        return this.#failure(err, ref);
       }
       const parsed = parseJson(raw);
       const valid = parsed.ok ? req.schema.safeParse(parsed.value) : undefined;
       if (valid?.success) {
         if (attempt > 0) this.totals.repaired++;
-        this.#markLast({ valid: true, repaired: attempt > 0 });
+        this.#mark(ref, { valid: true, repaired: attempt > 0 });
         return { ok: true, value: valid.data, repaired: attempt > 0 };
       }
       const error = parsed.ok ? summariseIssues(valid!.error) : parsed.error;
       this.totals.invalid++;
-      this.#markLast({ valid: false, repaired: false, error });
+      this.#mark(ref, { valid: false, repaired: false, error });
       previous = { raw, error };
     }
     if (req.fallbackSchema && previous) {
@@ -208,21 +221,23 @@ export class LlmGateway {
     assertLlmAllowed(req.role);
     let previous: { raw: string; error: string } | undefined;
     for (let attempt = 0; attempt < 2; attempt++) {
+      const ref: EntryRef = {};
       const prompt = previous
         ? repairPrompt(req.prompt, previous.raw, previous.error, "tool call")
         : req.prompt;
       let call: ToolCallValue | undefined;
       try {
-        const res = await this.#call(req.role, req.tier, req.instructions, prompt, attempt, {
+        const res = await this.#call(ref, req.role, req.tier, req.instructions, prompt, attempt, {
           kind: "tools",
           tools: req.tools,
+          promptPrefix: req.promptPrefix,
           temperature: req.temperature ?? 0,
           reasoning: req.reasoning ?? "none",
           timeoutMs: req.timeoutMs,
         });
         call = res.toolCall;
       } catch (err) {
-        return this.#failure(err);
+        return this.#failure(err, ref);
       }
       let error: string;
       if (!call) error = "You didn't call a tool. Call exactly one tool.";
@@ -231,13 +246,13 @@ export class LlmGateway {
         const valid = req.tools[call.name]!.schema.safeParse(call.input);
         if (valid.success) {
           if (attempt > 0) this.totals.repaired++;
-          this.#markLast({ valid: true, repaired: attempt > 0 });
+          this.#mark(ref, { valid: true, repaired: attempt > 0 });
           return { ok: true, value: { name: call.name, input: valid.data }, repaired: attempt > 0 };
         }
         error = `Invalid input for ${call.name}: ${summariseIssues(valid.error)}`;
       }
       this.totals.invalid++;
-      this.#markLast({ valid: false, repaired: false, error });
+      this.#mark(ref, { valid: false, repaired: false, error });
       previous = { raw: JSON.stringify(call ?? null), error };
     }
     this.totals.failures++;
@@ -246,16 +261,18 @@ export class LlmGateway {
 
   // -------------------------------------------------------------------------------------------
 
-  #lastEntry: LlmCallLogEntry | undefined;
-
-  #markLast(patch: Pick<LlmCallLogEntry, "valid" | "repaired"> & { error?: string }): void {
-    if (!this.#lastEntry) return;
-    Object.assign(this.#lastEntry, patch);
-    this.o.onCall?.(this.#lastEntry);
-    this.#lastEntry = undefined;
+  // Each call has its own log entry (calls run concurrently since P3: writer, UX, judge, skeptic).
+  #mark(
+    ref: EntryRef,
+    patch: Pick<LlmCallLogEntry, "valid" | "repaired"> & { error?: string },
+  ): void {
+    if (!ref.entry) return;
+    Object.assign(ref.entry, patch);
+    this.o.onCall?.(ref.entry);
+    ref.entry = undefined;
   }
 
-  #failure(err: unknown): { ok: false; reason: LlmFailureReason; error: string } {
+  #failure(err: unknown, ref: EntryRef): { ok: false; reason: LlmFailureReason; error: string } {
     if (err instanceof SecretLeakError) throw err;
     if (err instanceof Error && err.name === "ReplayGuardError") throw err;
     this.totals.failures++;
@@ -266,15 +283,16 @@ export class LlmGateway {
           ? "cache-miss"
           : "provider";
     const error = firstLine(err);
-    if (this.#lastEntry) {
-      this.#lastEntry.error = error;
-      this.o.onCall?.(this.#lastEntry);
-      this.#lastEntry = undefined;
+    if (ref.entry) {
+      ref.entry.error = error;
+      this.o.onCall?.(ref.entry);
+      ref.entry = undefined;
     }
     return { ok: false, reason, error };
   }
 
   async #call(
+    ref: EntryRef,
     role: LlmRole,
     tier: ModelTier,
     instructionsIn: string,
@@ -282,12 +300,22 @@ export class LlmGateway {
     attempt: number,
     spec:
       | ({ kind: "structured"; schemaName: string; llmSchema: JsonSchemaObject } & CallKnobs)
-      | ({ kind: "tools"; tools: Record<string, ToolSpec> } & CallKnobs),
+      | ({
+          kind: "tools";
+          tools: Record<string, ToolSpec>;
+          promptPrefix?: string | string[];
+        } & CallKnobs),
   ): Promise<{ text?: string; toolCall?: ToolCallValue }> {
     const model = this.o.modelIds[tier];
     // Redact, then assert: nothing that leaves the process may contain a vault value (T5).
     const instructions = this.o.vault.toPlaceholders(`${UNIVERSAL_RULES}\n\n${instructionsIn}`);
     const prompt = this.o.vault.toPlaceholders(promptIn);
+    const promptPrefix =
+      spec.kind === "tools" && spec.promptPrefix !== undefined
+        ? (Array.isArray(spec.promptPrefix) ? spec.promptPrefix : [spec.promptPrefix])
+            .slice(0, 3)
+            .map((p) => this.o.vault.toPlaceholders(p))
+        : undefined;
     const toolDefs =
       spec.kind === "tools"
         ? Object.fromEntries(
@@ -301,6 +329,7 @@ export class LlmGateway {
       model,
       role,
       instructions,
+      promptPrefix,
       prompt,
       tools: toolDefs,
       output:
@@ -321,6 +350,7 @@ export class LlmGateway {
       inputTokens: 0,
       outputTokens: 0,
       cacheReadTokens: 0,
+      cacheWriteTokens: 0,
       costUsd: 0,
       costEstimated: false,
       latencyMs: 0,
@@ -329,7 +359,7 @@ export class LlmGateway {
       valid: false,
       repaired: false,
     };
-    this.#lastEntry = entry;
+    ref.entry = entry;
 
     const hit = await this.o.cache.get(role, key); // throws CacheMissError in replay mode
     if (hit) {
@@ -359,13 +389,34 @@ export class LlmGateway {
     let usage: {
       inputTokens?: number;
       outputTokens?: number;
-      inputTokenDetails?: { cacheReadTokens?: number };
+      inputTokenDetails?: { cacheReadTokens?: number; cacheWriteTokens?: number };
     };
     let providerCost: number | undefined;
+    // A stable prefix goes first as its own block; with caching on, it carries a second cache breakpoint.
+    const input =
+      promptPrefix !== undefined
+        ? {
+            messages: [
+              {
+                role: "user" as const,
+                content: [
+                  ...promptPrefix.map((text) => ({
+                    type: "text" as const,
+                    text,
+                    ...(this.o.promptCaching
+                      ? { providerOptions: { openrouter: { cacheControl: { type: "ephemeral" } } } }
+                      : {}),
+                  })),
+                  { type: "text" as const, text: prompt },
+                ],
+              },
+            ],
+          }
+        : { prompt };
     const common = {
       model: this.o.models[tier],
       instructions: system,
-      prompt,
+      ...input,
       temperature: spec.temperature,
       maxRetries: this.o.maxRetries ?? 3,
       timeout: spec.timeoutMs ?? this.o.timeoutMs ?? 60_000,
@@ -414,6 +465,7 @@ export class LlmGateway {
     entry.inputTokens = usage.inputTokens ?? 0;
     entry.outputTokens = usage.outputTokens ?? 0;
     entry.cacheReadTokens = usage.inputTokenDetails?.cacheReadTokens ?? 0;
+    entry.cacheWriteTokens = usage.inputTokenDetails?.cacheWriteTokens ?? 0;
     entry.costEstimated = providerCost === undefined;
     entry.costUsd = providerCost ?? estimateCostUsd(model, entry.inputTokens, entry.outputTokens);
     this.totals.calls++;

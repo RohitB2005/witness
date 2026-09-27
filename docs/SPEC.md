@@ -148,7 +148,7 @@ Run on every recorded state (crawl and agent steps). IDs are stable (used by the
 | Preset | Pages | Journeys | Steps/journey | Wall-clock | LLM spend cap |
 | --- | --- | --- | --- | --- | --- |
 | quick | 15 | 2 | 15 | 3 min | US$0.50 |
-| standard | 40 | 5 | 25 | 8 min | US$2.00 |
+| standard | 40 | 3 (was 5; DEVLOG D50) | 25 | 8 min | US$2.00 |
 | deep | 100 | 8 | 35 | 15 min | US$5.00 |
 
 - When a cap is hit, Witness stops starting new work, verifies what it has, and reports the cap in "What wasn't tested".

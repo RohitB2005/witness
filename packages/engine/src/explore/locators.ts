@@ -180,7 +180,12 @@ async function uniqueLocator(page: Page, handle: ElementHandle, list: Locator[])
       if (await sameElement(page, pw.nth(i), handle)) return { ...loc, nth: i };
     }
   }
-  const css = await handle.evaluate((el) => {
+  return { by: "css", selector: await cssPath(handle) };
+}
+
+/** A structural CSS path (id anchor or tag + nth-of-type), deterministic for the same build of the app. */
+export async function cssPath(handle: ElementHandle): Promise<string> {
+  return handle.evaluate((el) => {
     const parts: string[] = [];
     let node: Element | null = el;
     while (node && node !== document.body && node !== document.documentElement) {
@@ -201,7 +206,39 @@ async function uniqueLocator(page: Page, handle: ElementHandle, list: Locator[])
     }
     return parts[0]?.startsWith("#") ? parts.join(" > ") : `body > ${parts.join(" > ")}`;
   });
-  return { by: "css", selector: css };
+}
+
+/**
+ * A stable locator for a message element that doesn't depend on the message's own text (the text is what
+ * changes when the bug is fixed): its test id, a unique alert/status role, or a CSS path.
+ */
+export async function messageLocator(page: Page, text: string): Promise<Locator | undefined> {
+  const shown = page.getByText(text, { exact: true }).first();
+  if ((await shown.count().catch(() => 0)) === 0) return undefined;
+  const handle = (await shown.elementHandle().catch(() => null)) as ElementHandle | null;
+  if (!handle) return undefined;
+  try {
+    const box = (await handle.evaluateHandle(
+      (el) => el.closest('[role="alert"],[role="status"],[aria-live]') ?? el,
+    )) as unknown as ElementHandle;
+    const facts = await box.evaluate((el) => ({
+      testId: el.getAttribute("data-testid") ?? undefined,
+      role: el.getAttribute("role") ?? undefined,
+    }));
+    const list: Locator[] = [
+      ...(facts.testId ? [{ by: "testId", id: facts.testId } as const] : []),
+      ...(facts.role === "alert" || facts.role === "status"
+        ? [{ by: "role", role: facts.role } as const]
+        : []),
+    ];
+    for (const loc of list) {
+      const pw = toPlaywright(page, loc);
+      if ((await safeCount(pw)) === 1 && (await sameElement(page, pw.first(), box))) return loc;
+    }
+    return { by: "css", selector: await cssPath(box) };
+  } finally {
+    await handle.dispose().catch(() => undefined);
+  }
 }
 
 /**

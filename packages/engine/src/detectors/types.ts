@@ -15,7 +15,10 @@ export type CandidateDraft = Pick<
   | "detail"
   | "summary"
   | "evidenceIds"
-> & { source: { kind: "detector"; id: DetectorId } };
+> &
+  Partial<Pick<Candidate, "check" | "grounding">> & {
+    source: { kind: "detector"; id: DetectorId };
+  };
 
 export interface DetectorContext {
   page: Page;

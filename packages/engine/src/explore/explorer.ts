@@ -12,6 +12,7 @@ import { log, type EventSink } from "../events";
 import { newId } from "../ids";
 import type { LlmGateway } from "../llm/gateway";
 import { EXPLORER_INSTRUCTIONS } from "../llm/prompts/explorer";
+import { pageContent } from "../llm/prompts/universal";
 import { containsLoose } from "../oracle/parse";
 import type { StorageState } from "../preflight/preflight";
 import type { EvidenceWriter } from "../record/evidence";
@@ -19,7 +20,7 @@ import { PageRecorder } from "../record/recorder";
 import type { RunStore } from "../store/run-store";
 import type { Candidate, Expectation, Journey, ScanMode, Step } from "../types";
 import { checkCandidate, flagCandidate } from "./candidates";
-import { buildTurnPrompt, labelledAmounts, type TurnContext } from "./context";
+import { buildTurnParts, labelledAmounts, type TurnContext } from "./context";
 import { Executor, type AgentAction, type StepResult } from "./executor";
 import { RefError } from "./locators";
 import type { StateRegistry } from "./states";
@@ -44,6 +45,12 @@ export interface ExploreDeps {
   stepsPerJourney: number;
   /** Epoch ms: no new turn starts after this. */
   deadline: number;
+  /**
+   * The crawl's site map (same text the Planner saw), sent first in every turn. It helps the Explorer find
+   * its way, and it is stable for the whole run, so with the tools and system prompt it clears the fast
+   * model's minimum cacheable length (P3).
+   */
+  siteMap?: string;
 }
 
 export interface ExplorerMetrics {
@@ -162,6 +169,8 @@ export async function exploreJourney(input: Journey, deps: ExploreDeps): Promise
     let finished = false;
     const amountStates = new Set<string>();
     let providerErrors = 0;
+    // The journey brief is fixed at the first turn, so every turn shares one cacheable prefix.
+    let brief: string | undefined;
 
     while (!finished) {
       if (metrics.turns >= deps.stepsPerJourney) {
@@ -182,7 +191,7 @@ export async function exploreJourney(input: Journey, deps: ExploreDeps): Promise
               .map((n) => `server error: ${n.method} ${n.path} → ${n.status}`),
           ]
         : [];
-      const prompt = buildTurnPrompt({
+      const parts = buildTurnParts({
         journey,
         expectations: journey.expectations.map((exp) => ({
           exp,
@@ -208,6 +217,8 @@ export async function exploreJourney(input: Journey, deps: ExploreDeps): Promise
         loggedIn,
         today: new Date().toLocaleDateString("en-CA"), // local YYYY-MM-DD
       });
+      brief ??= parts.brief;
+      const prompt = parts.turn;
       // Escalate to the smart model for one turn after two bad turns, and the first time a page state
       // shows labelled amounts: writing the relation a label states is where the small model is weakest.
       const stateId = cur?.state.id ?? "";
@@ -222,6 +233,12 @@ export async function exploreJourney(input: Journey, deps: ExploreDeps): Promise
         instructions: EXPLORER_INSTRUCTIONS,
         prompt,
         tools: EXPLORER_TOOLS,
+        promptPrefix: deps.siteMap
+          ? [
+              `<site_map hint="pages the crawl found, for finding your way">\n${pageContent(deps.siteMap)}\n</site_map>`,
+              brief!,
+            ]
+          : brief,
         // A normal turn takes 2–4 s; don't let one stuck call eat the journey's time.
         timeoutMs: 30_000,
       });

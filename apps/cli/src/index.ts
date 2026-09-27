@@ -1,7 +1,8 @@
 // witness scan <url> — CLI shell around @witness/engine (SPEC FR-15).
+// witness suppress <fingerprint> --origin <url> --reason <text> — "Not a bug" (FR-12).
 // Exit codes: 0 Ready · 1 Ready with caveats · 2 Not ready · 3 scan error.
+import { spawn } from "node:child_process";
 import { existsSync } from "node:fs";
-import { mkdir, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { parseArgs } from "node:util";
@@ -13,9 +14,10 @@ import {
   SecretVault,
   createModels,
   llmSettingsFromEnv,
-  renderMarkdown,
   resolveScanConfig,
   runScan,
+  writeRunExports,
+  type ExportFormat,
   type Models,
   type RunResult,
   type ScanInput,
@@ -26,6 +28,8 @@ const REPO_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..
 const EXIT = { ready: 0, caveats: 1, not_ready: 2, error: 3 } as const;
 
 const USAGE = `Usage: witness scan <url> [options]
+       witness suppress <fingerprint> --origin <url> --reason <text>
+       witness export <run id or folder> [--format md,json,html]   rewrite a finished run's reports and tests
 
   --mode staging|production   production blocks every write request except the login (default: staging for
                               localhost / *.local / *.test, production otherwise)
@@ -34,7 +38,7 @@ const USAGE = `Usage: witness scan <url> [options]
   --password-env <VAR>        …using the password in this environment variable (never pass it as an argument)
   --hint <text>               what the app is for (≤ 200 chars)
   --out <dir>                 also copy the reports into this folder
-  --format md,json            report formats (default: md,json; html arrives in P3)
+  --format md,json,html       report formats (default: md,json,html); regression tests always go to tests/
   --pipeline deterministic|ai-no-verify|full|full-no-skeptic   (default: full)
   --llm-cache off|rw|replay   (default: rw)
 
@@ -57,14 +61,20 @@ async function main(argv: string[]): Promise<number> {
       format: { type: "string" },
       pipeline: { type: "string" },
       "llm-cache": { type: "string" },
+      origin: { type: "string" },
+      reason: { type: "string" },
       help: { type: "boolean", short: "h" },
     },
   });
   const [command, url] = positionals;
+  if (command === "suppress" && url && !values.help)
+    return suppress(url, values.origin, values.reason);
+  if (command === "export" && url && !values.help) return reexport(url, values.format);
   if (values.help || command !== "scan" || !url) {
     console.log(USAGE);
     return values.help ? 0 : EXIT.error;
   }
+  keepAwake();
 
   const vault = new SecretVault();
   let credentials: ScanInput["credentials"];
@@ -96,8 +106,9 @@ async function main(argv: string[]): Promise<number> {
     console.error(err instanceof ConfigError ? err.message : String(err));
     return EXIT.error;
   }
-  const formats = new Set((values.format ?? "md,json").split(",").map((f) => f.trim()));
-  if (formats.has("html")) console.warn("HTML export arrives in P3; writing md/json only.");
+  const formats = new Set(
+    (values.format ?? "md,json,html").split(",").map((f) => f.trim() as ExportFormat),
+  );
 
   const runsDir = path.resolve(REPO_ROOT, process.env.WITNESS_RUNS_DIR ?? "runs");
   const store = new JsonRunStore({
@@ -135,30 +146,16 @@ async function main(argv: string[]): Promise<number> {
     llmCacheDir: path.join(REPO_ROOT, ".witness-cache"),
   });
 
-  const runDir = store.runDir(result.runId);
-  const written: string[] = [];
-  const md = renderMarkdown(result);
-  if (formats.has("md"))
-    written.push(await write(path.join(runDir, "report.md"), vault.redact(md)));
-  if (formats.has("json")) {
+  const exported = await writeRunExports(store, result, {
+    formats,
+    redact: (t) => vault.redact(t),
+    outDir: values.out,
+  });
+  const written = exported.written.filter((f) => !f.includes(`${path.sep}tests${path.sep}`));
+  if (exported.tests)
     written.push(
-      await write(path.join(runDir, "report.json"), vault.redact(JSON.stringify(result, null, 2))),
+      `${path.join(store.runDir(result.runId), "tests")} (${exported.tests} regression tests)`,
     );
-  }
-  if (values.out) {
-    const outDir = path.resolve(values.out);
-    await mkdir(outDir, { recursive: true });
-    if (formats.has("md"))
-      written.push(await write(path.join(outDir, "report.md"), vault.redact(md)));
-    if (formats.has("json")) {
-      written.push(
-        await write(
-          path.join(outDir, "report.json"),
-          vault.redact(JSON.stringify(result, null, 2)),
-        ),
-      );
-    }
-  }
   printSummary(result, written);
   if (result.error) return EXIT.error;
   return EXIT[result.verdict.level];
@@ -212,18 +209,75 @@ function printSummary(r: RunResult, written: string[]): void {
     r.verdict.level
   ];
   console.log(`\n${label} — ${r.verdict.reason}`);
-  const done = r.journeys.filter((j) => j.status === "completed").length;
+  const user = r.journeys.filter((j) => !j.automatic);
+  const done = user.filter((j) => j.status === "completed").length;
+  const auto = r.journeys.length - user.length;
   console.log(
-    `${r.stats.pages} pages · ${r.journeys.length ? `${done}/${r.journeys.length} journeys completed · ` : ""}${bugs.length} bugs · ${imps.length} improvements · ${(r.stats.durationMs / 1000).toFixed(0)} s · ${r.stats.llmCalls} LLM calls, US$${r.stats.costUsd.toFixed(3)}`,
+    `${r.stats.pages} pages · ${user.length ? `${done}/${user.length} journeys completed · ` : ""}${auto ? `${auto} automatic checks · ` : ""}${bugs.length} bugs · ${imps.length} improvements · ${(r.stats.durationMs / 1000).toFixed(0)} s · ${r.stats.llmCalls} LLM calls, US$${r.stats.costUsd.toFixed(3)}`,
   );
   if (r.aiStagesSkipped) console.log(`Note: ${r.aiStagesSkipped}`);
+  for (const n of r.notes ?? []) console.log(`Note: ${n}`);
   for (const f of bugs) console.log(`  [${f.severity}/${f.tier}] ${f.title}`);
   for (const w of written) console.log(`Report: ${path.relative(process.cwd(), w)}`);
 }
 
-async function write(file: string, content: string): Promise<string> {
-  await writeFile(file, content);
-  return file;
+/** Rewrites a finished run's exports (reports and regression tests) from its run.json. No scan, no LLM. */
+async function reexport(run: string, format?: string): Promise<number> {
+  const runsDir = path.resolve(REPO_ROOT, process.env.WITNESS_RUNS_DIR ?? "runs");
+  const store = new JsonRunStore({ runsDir, dataDir: path.join(REPO_ROOT, "data") });
+  const runId = path.basename(path.resolve(run));
+  const result = await store.getResult(runId);
+  if (!result) {
+    console.error(`No finished run ${runId} in ${runsDir}.`);
+    return EXIT.error;
+  }
+  const formats = new Set(
+    (format ?? "md,json,html").split(",").map((f) => f.trim() as ExportFormat),
+  );
+  const out = await writeRunExports(store, result, { formats, redact: (t) => t });
+  console.log(`Rewrote ${out.written.length} files for ${runId} (${out.tests} regression tests).`);
+  for (const s of out.testsSkipped) console.log(`  no test for ${s.findingId}: ${s.reason}`);
+  return 0;
+}
+
+/** FR-12: record "Not a bug" for a finding's fingerprint on an origin; later runs discard it. */
+async function suppress(fingerprint: string, origin?: string, reason?: string): Promise<number> {
+  if (!/^fp_[0-9a-f]{16}$/.test(fingerprint) || !origin || !reason?.trim()) {
+    console.error("Usage: witness suppress <fp_…> --origin <url> --reason <text>");
+    return EXIT.error;
+  }
+  const store = new JsonRunStore({
+    runsDir: path.resolve(REPO_ROOT, process.env.WITNESS_RUNS_DIR ?? "runs"),
+    dataDir: path.join(REPO_ROOT, "data"),
+  });
+  const o = new URL(origin).origin;
+  await store.addSuppression({
+    origin: o,
+    fingerprint,
+    reason: reason.trim().slice(0, 300),
+    createdAt: new Date().toISOString(),
+  });
+  console.log(`Suppressed ${fingerprint} on ${o}. Later scans list it under Discarded.`);
+  return 0;
+}
+
+/**
+ * macOS: keep the Mac awake while this process runs (P2 lost a run to sleep; D46). `caffeinate -w` exits
+ * with us. Elsewhere, or with WITNESS_NO_CAFFEINATE=1, it does nothing. Closing the lid on battery can
+ * still sleep the Mac; that's outside what caffeinate can stop.
+ */
+function keepAwake(): void {
+  if (process.platform !== "darwin" || process.env.WITNESS_NO_CAFFEINATE === "1") return;
+  try {
+    const child = spawn("caffeinate", ["-i", "-m", "-s", "-w", String(process.pid)], {
+      stdio: "ignore",
+      detached: true,
+    });
+    child.on("error", () => undefined);
+    child.unref();
+  } catch {
+    // No caffeinate: the scan runs anyway.
+  }
 }
 
 main(process.argv.slice(2)).then(

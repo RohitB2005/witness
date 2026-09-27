@@ -136,13 +136,24 @@ export interface RunScore {
   llmCalls: number;
 }
 
+/**
+ * Which tiers to score. "final" is what the run reported. "aiNoVerify" (A1) and "noSkeptic" (A3) are the
+ * tiers each finding had at those earlier stages of the same run (D51): findings verification discarded
+ * count again if they were reportable at that stage.
+ */
+export type ScoreStage = "final" | "aiNoVerify" | "noSkeptic";
+
 export function scoreRun(
   result: RunResult,
   truth: Truth,
   labels: Labels,
-  opts: { clean: boolean },
+  opts: { clean: boolean; stage?: ScoreStage },
 ): RunScore {
+  const stage = opts.stage ?? "final";
+  const tierAt = (f: Finding): Finding["tier"] =>
+    stage === "final" ? f.tier : (f.stageTiers?.[stage] ?? f.tier);
   const findings = result.findings
+    .map((f) => ({ ...f, tier: tierAt(f) }))
     .filter((f) => f.tier !== "discarded")
     .map((f) => scoreFinding(f, truth, labels));
 
@@ -180,7 +191,10 @@ export function scoreRun(
 
   return {
     runId: result.runId,
-    pipeline: result.config.pipeline,
+    pipeline:
+      stage === "final"
+        ? result.config.pipeline
+        : `${stage === "aiNoVerify" ? "ai-no-verify" : "full-no-skeptic"} (derived)`,
     clean: opts.clean,
     findings,
     found,
@@ -266,7 +280,8 @@ export function summarise(
       stabilityJaccard: stabilityJaccard(buggy.map((s) => Object.keys(s.found))),
     };
   }
-  const buggy = scores.filter((s) => !s.clean);
+  // Per-bug and by-category views use each run once (its final tiers), not the derived A1/A3 rows.
+  const buggy = scores.filter((s) => !s.clean && !s.pipeline.endsWith("(derived)"));
   const categories = [...new Set(truth.bugs.map((b) => b.category))];
   const recallByCategory = Object.fromEntries(
     categories.map((c) => {

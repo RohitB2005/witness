@@ -3,6 +3,8 @@
 import { routePattern } from "../crawl/normalise";
 import { newId } from "../ids";
 import type { CheckResult } from "../oracle/evaluate";
+import type { Check } from "../oracle/language";
+import { containsLoose } from "../oracle/parse";
 import type { Candidate, Expectation, FindingCategory, Grounding, PageState } from "../types";
 
 const IMPACT_TEXT: Record<Expectation["impact"], string> = {
@@ -36,9 +38,48 @@ export function groundingText(g: Grounding): string {
   }
 }
 
+/**
+ * An expectation can't be grounded in the very text it expects to see: if that text were on the page being
+ * checked, the check would pass. A failure of such a check means the quote came from somewhere else (P2:
+ * "Booking summary" from the booking form, asserted on the confirmation page).
+ */
+export function assertsOwnQuote(check: Check, quote: string): boolean {
+  switch (check.type) {
+    case "visible":
+    case "textMatches":
+      return (
+        check.target.by === "text" &&
+        (containsLoose(check.target.text, quote) || containsLoose(quote, check.target.text))
+      );
+    case "all":
+      return check.checks.some((c) => assertsOwnQuote(c, quote));
+    default:
+      return false;
+  }
+}
+
+/** Grounding facts a candidate carries for tiering (verify/tier.ts). */
+export function candidateGrounding(exp: Expectation): NonNullable<Candidate["grounding"]> {
+  const g = exp.grounding;
+  const quote = g.kind === "convention" ? undefined : g.quote;
+  return {
+    kind: g.kind,
+    verified: g.kind === "convention" ? false : g.verified,
+    ...(quote ? { quote } : {}),
+    ...(quote && assertsOwnQuote(exp.check, quote) ? { selfReferential: true } : {}),
+    // D46: an input rule an AI guessed, not stated on the page. Witness's own fixed edge rules aren't.
+    ...(g.kind === "convention" &&
+    (exp.aiGuessed || (exp.origin !== "edge" && exp.category === "validation"))
+      ? { aiGuessedRule: true }
+      : {}),
+  };
+}
+
 export function checkCandidate(input: {
   exp: Expectation;
   result: CheckResult;
+  /** For fieldRejected: the form's success signature when it ran. */
+  successCheck?: Check;
   url: string;
   state?: Pick<PageState, "id">;
   session: PageState["session"];
@@ -72,6 +113,11 @@ export function checkCandidate(input: {
       whyFlagged: `Check "${result.leaf}" failed on ${route}; ${groundingText(exp.grounding)}.`,
     },
     summary: exp.statement,
+    check: exp.check,
+    ...(input.successCheck && exp.check.type === "fieldRejected"
+      ? { successCheck: input.successCheck }
+      : {}),
+    grounding: candidateGrounding(exp),
   };
 }
 

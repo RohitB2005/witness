@@ -2,7 +2,7 @@
 // Phases run in order and emit typed events. P1 implements preflight → map (crawl + detectors) → report;
 // the AI stages (plan, explore) and verification arrive in P2/P3.
 import type { Browser } from "playwright";
-import { BUDGETS } from "./config/budgets";
+import { BUDGETS, TIME_SPLIT } from "./config/budgets";
 import { launchBrowser } from "./browser/context";
 import { SafetyPolicy } from "./browser/policy";
 import type { SecretVault } from "./browser/vault";
@@ -14,12 +14,18 @@ import { fanOut, log, type EventSink, type Phase } from "./events";
 import { newRunId } from "./ids";
 import { preflight } from "./preflight/preflight";
 import { EvidenceWriter } from "./record/evidence";
-import { buildFindings } from "./report/findings";
+import { buildFindings, compareFindings } from "./report/findings";
+import { writeFindings, type WriterMetrics } from "./report/writer";
+import { uxReview } from "./report/ux";
 import { readinessVerdict } from "./report/verdict";
 import type { RunStore } from "./store/run-store";
-import type { Candidate, Journey, RunResult, ScanConfig } from "./types";
+import type { Candidate, Journey, PageState, RunResult, ScanConfig } from "./types";
 import { runAiStages, type AiStagesOutput } from "./ai-stages";
 import type { Models } from "./llm/settings";
+import { StateRegistry } from "./explore/states";
+import { verify, type VerifyOutput } from "./verify";
+import { runProbes, type ProbeResult } from "./probes";
+import { injectionNotes } from "./report/notes";
 
 export * from "./types";
 export * from "./events";
@@ -31,6 +37,9 @@ export { SafetyPolicy } from "./browser/policy";
 export { JsonRunStore } from "./store/json-store";
 export type { RunStore, Suppression, RunSummary } from "./store/run-store";
 export { renderMarkdown } from "./report/markdown";
+export { renderHtml } from "./report/html";
+export { exportTests } from "./export/playwright";
+export { writeRunExports, type ExportFormat } from "./export/write";
 export { readinessVerdict } from "./report/verdict";
 export { newRunId, RUN_ID_PATTERN } from "./ids";
 
@@ -38,7 +47,7 @@ export { llmSettingsFromEnv, createModels, LlmConfigError } from "./llm/settings
 export type { LlmSettings, Models } from "./llm/settings";
 export { CheckSchema as StoredCheckSchema, CHECK_LANGUAGE_DOC } from "./oracle/language";
 
-export const ENGINE_PHASE = "P2-ai-exploration" as const;
+export const ENGINE_PHASE = "P3-verification" as const;
 
 export interface RunScanDeps {
   store: RunStore;
@@ -135,6 +144,7 @@ export async function runScan(config: ScanConfig, deps: RunScanDeps): Promise<Ru
       pageBudget: budget.pages,
       deadline: started + budget.wallClockMs - 30_000, // keep time to write the report
       session: pre.session?.storageState,
+      landingUrl: pre.session?.landingUrl,
     });
     for (const e of crawled.detectorErrors)
       log(sink, "warn", `${e.detectorId} failed on a page: ${e.message}`);
@@ -166,7 +176,15 @@ export async function runScan(config: ScanConfig, deps: RunScanDeps): Promise<Ru
       cookies: pre.cookies,
       evidenceId: pre.headersEvidenceId,
     })) {
-      candidates.push(toCandidate(draft, siteState));
+      // Preflight reads cookies after logging in, so a cookie finding is re-checked logged in too.
+      const cookie =
+        draft.signature.kind === "detector" && draft.signature.key.startsWith("cookie|");
+      candidates.push(
+        toCandidate(draft, {
+          ...siteState,
+          session: cookie && pre.session ? "authenticated" : "anonymous",
+        }),
+      );
     }
 
     for (const c of candidates) {
@@ -175,6 +193,35 @@ export async function runScan(config: ScanConfig, deps: RunScanDeps): Promise<Ru
         candidate: { id: c.id, category: c.category, summary: c.summary, route: c.route },
       });
     }
+
+    // ---- Automatic probes (sort, sweep, reflected input) run alongside the AI stages: their own
+    // read-only browsers, no LLM (D46).
+    const registry = new StateRegistry(crawled.states);
+    const probing: Promise<ProbeResult | undefined> = runProbes({
+      browser,
+      policy,
+      evidence,
+      store: deps.store,
+      runId,
+      vault: deps.vault,
+      sink,
+      mode: config.mode,
+      viewport: config.viewport,
+      mobileViewport: config.mobileViewport,
+      credentials: config.credentials,
+      session: pre.session?.storageState,
+      states: registry,
+      crawl: {
+        states: crawled.states,
+        snapshots: crawled.snapshots,
+        linkUrls: crawled.links.map((l) => l.url),
+      },
+      deadline: started + Math.round(budget.wallClockMs * TIME_SPLIT.edgeEnd),
+    }).catch((err: unknown) => {
+      if (err instanceof Error && err.name === "ReplayGuardError") throw err;
+      log(sink, "warn", `The automatic checks failed: ${String(err).split("\n")[0]}`);
+      return undefined;
+    });
 
     // ---- AI stages: plan → explore → edge inputs. Any failure degrades to deterministic findings (NFR-3).
     let aiStagesSkipped: string | undefined;
@@ -198,7 +245,8 @@ export async function runScan(config: ScanConfig, deps: RunScanDeps): Promise<Ru
             sink,
             pre,
             crawled,
-            crawlCandidates: candidates,
+            states: registry,
+            crawlCandidates: [...candidates],
             models: deps.models,
             cacheDir: deps.llmCacheDir ?? ".witness-cache",
             costCapUsd: Math.min(budget.llmUsd, deps.maxCostUsd ?? Infinity),
@@ -217,16 +265,94 @@ export async function runScan(config: ScanConfig, deps: RunScanDeps): Promise<Ru
         }
       }
     }
-    const journeys = ai?.journeys ?? [];
+    const probes = await probing;
+    if (probes) candidates.push(...probes.candidates);
+    const journeys = [...(ai?.journeys ?? []), ...(probes?.journeys ?? [])];
+    const allStates = [...crawled.states, ...registry.added];
 
-    // ---- Report
+    // ---- Verify: evidence, replay (no LLM), judge, skeptic, suppression → tiers (FR-8)
+    phase("verify");
+    let verification: VerifyOutput | undefined;
+    try {
+      verification = await verify({
+        candidates,
+        journeys,
+        states: allStates,
+        pipeline: config.pipeline,
+        gateway: ai?.gateway,
+        replay: {
+          browser,
+          policy,
+          evidence,
+          store: deps.store,
+          runId,
+          vault: deps.vault,
+          sink,
+          mode: config.mode,
+          viewport: config.viewport,
+          mobileViewport: config.mobileViewport,
+          credentials: config.credentials,
+          loginUrl: pre.loginUrl,
+          states: registry,
+        },
+        deadline: started + budget.wallClockMs - TIME_SPLIT.reportReserveMs,
+        suppressions: await deps.store.getSuppressions(origin).catch(() => []),
+      });
+    } catch (err) {
+      if (
+        err instanceof Error &&
+        (err.name === "SecretLeakError" || err.name === "ReplayGuardError")
+      )
+        throw err;
+      log(
+        sink,
+        "warn",
+        `Verification stopped with an error (${err instanceof Error ? err.message.split("\n")[0] : String(err)}); findings are reported as not verified.`,
+      );
+    }
+
+    // ---- Report: findings, then the writer (fact-checked) and the UX reviewer, side by side
     phase("report");
-    const findings = buildFindings(candidates, {
+    const buildCtx = {
       accountLabel: credentials ? `the account ${credentials.username}` : undefined,
       mobileViewport: config.mobileViewport,
       pipeline: config.pipeline,
       journeys,
-    });
+      verdicts: verification?.verdicts,
+    };
+    const findings = buildFindings(candidates, buildCtx);
+    const gateway = ai?.gateway;
+    const reportDeadline = started + budget.wallClockMs - 3_000;
+    let writer: WriterMetrics | undefined;
+    const reportMetrics: Record<string, number> = {};
+    if (gateway && config.pipeline !== "deterministic") {
+      const uxPages = keyPages(crawled, journeys).map((state) => ({
+        state,
+        snapshot: crawled.snapshots.get(state.id) ?? "",
+      }));
+      const [w, ux] = await Promise.all([
+        writeFindings(
+          gateway,
+          findings.filter((f) => f.kind === "bug" && f.tier !== "discarded").slice(0, 16),
+          reportDeadline,
+        ).catch(() => undefined),
+        config.budget === "quick" || Date.now() > reportDeadline - 15_000
+          ? undefined
+          : uxReview(gateway, uxPages).catch(() => undefined),
+      ]);
+      writer = w;
+      if (ux) {
+        findings.push(...buildFindings(ux.candidates, buildCtx));
+        findings.sort(compareFindings);
+        reportMetrics["ux.proposed"] = ux.proposed;
+        reportMetrics["ux.dropped"] = ux.dropped;
+      }
+      if (writer) {
+        reportMetrics["reporter.written"] = writer.written;
+        reportMetrics["reporter.factCheckFailures"] = writer.factCheckFailures;
+        reportMetrics["reporter.templateFallbacks"] = writer.templateFallbacks;
+      }
+    }
     for (const f of findings) {
       sink({
         t: "finding",
@@ -243,11 +369,19 @@ export async function runScan(config: ScanConfig, deps: RunScanDeps): Promise<Ru
       journeys,
       aiStagesSkipped,
     });
-    const journeysAttempted = journeys.some((j) => (j.steps?.length ?? 0) > 0);
+    notTested.push(...(probes?.notTested ?? []));
+    const notReplayed = verification?.funnel["verify.notReplayed"] ?? 0;
+    if (notReplayed && config.pipeline !== "ai-no-verify")
+      notTested.push(
+        `${notReplayed} finding${notReplayed === 1 ? " wasn't" : "s weren't"} replayed, because the time for verifying ran out; ${notReplayed === 1 ? "it is" : "they are"} marked Needs review.`,
+      );
+    const journeysAttempted = journeys.some((j) => !j.automatic && (j.steps?.length ?? 0) > 0);
+    await ai?.flushLogs();
+    const llm = ai?.gateway.totals;
     const result: RunResult = {
       ...base,
       journeys,
-      states: [...crawled.states, ...(ai?.addedStates ?? [])],
+      states: allStates,
       finishedAt: new Date().toISOString(),
       verdict: readinessVerdict({ findings, journeys, journeysAttempted }),
       notTested,
@@ -255,15 +389,31 @@ export async function runScan(config: ScanConfig, deps: RunScanDeps): Promise<Ru
       stats: stats({
         pages: crawled.states.length,
         steps: ai?.steps ?? 0,
-        llmCalls: ai?.llm.calls ?? 0,
-        inputTokens: ai?.llm.inputTokens ?? 0,
-        outputTokens: ai?.llm.outputTokens ?? 0,
-        costUsd: ai?.llm.costUsd ?? 0,
+        llmCalls: llm?.calls ?? 0,
+        inputTokens: llm?.inputTokens ?? 0,
+        outputTokens: llm?.outputTokens ?? 0,
+        costUsd: llm?.costUsd ?? 0,
         candidates: candidates.length,
+        discarded: findings.filter((f) => f.tier === "discarded").length,
         capsHit,
       }),
       aiStagesSkipped,
-      aiMetrics: ai?.metrics,
+      loginPath: pre.loginUrl ? new URL(pre.loginUrl).pathname : undefined,
+      notes: injectionNotes(
+        crawled.states.map((s) => ({
+          route: s.routePattern,
+          snapshot: crawled.snapshots.get(s.id) ?? "",
+        })),
+      ),
+      aiMetrics:
+        ai?.metrics || verification || probes
+          ? {
+              ...(ai?.metrics ?? {}),
+              ...(probes?.metrics ?? {}),
+              ...(verification?.funnel ?? {}),
+              ...reportMetrics,
+            }
+          : undefined,
       appModel: ai?.appModel,
     };
     await deps.store.saveResult(result);
@@ -289,6 +439,23 @@ export async function runScan(config: ScanConfig, deps: RunScanDeps): Promise<Ru
   }
 }
 
+/** Up to 6 key pages for the UX reviewer: the start page, then pages on core journeys, then the rest. */
+function keyPages(crawled: { states: PageState[] }, journeys: Journey[]): PageState[] {
+  const core = new Set(
+    journeys
+      .filter((j) => j.priority === "core" && !j.automatic)
+      .flatMap((j) => (j.steps ?? []).map((s) => new URL(s.urlAfter).pathname)),
+  );
+  const ok = crawled.states.filter((s) => (s.status ?? 200) < 400 || s.appRendered);
+  const ordered = [
+    ...ok.slice(0, 1),
+    ...ok.filter((s) => core.has(new URL(s.url).pathname)),
+    ...ok,
+  ];
+  const seen = new Set<string>();
+  return ordered.filter((s) => !seen.has(s.routePattern) && !!seen.add(s.routePattern)).slice(0, 6);
+}
+
 export function whatWasntTested(i: {
   loginDetected: boolean;
   loggedIn: boolean;
@@ -300,7 +467,7 @@ export function whatWasntTested(i: {
 }): string[] {
   const out: string[] = [];
   const journeys = i.journeys ?? [];
-  if (!journeys.some((j) => (j.steps?.length ?? 0) > 0)) {
+  if (!journeys.some((j) => !j.automatic && (j.steps?.length ?? 0) > 0)) {
     out.push(
       "User journeys (filling forms, buttons, multi-step flows): only page loads were checked in this run.",
     );

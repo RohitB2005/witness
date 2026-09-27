@@ -117,7 +117,7 @@ const explorerReply = (prompt: string): MockReply => {
   const title = /Title: (.+)/.exec(prompt)?.[1] ?? "";
   const history = /<recent_steps>([\s\S]*?)<\/recent_steps>/.exec(prompt)?.[1] ?? "";
   const ref = (re: RegExp) => {
-    const line = prompt.split("\n").find((l) => re.test(l)) ?? "";
+    const line = prompt.split("\n").find((l) => re.test(l) && /\[ref=/.test(l)) ?? "";
     return /\[ref=([a-z0-9]+)\]/.exec(line)?.[1] ?? "e0";
   };
   const pending = /(ex_[a-z0-9]+) \[not checked yet\]/.exec(prompt)?.[1];
@@ -211,10 +211,17 @@ describe("AI pipeline (mock models)", () => {
 
       // Planner output was validated by code.
       expect(result.appModel?.domain).toBe("library");
-      expect(result.journeys.map((j) => j.title)).toEqual([
+      expect(result.journeys.filter((j) => !j.automatic).map((j) => j.title)).toEqual([
         "Sort books by price",
         "Request a book",
       ]);
+      // The automatic probes ran alongside (D46), and the sort probe found the same sort bug on its own.
+      expect(result.journeys.filter((j) => j.automatic).map((j) => j.title)).toContain(
+        "Sort controls (automatic check)",
+      );
+      expect(
+        result.findings.some((f) => f.source.kind === "detector" && f.source.id === "DET-SORT"),
+      ).toBe(true);
       expect(result.aiMetrics).toMatchObject({
         "plan.journeysDroppedRoute": 1,
         "plan.journeysInvalid": 1,
@@ -229,12 +236,15 @@ describe("AI pipeline (mock models)", () => {
         verified: true,
       });
 
-      // The sort bug: a failed `ordered` check, grounded in on-screen text, capped at Likely until replay.
+      // The sort bug: a failed `ordered` check, grounded in on-screen text, reproduced by replay → Confirmed.
       const sort = result.findings.find(
         (f) => f.source.kind === "check" && f.source.id === "ordered",
       );
       expect(sort, JSON.stringify(result.findings.map((f) => f.title))).toBeDefined();
-      expect(sort!.tier).toBe("likely");
+      expect(sort!.tier).toBe("confirmed");
+      expect(sort!.replay).toMatchObject({ attempts: 2, reproduced: 2 });
+      expect(sort!.stageTiers).toEqual({ aiNoVerify: "confirmed", noSkeptic: "confirmed" });
+      expect(sort!.repro?.check?.type).toBe("ordered");
       expect(sort!.severity).toBe("high"); // core journey, wrong-info
       expect(sort!.route).toBe("/books");
       expect(sort!.steps).toContain('Choose "Price: low to high" in the "Sort by" dropdown');
@@ -326,7 +336,7 @@ describe("AI pipeline (mock models)", () => {
       const { result } = await scan("full", broken);
       expect(result.error).toBeUndefined();
       expect(result.aiStagesSkipped).toMatch(/^Planning failed \(invalid\)/);
-      expect(result.journeys).toEqual([]);
+      expect(result.journeys.filter((j) => !j.automatic)).toEqual([]);
       expect(result.stats.pages).toBeGreaterThan(0);
       expect(result.notTested[0]).toMatch(/only page loads/);
     },

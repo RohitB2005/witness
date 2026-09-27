@@ -16,115 +16,48 @@
       "runs": 5,
       "recall": {
         "confirmed": [
-          0.16666666666666666,
-          0.16666666666666666,
-          0.16666666666666666,
-          0.16666666666666666,
+          0.16666666666666666, 0.16666666666666666, 0.16666666666666666, 0.16666666666666666,
           0.16666666666666666
         ],
         "confirmedLikely": [
-          0.5555555555555556,
-          0.6666666666666666,
-          0.6111111111111112,
-          0.5,
-          0.7222222222222222
+          0.5555555555555556, 0.6666666666666666, 0.6111111111111112, 0.5, 0.7222222222222222
         ],
-        "all": [
-          0.6666666666666666,
-          0.6666666666666666,
-          0.6111111111111112,
-          0.5,
-          0.7222222222222222
-        ]
+        "all": [0.6666666666666666, 0.6666666666666666, 0.6111111111111112, 0.5, 0.7222222222222222]
       },
       "precision": {
         "bugs": [
-          0.5833333333333334,
-          0.6,
-          0.5333333333333333,
-          0.8571428571428571,
-          0.5555555555555556
+          0.5833333333333334, 0.6, 0.5333333333333333, 0.8571428571428571, 0.5555555555555556
         ],
-        "improvements": [
-          1,
-          1,
-          1,
-          1,
-          1
-        ]
+        "improvements": [1, 1, 1, 1, 1]
       },
       "cleanFalsePositives": [],
       "tierAccuracy": [
-        0.4166666666666667,
-        0.5,
-        0.45454545454545453,
-        0.4444444444444444,
-        0.46153846153846156
+        0.4166666666666667, 0.5, 0.45454545454545453, 0.4444444444444444, 0.46153846153846156
       ],
-      "minutes": [
-        7.45,
-        7.65,
-        7.54,
-        7.87,
-        7.04
-      ],
+      "minutes": [7.45, 7.65, 7.54, 7.87, 7.04],
       "costUsd": [
-        0.6068865000000002,
-        0.5635728000000001,
-        0.5167578999999998,
-        0.49793550000000003,
+        0.6068865000000002, 0.5635728000000001, 0.5167578999999998, 0.49793550000000003,
         0.5122980000000003
       ],
-      "llmCalls": [
-        97,
-        88,
-        90,
-        85,
-        92
-      ],
+      "llmCalls": [97, 88, 90, 85, 92],
       "stabilityJaccard": 0.8384615384615385
     },
     "deterministic": {
       "runs": 2,
       "recall": {
-        "confirmed": [
-          0.16666666666666666
-        ],
-        "confirmedLikely": [
-          0.3333333333333333
-        ],
-        "all": [
-          0.3333333333333333
-        ]
+        "confirmed": [0.16666666666666666],
+        "confirmedLikely": [0.3333333333333333],
+        "all": [0.3333333333333333]
       },
       "precision": {
-        "bugs": [
-          1,
-          null
-        ],
-        "improvements": [
-          1,
-          1
-        ]
+        "bugs": [1, null],
+        "improvements": [1, 1]
       },
-      "cleanFalsePositives": [
-        0
-      ],
-      "tierAccuracy": [
-        0.5
-      ],
-      "minutes": [
-        0.58,
-        0.53
-      ],
-      "costUsd": [
-        0,
-        0
-      ],
-      "llmCalls": [
-        0,
-        0
-      ],
+      "cleanFalsePositives": [0],
+      "tierAccuracy": [0.5],
+      "minutes": [0.58, 0.53],
+      "costUsd": [0, 0],
+      "llmCalls": [0, 0],
       "stabilityJaccard": null
     }
   },
@@ -142,235 +75,109 @@
   "perBug": [
     {
       "id": "B01",
-      "found": [
-        false,
-        false,
-        false,
-        false,
-        false,
-        false
-      ],
+      "found": [false, false, false, false, false, false],
       "bestTier": null,
       "expectedTier": "Confirmed"
     },
     {
       "id": "B02",
-      "found": [
-        false,
-        false,
-        false,
-        false,
-        false,
-        false
-      ],
+      "found": [false, false, false, false, false, false],
       "bestTier": null,
       "expectedTier": "Confirmed"
     },
     {
       "id": "B03",
-      "found": [
-        true,
-        true,
-        false,
-        true,
-        true,
-        false
-      ],
+      "found": [true, true, false, true, true, false],
       "bestTier": "likely",
       "expectedTier": "Likely"
     },
     {
       "id": "B04",
-      "found": [
-        true,
-        true,
-        true,
-        false,
-        true,
-        false
-      ],
+      "found": [true, true, true, false, true, false],
       "bestTier": "likely",
       "expectedTier": "Likely"
     },
     {
       "id": "B05",
-      "found": [
-        true,
-        true,
-        true,
-        false,
-        true,
-        false
-      ],
+      "found": [true, true, true, false, true, false],
       "bestTier": "likely",
       "expectedTier": "Confirmed"
     },
     {
       "id": "B06",
-      "found": [
-        true,
-        true,
-        true,
-        true,
-        true,
-        false
-      ],
+      "found": [true, true, true, true, true, false],
       "bestTier": "likely",
       "expectedTier": "Confirmed"
     },
     {
       "id": "B07",
-      "found": [
-        false,
-        false,
-        false,
-        false,
-        false,
-        false
-      ],
+      "found": [false, false, false, false, false, false],
       "bestTier": null,
       "expectedTier": "Likely"
     },
     {
       "id": "B08",
-      "found": [
-        true,
-        true,
-        true,
-        true,
-        true,
-        false
-      ],
+      "found": [true, true, true, true, true, false],
       "bestTier": "likely",
       "expectedTier": "Confirmed"
     },
     {
       "id": "B09",
-      "found": [
-        true,
-        true,
-        true,
-        true,
-        true,
-        true
-      ],
+      "found": [true, true, true, true, true, true],
       "bestTier": "likely",
       "expectedTier": "Confirmed"
     },
     {
       "id": "B10",
-      "found": [
-        true,
-        true,
-        true,
-        true,
-        true,
-        true
-      ],
+      "found": [true, true, true, true, true, true],
       "bestTier": "likely",
       "expectedTier": "Confirmed"
     },
     {
       "id": "B11",
-      "found": [
-        false,
-        false,
-        false,
-        false,
-        false,
-        false
-      ],
+      "found": [false, false, false, false, false, false],
       "bestTier": null,
       "expectedTier": "Confirmed"
     },
     {
       "id": "B12",
-      "found": [
-        true,
-        true,
-        true,
-        true,
-        true,
-        true
-      ],
+      "found": [true, true, true, true, true, true],
       "bestTier": "confirmed",
       "expectedTier": "Confirmed"
     },
     {
       "id": "B13",
-      "found": [
-        true,
-        true,
-        true,
-        true,
-        true,
-        true
-      ],
+      "found": [true, true, true, true, true, true],
       "bestTier": "confirmed",
       "expectedTier": "Confirmed"
     },
     {
       "id": "B14",
-      "found": [
-        true,
-        true,
-        true,
-        true,
-        true,
-        true
-      ],
+      "found": [true, true, true, true, true, true],
       "bestTier": "confirmed",
       "expectedTier": "Confirmed"
     },
     {
       "id": "B15",
-      "found": [
-        false,
-        false,
-        false,
-        false,
-        false,
-        false
-      ],
+      "found": [false, false, false, false, false, false],
       "bestTier": null,
       "expectedTier": "Confirmed"
     },
     {
       "id": "B16",
-      "found": [
-        true,
-        true,
-        true,
-        true,
-        true,
-        true
-      ],
+      "found": [true, true, true, true, true, true],
       "bestTier": "likely",
       "expectedTier": "Confirmed"
     },
     {
       "id": "B17",
-      "found": [
-        true,
-        true,
-        true,
-        false,
-        true,
-        false
-      ],
+      "found": [true, true, true, false, true, false],
       "bestTier": "likely",
       "expectedTier": "Likely"
     },
     {
       "id": "B18",
-      "found": [
-        false,
-        false,
-        false,
-        false,
-        true,
-        false
-      ],
+      "found": [false, false, false, false, true, false],
       "bestTier": "likely",
       "expectedTier": "Needs review"
     }
@@ -819,9 +626,7 @@
         }
       },
       "cleanFalsePositives": null,
-      "decoysFlagged": [
-        "D03"
-      ],
+      "decoysFlagged": ["D03"],
       "tierAccuracy": 0.4166666666666667,
       "unlabelled": 0,
       "minutes": 7.44625,
@@ -1275,9 +1080,7 @@
         }
       },
       "cleanFalsePositives": null,
-      "decoysFlagged": [
-        "D03"
-      ],
+      "decoysFlagged": ["D03"],
       "tierAccuracy": 0.5,
       "unlabelled": 0,
       "minutes": 7.651133333333333,

@@ -59,6 +59,11 @@ export const PageStateSchema = z.object({
   structureHash: z.string(),
   title: z.string(),
   status: z.number().int().optional(), // HTTP status of the document, when it was a navigation
+  /**
+   * The document had an error status but the app rendered a working page anyway (single-page apps on static
+   * hosts often answer deep links with 404). Crawled and probed like a normal page (P3).
+   */
+  appRendered: z.boolean().optional(),
   session: z.enum(["anonymous", "authenticated"]),
   evidenceIds: z.array(z.string()),
   discoveredBy: z.enum(["crawl", "agent"]),
@@ -162,8 +167,10 @@ export const ExpectationSchema = z.object({
   category: ExpectationCategorySchema.optional(),
   /** Plain-language moment to evaluate it, for the Explorer. */
   when: z.string().optional(),
-  /** Who wrote it: the Planner, the Explorer mid-journey, or the edge-input runner. */
-  origin: z.enum(["plan", "agent", "edge"]).optional(),
+  /** Who wrote it: the Planner, the Explorer mid-journey, the edge-input runner, or an automatic probe. */
+  origin: z.enum(["plan", "agent", "edge", "probe"]).optional(),
+  /** An input rule an AI proposed (edge-input generator) rather than Witness's fixed set (D46 cap). */
+  aiGuessed: z.boolean().optional(),
 });
 export type Expectation = z.infer<typeof ExpectationSchema>;
 
@@ -190,6 +197,11 @@ export const JourneySchema = z.object({
   edgeTargets: z.array(z.object({ formRoute: z.string(), formName: z.string() })).optional(),
   /** Steps the Explorer recorded (happy path first, then edge variants). */
   steps: z.array(StepSchema).optional(),
+  /**
+   * An automatic check Witness ran by itself (sort controls, the interaction sweep, reflected input, the
+   * login-message comparison), not a user journey: it never counts as "a journey was exercised" (D16).
+   */
+  automatic: z.boolean().optional(),
 });
 export type Journey = z.infer<typeof JourneySchema>;
 
@@ -223,6 +235,8 @@ export const DetectorIdSchema = z.enum([
   "DET-OVERFLOW",
   "DET-XSS",
   "DET-SECHEADERS",
+  "DET-TOTALS",
+  "DET-SORT",
 ]);
 export type DetectorId = z.infer<typeof DetectorIdSchema>;
 
@@ -302,6 +316,26 @@ export const CandidateSchema = z.object({
   signals: SignalsSchema,
   detail: CandidateDetailSchema,
   summary: z.string(),
+  /**
+   * The deterministic check whose failure this candidate is: a failed expectation's check, or the check a
+   * detector's finding is equivalent to (DET-TOTALS, DET-SORT, DET-XSS). Replay re-evaluates it at the end of
+   * the steps; the test exporter asserts it (P3).
+   */
+  check: CheckSchema.optional(),
+  /** For a `fieldRejected` check: the form's success signature when it ran (replay passes it again). */
+  successCheck: CheckSchema.optional(),
+  /** Grounding facts for tiering, copied from the expectation (or a detector's on-screen labels). */
+  grounding: z
+    .object({
+      kind: z.enum(["ui_text", "requirement", "convention"]),
+      verified: z.boolean(),
+      quote: z.string().optional(),
+      /** The check only asserts that its own grounding quote is visible (can't ground itself, P3). */
+      selfReferential: z.boolean().optional(),
+      /** An AI-guessed input rule not stated on the page (capped at Needs review, D46). */
+      aiGuessedRule: z.boolean().optional(),
+    })
+    .optional(),
 });
 export type Candidate = z.infer<typeof CandidateSchema>;
 
@@ -342,9 +376,48 @@ export const FindingSchema = z.object({
   skeptic: z
     .object({ verdict: z.enum(["bug_likely", "unclear", "benign_likely"]), reason: z.string() })
     .optional(),
+  judge: z
+    .object({
+      verdict: z.enum(["bug", "not_bug", "unclear"]),
+      confidence: z.number().min(0).max(1),
+      notes: z.string().optional(),
+    })
+    .optional(),
   signals: SignalsSchema,
   testFile: z.string().optional(),
   suppressed: z.object({ reason: z.string(), at: z.string() }).optional(),
+  /**
+   * The tier this finding would have had at earlier pipeline stages, so ablations A1 (no verification) and
+   * A3 (no skeptic) can be scored from the same run (DEVLOG D51).
+   */
+  stageTiers: z
+    .object({
+      aiNoVerify: z.union([TierSchema, ImprovementTierSchema]),
+      noSkeptic: z.union([TierSchema, ImprovementTierSchema]),
+    })
+    .optional(),
+  /** How to reproduce it without the LLM: the representative candidate's replay facts (exporter input). */
+  repro: z
+    .object({
+      session: z.enum(["anonymous", "authenticated"]),
+      viewport: z.enum(["desktop", "mobile"]),
+      url: z.string(),
+      journeyId: z.string().optional(),
+      stepIds: z.array(z.string()),
+      signature: SignatureSchema,
+      check: CheckSchema.optional(),
+      successCheck: CheckSchema.optional(),
+    })
+    .optional(),
+  /** Set when the writer's wording replaced the deterministic template (fact-checked). */
+  wording: z.enum(["template", "writer"]).optional(),
+  /**
+   * The deterministic wording (D22), kept when the writer rephrased the finding. The eval scorer matches on
+   * this, so scores don't depend on the writer's word choice (DEVLOG D53).
+   */
+  template: z
+    .object({ title: z.string(), impact: z.string(), expected: z.string(), actual: z.string() })
+    .optional(),
 });
 export type Finding = z.infer<typeof FindingSchema>;
 
@@ -407,6 +480,10 @@ export const RunResultSchema = z.object({
   aiStagesSkipped: z.string().optional(),
   /** What the AI stages did, for the reliability measures in AI_AGENT_SPEC.md §8 (counts and ratios). */
   aiMetrics: z.record(z.string(), z.number()).optional(),
+  /** Path of the login page found in preflight (exported tests log in there). */
+  loginPath: z.string().optional(),
+  /** Short plain-language notes for the report (e.g. page text aimed at AI tools that was ignored, D44). */
+  notes: z.array(z.string()).optional(),
   /** The Planner's reading of the app (purpose, domain), shown in the report. */
   appModel: z
     .object({
