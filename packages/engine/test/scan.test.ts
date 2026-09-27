@@ -171,3 +171,48 @@ describe("crawl budget", () => {
     expect(out.notVisited.length).toBeGreaterThan(0);
   });
 });
+
+describe("cancelling a scan", () => {
+  it("saves the run as cancelled, with no verdict, and the abandoned work stops writing", async () => {
+    const { mkdtemp, readFile, rm } = await import("node:fs/promises");
+    const { tmpdir } = await import("node:os");
+    const path = await import("node:path");
+    const { JsonRunStore } = await import("../src/store/json-store");
+    const dir = await mkdtemp(path.join(tmpdir(), "witness-cancel-"));
+    const store = new JsonRunStore({
+      runsDir: path.join(dir, "runs"),
+      dataDir: path.join(dir, "data"),
+    });
+    const controller = new AbortController();
+    const seen: string[] = [];
+    const config = resolveScanConfig({
+      url: srv.url("/"),
+      pipeline: "deterministic",
+      budget: "quick",
+    });
+    const result = await runScan(config, {
+      store,
+      vault: new SecretVault(),
+      browser: h.browser,
+      signal: controller.signal,
+      sink: (e) => {
+        seen.push(e.t);
+        if (e.t === "page") controller.abort();
+      },
+    });
+    expect(result.cancelled).toBe(true);
+    expect(result.error).toBe("Cancelled by you.");
+    expect(result.verdict.reason).toContain("cancelled");
+    expect(seen.at(-1)).toBe("done");
+    expect((await store.getResult(result.runId))?.cancelled).toBe(true);
+    // Give the abandoned work time to fail; nothing more may reach the run's files.
+    await new Promise((r) => setTimeout(r, 1_500));
+    const events = (await readFile(path.join(store.runDir(result.runId), "events.ndjson"), "utf8"))
+      .trim()
+      .split("\n")
+      .map((l) => JSON.parse(l) as { t: string });
+    expect(events.at(-1)?.t).toBe("done");
+    expect((await store.getResult(result.runId))?.cancelled).toBe(true);
+    await rm(dir, { recursive: true, force: true });
+  });
+});

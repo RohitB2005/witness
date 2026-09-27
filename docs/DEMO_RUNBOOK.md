@@ -10,8 +10,9 @@ The live demo must work first time on the presentation laptop, with honest fallb
 | `pnpm bench:reset` | `POST /__bench/reset` (restores seed data) |
 | `pnpm bench:fix B01` / `pnpm bench:break B01` | Toggle one bug flag at runtime (Node script, not curl — PowerShell aliases `curl`) |
 | `pnpm demo:test <path-to-spec>` | Runs one exported Playwright test against the bench with `WITNESS_BASE_URL` set |
-| `pnpm demo:replay <runId>` | Re-runs a recorded scan with `--llm-cache replay` (works offline) |
-| `pnpm demo:check` | Pre-flight: Node version, Playwright Chromium installed, API key present, provider reachable, bench reachable, disk space, cache present for the rehearsal run |
+| `pnpm demo:replay <runId>` | Resets the bench's data, then re-runs a recorded scan with `--llm-cache replay` (works offline). Starts in the dashboard if Witness is running (labelled "AI answers replayed from cache"), else in the terminal. Needs a run recorded with the cache on (`rw`) after D86 |
+| `pnpm demo:check [runId]` | Pre-flight: Node version, Playwright Chromium installed, API key present, provider reachable, **credit balance** (warns under $2), bench reachable, Witness server up and dashboard built, **"Not a bug" marks on the bench** (a rehearsal click would hide that bug in the demo), disk space, and how many of the rehearsal run's AI answers are in the cache |
+| `pnpm dev` | Development: server (restarts on change) + dashboard with hot reload on :5317 |
 
 ## 2. The day before
 
@@ -32,7 +33,7 @@ The live demo must work first time on the presentation laptop, with honest fallb
 
 ## 4. Ten minutes before
 
-1. `pnpm demo:check` → all green.
+1. `pnpm demo:check <rehearsal run id>` → all green, and no "Not a bug" marks on the bench.
 2. `pnpm demo:up`; `pnpm bench:reset`; confirm B01 is on (`GET /__bench/bugs`).
 3. Open tabs: Witness *New scan* with the bench URL pre-filled (`http://localhost:5180`), mode Staging, test account filled, budget Standard; the SauceDemo report; the Evaluation page.
 4. Terminal open in the repo root, command typed but not run: `pnpm demo:test <path printed by the last rehearsal>` (the new run's path will be similar; copy from the card's *Download test* button during the demo).
@@ -48,6 +49,8 @@ The live demo must work first time on the presentation laptop, with honest fallb
 | ~5:45 | *Download test* → terminal → `pnpm demo:test …` (red) → `pnpm bench:fix B01` → run again (green) | "Every confirmed bug becomes a test that stays red until it's fixed." |
 | ~6:15 | Improvements tab | Accessibility, a slow API, one labelled UX suggestion |
 | after talk | `pnpm bench:break B01`; `pnpm bench:reset` | — |
+
+**Measured (P4 gate, 28 Sep):** a Standard scan with `SCOPE.md` from the UI took **7:56**. The 8-minute cap is hard: the scan always ends with a report, which lists what the cap cut. The demo preset is decided in P5.
 
 **Target:** the demo scan finishes within 5 minutes on the presentation laptop. If rehearsals run longer, add a `demo` budget preset limited to core journeys rather than rushing the talk. If it's still running at ~5:00, talk through the architecture slide and come back; it's hard-capped at 8 minutes.
 

@@ -18,10 +18,20 @@ export const BUDGETS: Record<BudgetPreset, Budget> = {
 
 /**
  * How a run's wall-clock budget is shared (D38, revised in P3 for verification). Exploring stops starting
- * journeys at `exploreEnd`, edge inputs stop at `edgeEnd`, replays and the judge/skeptic stop starting at
- * `wall − reportReserveMs`, and the report (writer, UX review) gets the rest.
+ * journeys at `exploreEnd`, edge inputs stop at `edgeEnd`, replays and the judge/skeptic stop at
+ * `wall − reportReserveMs`, and the report (writer, UX review) gets the rest. The cap is hard (D78): every
+ * AI call and replay is cut off at its deadline, and the last `finalizeMs` is kept for building and saving
+ * the result, so a run never finishes after `wall`.
  */
-export const TIME_SPLIT = { exploreEnd: 0.5, edgeEnd: 0.64, reportReserveMs: 25_000 } as const;
+export const TIME_SPLIT = {
+  exploreEnd: 0.5,
+  edgeEnd: 0.64,
+  reportReserveMs: 25_000,
+  finalizeMs: 4_000,
+} as const;
+
+/** How long the plan waits for review before it is approved automatically (live view). */
+export const PLAN_AUTO_APPROVE_MS = 10_000;
 
 /** Per-action and per-page time limits (SECURITY.md T9). */
 export const LIMITS = {

@@ -5,7 +5,8 @@
   "type": "module",
   "description": "Witness scanning engine: all logic, framework-free",
   "exports": {
-    ".": "./src/index.ts"
+    ".": "./src/index.ts",
+    "./view": "./src/report/view.ts"
   },
   "main": "./src/index.ts",
   "scripts": {

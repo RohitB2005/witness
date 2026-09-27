@@ -264,7 +264,7 @@ runs/<runId>/
   tests/              # exported Playwright specs
   report.html, report.md
 data/suppressions.json   # [{ origin, fingerprint, reason, createdAt }]
-.witness-cache/          # LLM response cache (git-ignored)
+.witness-cache/v2/       # LLM response cache (git-ignored); keys ignore run-generated IDs (DEVLOG D86)
 ```
 
 `RunStore` interface: `createRun`, `appendEvent`, `putEvidence`, `getEvidence`, `hasEvidence`, `putArtifact`, `saveResult`, `getResult`, `listRuns`, `getSuppressions`, `addSuppression`. Only the JSON implementation is built.
@@ -316,19 +316,20 @@ Universal signatures export as: 5xx → `const res = await page.waitForResponse(
 
 | Method & path | Purpose |
 | --- | --- |
-| `POST /api/scans` | Body: ScanConfig input (+ plaintext password, immediately moved to the in-memory vault). Returns `{ runId }` |
-| `GET /api/scans` | List runs (summary) |
-| `GET /api/scans/:id` | RunResult |
-| `GET /api/scans/:id/events` | SSE stream (replays past events, then live) |
-| `POST /api/scans/:id/plan` | `{ approvedJourneyIds }` |
-| `POST /api/scans/:id/cancel` | Cancel |
-| `GET /api/scans/:id/artifacts/:file` | Screenshot / snapshot (path-traversal safe) |
+| `POST /api/scans` | Body: ScanConfig input (+ plaintext password, immediately moved to the in-memory vault; optional `pipeline` for evaluation runs). Staging mode on a non-local host needs `confirmStagingOnNonLocal: true` (FR-1). Returns `{ runId }` |
+| `GET /api/scans` | `{ live, runs }`: the running scan (if any, with its time and spend caps) and every run's summary |
+| `GET /api/scans/:id` | RunResult (409 while that scan is still running) |
+| `GET /api/scans/:id/events` | SSE: a `hello` event says whether the run is live; then past events, then live ones; `end` when finished. A finished run's stream is its record from `events.ndjson` |
+| `POST /api/scans/:id/plan` | `{ approvedJourneyIds }` (plan review) |
+| `POST /api/scans/:id/cancel` | Cancel: the run is saved as cancelled, with no verdict |
+| `GET /api/scans/:id/artifacts/:file` | Screenshot / snapshot by file name (`ev_….jpg` or `.yaml`; path-traversal safe) |
+| `GET /api/scans/:id/findings/:fid/screenshot` | The finding's first screenshot |
 | `GET /api/scans/:id/export?format=html\|md\|json` | Download report |
 | `GET /api/scans/:id/findings/:fid/test` | Download exported spec |
-| `POST /api/suppressions` | `{ origin, fingerprint, reason }` |
-| `GET /api/eval/latest` | Latest eval summary for the Evaluation page |
+| `POST /api/suppressions`, `GET /api/suppressions?origin=` | "Not a bug": `{ origin, fingerprint, reason }` → `data/suppressions.json` (never `eval/labels.json`) |
+| `GET /api/eval/latest[?path=]` | The newest results folder's first `summary.json`, and the list to switch between |
 
-One scan at a time (return 409 if busy). Bind to `127.0.0.1` only.
+One scan at a time (409 if busy). Bind to `127.0.0.1` only; requests addressed to any host name other than localhost get 403 (DNS rebinding), and so do writes from another site's `Origin`. No CORS headers (DEVLOG D80).
 
 ## 8. Event protocol (SSE `data:` JSON)
 
@@ -337,21 +338,24 @@ type WitnessEvent =
   | { t: "phase"; phase: "preflight" | "map" | "plan" | "explore" | "verify" | "report" | "done"; at: string }
   | { t: "page"; state: Pick<PageState, "id" | "url" | "routePattern" | "title">; thumb?: string }
   | { t: "detector"; candidateId: string; detectorId: string; summary: string }
-  | { t: "plan"; journeys: Journey[]; autoApproveInMs: number }
+  | { t: "plan"; journeys: Journey[]; autoApproveInMs: number }   // > 0: waiting for review (D79)
   | { t: "journey"; journeyId: string; status: Journey["status"] }
   | { t: "step"; step: Pick<Step, "id" | "journeyId" | "index" | "description" | "ok" | "kind">; thumb?: string }
-  | { t: "candidate"; candidate: Pick<Candidate, "id" | "category" | "summary" | "route"> }
+  | { t: "candidate"; candidate: Pick<Candidate, "id" | "category" | "summary" | "route"> & { title?: string } }
   | { t: "verify"; candidateId: string; stage: "evidence" | "replay" | "skeptic" | "tier"; detail: string }
-  | { t: "finding"; finding: Pick<Finding, "id" | "title" | "tier" | "severity" | "kind"> }
-  | { t: "cost"; llmCalls: number; costUsd: number }
+  | { t: "tier"; candidateIds: string[]; tier: Finding["tier"]; reason: string }   // verification's decision
+  | { t: "finding"; finding: Pick<Finding, "id" | "title" | "tier" | "severity" | "kind" | "tierReason" | "candidateIds" | "category"> }
+  | { t: "cost"; llmCalls: number; costUsd: number }   // after every LLM call
   | { t: "log"; level: "info" | "warn" | "error"; message: string }
   | { t: "done"; verdict: RunResult["verdict"] }
   | { t: "error"; message: string };
 ```
 
+`thumb` is a screenshot's file name in the run's `artifacts/` folder. Plain-language labels for phases, tiers, severities and verdicts live in one browser-safe module, `report/view.ts` (`@witness/engine/view`), shared by the HTML and Markdown exports and the dashboard.
+
 ## 9. Dashboard (React + Vite + Tailwind)
 
-Pages: **New scan** (form + mode warning), **Live run** (phase stepper; app map list; plan review with 10 s auto-approve countdown; action log with thumbnails; candidate → tier transitions; cost meter), **Report** (verdict banner, what wasn't tested, Bugs / Improvements / Needs review / Discarded tabs, finding cards, exports), **History**, **Evaluation** (Recharts: recall/precision per pipeline, per-category recall, clean-build FP counts, cost/time). Design: calm, legible, plain-language labels; severity and tier shown with text + colour (never colour alone); readiness verdict readable from across a room.
+Pages: **New scan** (form + mode warning; requirements textarea and file upload; offline cache-replay option), **Live run** (phase stepper in plain words; "Now:" line; plan review with 10 s auto-approve countdown; pages with thumbnails; action log with thumbnails; candidate → tier transitions with the reason; time and spend meters; cancel), **Report** (verdict banner, then Requirements coverage, then Security, then what wasn't tested and what the time cap cut, then Bugs / Needs review / Improvements / Discarded tabs, finding cards, exports), **History** (every run labelled with its date and time; only the running scan says Live), **Evaluation** (plain SVG bars, no chart library: recall and precision per pipeline, per-category recall, per-bug table, clean-build false positives, cost/time). Routing is a 40-line history router (no library). Design: calm, legible, plain-language labels; severity and tier shown with text + colour (never colour alone); readiness verdict readable from across a room.
 
 ## 10. Key decisions (ADR-lite; extend in DEVLOG.md)
 

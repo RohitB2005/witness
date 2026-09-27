@@ -3,8 +3,17 @@
   "version": "0.0.0",
   "private": true,
   "type": "module",
-  "description": "Express REST + SSE server for the dashboard",
+  "description": "Express REST + SSE server for the dashboard (binds 127.0.0.1 only)",
   "scripts": {
+    "start": "tsx src/index.ts",
     "typecheck": "tsc -p tsconfig.json"
+  },
+  "dependencies": {
+    "@witness/engine": "workspace:*",
+    "express": "^5.2.1",
+    "zod": "^4.6.5"
+  },
+  "devDependencies": {
+    "@types/express": "^5.0.6"
   }
 }

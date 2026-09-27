@@ -521,6 +521,8 @@ export const RunResultSchema = z.object({
     discarded: z.number().int(),
     durationMs: z.number(),
     capsHit: z.array(z.string()),
+    /** AI calls answered from the response cache, not the provider (so the report can say so). */
+    llmCacheHits: z.number().int().optional(),
   }),
   aiStagesSkipped: z.string().optional(),
   /** What the AI stages did, for the reliability measures in AI_AGENT_SPEC.md §8 (counts and ratios). */
@@ -547,5 +549,16 @@ export const RunResultSchema = z.object({
     })
     .optional(),
   error: z.string().optional(), // set when the scan stopped early (e.g. preflight failed)
+  /** The person stopped the scan; there is no verdict to read. */
+  cancelled: z.boolean().optional(),
+  /** The wall-clock cap (hard, D78) and what it cut, in plain language. */
+  timeCap: z
+    .object({
+      capMs: z.number(),
+      /** True when the cap stopped or skipped any work. */
+      hit: z.boolean(),
+      cut: z.array(z.string()),
+    })
+    .optional(),
 });
 export type RunResult = z.infer<typeof RunResultSchema>;

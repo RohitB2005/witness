@@ -46,11 +46,7 @@ export interface TierDecision {
 }
 
 export type ReplayOutcome =
-  | "reproduced"
-  | "intermittent"
-  | "not_reproduced"
-  | "not_replayed"
-  | "couldnt_repeat";
+  "reproduced" | "intermittent" | "not_reproduced" | "not_replayed" | "couldnt_repeat";
 
 /** Judge verdicts below this confidence can't lift a finding above Needs review (FR-8). */
 export const JUDGE_MIN_CONFIDENCE = 0.7;
@@ -70,7 +66,12 @@ export function replayOutcome(r: ReplayFacts): ReplayOutcome {
 export function replayText(r: ReplayFacts): string {
   if (r.attempts === 0) return `not replayed${r.skipped ? ` (${r.skipped})` : ""}`;
   if (replayOutcome(r) === "couldnt_repeat") {
-    const n = r.attempts === 1 ? "the replay" : r.attempts === 2 ? "both replays" : `all ${r.attempts} replays`;
+    const n =
+      r.attempts === 1
+        ? "the replay"
+        : r.attempts === 2
+          ? "both replays"
+          : `all ${r.attempts} replays`;
     return r.failedStep
       ? `step ${r.failedStep.index} (${r.failedStep.description}) failed in ${n}`
       : `the steps failed in ${n}`;

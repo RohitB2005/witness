@@ -7,7 +7,7 @@ import path from "node:path";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { SecretVault } from "../src/browser/vault";
 import { resolveScanConfig } from "../src/config/schema";
-import { runScan } from "../src/index";
+import { PLAN_AUTO_APPROVE_MS, runScan, type WitnessEvent } from "../src/index";
 import { JsonRunStore } from "../src/store/json-store";
 import type { Pipeline } from "../src/types";
 import { createHarness, type Harness } from "./harness";
@@ -339,6 +339,109 @@ describe("AI pipeline (mock models)", () => {
       expect(result.journeys.filter((j) => !j.automatic)).toEqual([]);
       expect(result.stats.pages).toBeGreaterThan(0);
       expect(result.notTested[0]).toMatch(/only page loads/);
+    },
+  );
+});
+
+describe("plan review (live view)", () => {
+  it(
+    "shows the plan with an auto-approve countdown and runs only the approved journeys",
+    { timeout: 120_000 },
+    async () => {
+      const store = new JsonRunStore({
+        runsDir: path.join(dir, "runs"),
+        dataDir: path.join(dir, "data"),
+      });
+      const models = { smart: mockModel([smartReply]), fast: mockModel([explorerReply]) };
+      let shown: { titles: string[]; ms: number } | undefined;
+      const events: WitnessEvent[] = [];
+      const result = await runScan(
+        resolveScanConfig({
+          url: site.url("/"),
+          budget: "quick",
+          pipeline: "full",
+          llmCache: "off",
+        }),
+        {
+          store,
+          vault: new SecretVault(),
+          browser: h.browser,
+          sink: (e) => events.push(e),
+          models: {
+            smart: models.smart.model,
+            fast: models.fast.model,
+            ids: { smart: "test/smart", fast: "test/fast" },
+          },
+          llmCacheDir: path.join(dir, "cache"),
+          // The reviewer unticks every journey.
+          approvePlan: async (journeys, ms) => {
+            shown = { titles: journeys.map((j) => j.title), ms };
+            return [];
+          },
+        },
+      );
+      expect(shown?.ms).toBe(PLAN_AUTO_APPROVE_MS);
+      expect(shown?.titles.length).toBeGreaterThan(0);
+      const plan = events.find((e) => e.t === "plan");
+      expect(plan && plan.t === "plan" && plan.autoApproveInMs).toBe(PLAN_AUTO_APPROVE_MS);
+      const planned = result.journeys.filter((j) => !j.automatic);
+      expect(planned.length).toBe(shown?.titles.length);
+      for (const j of planned) {
+        expect(j.status).toBe("skipped");
+        expect(j.incompleteReason).toBe("Not approved in the plan review.");
+      }
+      expect(models.fast.prompts).toHaveLength(0); // the Explorer never ran
+    },
+  );
+});
+
+describe("offline replay (NFR-5, D86)", () => {
+  it(
+    "a second scan with --llm-cache replay gets every AI answer from the first scan's cache",
+    { timeout: 240_000 },
+    async () => {
+      const cacheDir = path.join(dir, "replay-cache");
+      const run = async (llmCache: "rw" | "replay", models: ReturnType<typeof mockModel>[]) => {
+        const store = new JsonRunStore({
+          runsDir: path.join(dir, "runs"),
+          dataDir: path.join(dir, "data"),
+        });
+        return runScan(
+          resolveScanConfig({ url: site.url("/"), budget: "quick", pipeline: "full", llmCache }),
+          {
+            store,
+            vault: new SecretVault(),
+            browser: h.browser,
+            models: {
+              smart: models[0]!.model,
+              fast: models[1]!.model,
+              ids: { smart: "test/smart", fast: "test/fast" },
+            },
+            llmCacheDir: cacheDir,
+          },
+        );
+      };
+      const first = await run("rw", [mockModel([smartReply]), mockModel([explorerReply])]);
+      expect(first.aiStagesSkipped).toBeUndefined();
+      expect(first.stats.llmCalls).toBeGreaterThan(3);
+
+      // Offline: any real model call fails. Every ID the run generates is new.
+      const offline = [
+        mockModel([{ error: new Error("network is off") }]),
+        mockModel([{ error: new Error("network is off") }]),
+      ];
+      const second = await run("replay", offline);
+      expect(second.aiStagesSkipped).toBeUndefined();
+      expect(offline[0]!.prompts.length + offline[1]!.prompts.length).toBe(0);
+      expect(second.stats.llmCacheHits).toBe(second.stats.llmCalls);
+      expect(second.stats.llmCalls).toBeGreaterThan(3);
+      const titles = (r: typeof first) =>
+        r.findings
+          .filter((f) => f.kind === "bug")
+          .map((f) => f.title)
+          .sort();
+      expect(titles(second)).toEqual(titles(first));
+      expect(second.journeys.map((j) => j.status)).toEqual(first.journeys.map((j) => j.status));
     },
   );
 });

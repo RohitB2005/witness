@@ -45,6 +45,7 @@ export function judgePrompt(i: JudgeInput): string {
 export async function judge(
   gateway: LlmGateway,
   input: JudgeInput,
+  deadline?: number,
 ): Promise<{ ok: true; value: JudgeOutput } | { ok: false; error: string }> {
   const res = await gateway.structured({
     role: "judge",
@@ -54,6 +55,7 @@ export async function judge(
     schema: JudgeOutputSchema,
     schemaName: "judgement",
     timeoutMs: 45_000,
+    deadline,
   });
   if (!res.ok) return { ok: false, error: res.error };
   // Code checks what the model cites: unknown evidence IDs are dropped, never trusted.

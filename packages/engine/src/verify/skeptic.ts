@@ -52,6 +52,7 @@ export function skepticPrompt(i: SkepticInput): string {
 export async function skeptic(
   gateway: LlmGateway,
   input: SkepticInput,
+  deadline?: number,
 ): Promise<{ ok: true; value: SkepticOutput } | { ok: false; error: string }> {
   const res = await gateway.structured({
     role: "skeptic",
@@ -61,6 +62,7 @@ export async function skeptic(
     schema: SkepticOutputSchema,
     schemaName: "skepticVerdict",
     timeoutMs: 45_000,
+    deadline,
   });
   return res.ok ? { ok: true, value: res.value } : { ok: false, error: res.error };
 }

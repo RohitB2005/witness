@@ -232,6 +232,10 @@ function printSummary(r: RunResult, written: string[]): void {
     `${r.stats.pages} pages · ${user.length ? `${done}/${user.length} journeys completed · ` : ""}${auto ? `${auto} automatic checks · ` : ""}${bugs.length} bugs · ${imps.length} improvements · ${(r.stats.durationMs / 1000).toFixed(0)} s · ${r.stats.llmCalls} LLM calls, US$${r.stats.costUsd.toFixed(3)}`,
   );
   if (r.aiStagesSkipped) console.log(`Note: ${r.aiStagesSkipped}`);
+  if (r.timeCap?.cut.length)
+    console.log(
+      `The ${Math.round(r.timeCap.capMs / 60_000)}-minute time cap cut: ${r.timeCap.cut.join(" ")}`,
+    );
   for (const n of r.notes ?? []) console.log(`Note: ${n}`);
   for (const f of bugs) console.log(`  [${f.severity}/${f.tier}] ${f.title}`);
   for (const w of written) console.log(`Report: ${path.relative(process.cwd(), w)}`);

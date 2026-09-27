@@ -52,7 +52,7 @@ it("a check whose replays all stopped at an earlier step is Needs review, and sa
   });
   expect(d.tier).toBe("needs_review");
   expect(d.reason).toBe(
-    'Couldn\'t repeat the steps: step 7 (Click the "Remove item 42" button) failed in both replays. The app\'s data may have changed after the first attempt, so a person needs to check this.',
+    "Couldn't repeat the steps: step 7 (Click the \"Remove item 42\" button) failed in both replays. The app's data may have changed after the first attempt, so a person needs to check this.",
   );
   // Not the old, misleading reason.
   expect(d.reason).not.toMatch(/didn't happen again/);

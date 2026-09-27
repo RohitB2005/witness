@@ -1,0 +1,30 @@
+@import "tailwindcss";
+
+/* Readable from the back of a room: a larger base size, system fonts (works offline). */
+:root {
+  font-size: 17px;
+  color-scheme: light dark;
+}
+@media (min-width: 1400px) {
+  :root {
+    font-size: 18px;
+  }
+}
+body {
+  @apply bg-stone-50 text-stone-900 antialiased dark:bg-stone-950 dark:text-stone-100;
+  font-family:
+    system-ui,
+    -apple-system,
+    "Segoe UI",
+    Roboto,
+    sans-serif;
+}
+:focus-visible {
+  @apply outline-2 outline-offset-2 outline-teal-600;
+}
+@media (prefers-reduced-motion: reduce) {
+  * {
+    animation: none !important;
+    transition: none !important;
+  }
+}

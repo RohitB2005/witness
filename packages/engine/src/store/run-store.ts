@@ -15,6 +15,16 @@ export interface RunSummary {
   startedAt: string;
   verdict?: RunResult["verdict"];
   findings?: number;
+  /** Finished runs only. */
+  finishedAt?: string;
+  budget?: RunResult["config"]["budget"];
+  pipeline?: RunResult["config"]["pipeline"];
+  durationMs?: number;
+  /** Bugs not discarded, by tier. */
+  bugs?: { confirmed: number; likely: number; needsReview: number };
+  costUsd?: number;
+  cancelled?: boolean;
+  error?: string;
 }
 
 export interface RunStore {

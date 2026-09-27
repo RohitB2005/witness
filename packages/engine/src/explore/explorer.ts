@@ -8,7 +8,7 @@ import { createContext } from "../browser/context";
 import type { SafetyPolicy } from "../browser/policy";
 import type { SecretVault } from "../browser/vault";
 import { AUTH_PAGE } from "../crawl/crawler";
-import { log, type EventSink } from "../events";
+import { candidateEvent, log, type EventSink } from "../events";
 import { newId } from "../ids";
 import type { LlmGateway } from "../llm/gateway";
 import { EXPLORER_INSTRUCTIONS } from "../llm/prompts/explorer";
@@ -138,7 +138,9 @@ export async function exploreJourney(input: Journey, deps: ExploreDeps): Promise
       mobileViewport: deps.mobileViewport,
       credentials: deps.credentials,
     });
-    const emitStep = (r: { step: Step }) =>
+    // An action's after-evidence starts with its screenshot (executor evidenceList); a check's is its result.
+    const emitStep = (r: { step: Step }) => {
+      const shot = r.step.action.type === "check" ? undefined : r.step.afterEvidenceIds[0];
       deps.sink({
         t: "step",
         step: {
@@ -149,14 +151,13 @@ export async function exploreJourney(input: Journey, deps: ExploreDeps): Promise
           ok: r.step.ok,
           kind: r.step.kind,
         },
+        ...(shot ? { thumb: `${shot}.jpg` } : {}),
       });
+    };
     const addCandidates = (cs: Candidate[]) => {
       for (const c of cs) {
         candidates.push(c);
-        deps.sink({
-          t: "candidate",
-          candidate: { id: c.id, category: c.category, summary: c.summary, route: c.route },
-        });
+        deps.sink(candidateEvent(c));
       }
     };
 
@@ -263,6 +264,10 @@ export async function exploreJourney(input: Journey, deps: ExploreDeps): Promise
           badTurns++;
           lastResult = "The previous turn didn't get a reply; carry on.";
           continue;
+        }
+        if (call.reason === "deadline") {
+          finish("incomplete", "The run's time cap was reached.");
+          break;
         }
         llmUnavailable = call.reason;
         finish("incomplete", `The AI stopped being available (${call.reason}): ${call.error}`);

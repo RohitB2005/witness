@@ -918,3 +918,151 @@ No paid runs. Tests: 32 files, all pass.
 **ROADMAP P5 additions** (not done now):
 - combined v1+v2 scoring where a finding counts for at most one seeded bug (the DB-error finding is B22, not B15);
 - clean-run rows show "–" for recall and precision.
+
+### P4 decisions (28 Sep 2026)
+
+**D78 — The wall-clock cap is hard, and the report says what it cut** (Rohit, 28 Sep: option b).
+- **Before.** Deadlines only stopped work from *starting*. Work already running kept going: in `…130217_vg4y` verification ran 6 s past its deadline and the report's AI calls another 28 s, so the run finished at 489 s against a 480 s cap.
+- **Now.** Three limits:
+  - **AI calls.** The gateway has a `hardDeadline` (cap − 4 s). No call starts within 2 s of it, and a call still running is cut off when it arrives (the AI SDK's total timeout is set to the time left). The judge and skeptic also get verification's own deadline.
+  - **Replays.** An attempt never starts with under 5 s left, and one in flight is stopped at the deadline.
+  - **Saving.** The last 4 s are kept for building and saving the result.
+  - A deadline cut-off is its own failure reason (`deadline`), not a provider error. The Explorer ends the journey with "The run's time cap was reached." instead of calling the AI unavailable.
+- **Reporting.** `RunResult.timeCap = { capMs, hit, cut[] }` lists in plain words what was cut: pages not visited, journeys stopped, unusual inputs not tried, findings not replayed (so Needs review), second-opinion reviews skipped, the UX review skipped, bug descriptions left in template wording, AI calls stopped. Every renderer shows it (HTML, Markdown, dashboard, CLI).
+- **Tests:** gateway (past deadline, a request deadline, a slow call cut off) and `whatTheCapCut` (table).
+
+**D79 — Plan review and cancel live in the engine, behind two hooks.**
+- **Plan review.** `RunScanDeps.approvePlan(journeys, autoApproveInMs)` resolves with the journey IDs to run. The engine races it against its own 10 s timer (+2 s), so a missing or broken reviewer can never stall a scan. Unticked journeys become "Not approved in the plan review."
+- **Cancel.** `RunScanDeps.signal` (an AbortSignal) cancels the scan:
+  - the scan body races the abort;
+  - on abort, the store and event sink stop accepting writes from the abandoned work (a proxy);
+  - every browser context closes;
+  - the run is saved with `cancelled: true` and no verdict ("Cancelled", never "Not ready").
+- **Alternative rejected:** cancel by pulling deadlines forward. The deadlines are computed once per stage, so that would have meant threading a mutable clock through every stage.
+- **Tests:** plan review with mock models; cancel on the fixture site, including that nothing is written after `done`.
+
+**D80 — The server is a local tool and says so in code.**
+- **Local only.** It binds 127.0.0.1, answers only requests addressed to localhost (so a DNS-rebinding page can't reach it), refuses writes whose `Origin` is another site, and sends no CORS headers.
+- **Files.** Artifacts are served only by validated names (`ev_…jpg`/`yaml`) resolved inside the run's `artifacts/` folder.
+- **Password.** It goes from the request body straight into a per-scan `SecretVault` and is cleared when the scan and its exports finish. It's never in the config, a response or a run file.
+- **One scan at a time**, 409 when busy.
+- **Exports.** After each scan it writes the same exports as the CLI, so FR-15's "identical findings" holds.
+- **Tests:** 19 in `apps/server/src/app.test.ts`, including traversal attempts and the password check.
+
+**D81 — Dashboard stack: React + Vite + Tailwind, no router or chart library** (Rohit approved the dependencies and SVG bars).
+- **Routing.** Five pages don't need a router: a 40-line history router.
+- **Charts.** The Evaluation page draws plain SVG bars: one measure per chart, one hue, a value label on each bar, a hover title, and the full numbers in a table next to them.
+- **Offline.** System fonts only, so the offline demo has no network dependency.
+- The bundle has 28 modules (275 kB): the engine contributes only its browser-safe view module.
+
+**D82 — One browser-safe module holds every label and the report's order** (`report/view.ts`, exported as `@witness/engine/view`).
+- **What's in it:** phase names, verdict/tier/severity/criterion labels, `reportView()`, `issueMarkdown()` ("Copy as issue"), `aiUseLabel()` and `runTimeLabel()`.
+- **Shared.** The HTML and Markdown exports and the dashboard all use it, so they can't drift.
+- **Report order** (Rohit): verdict line, then Requirements coverage, then Security, then the rest.
+  - The Security section lists security bugs, then security hygiene improvements, and links to their cards. The cards stay under Bugs and Improvements.
+  - When there are no requirements, the dashboard says so in the Requirements section rather than dropping it.
+- **Phase names for a non-technical viewer:** "Checking the app is reachable", "Mapping the app", "Planning what to test", "Testing journeys", "Double-checking findings", "Writing the report". Checks read "Check passed/failed", actions "Done/Didn't work".
+- **Events.** Two changes so the live view can show candidate → tier with the reason:
+  - a new `tier` event;
+  - `finding` events carry `tierReason` and `candidateIds`.
+- **Other event changes:**
+  - candidate events carry the plain title;
+  - cost events follow every AI call;
+  - `thumb` is filled for pages and steps.
+
+**D83 — Only the scan running now is ever called live.**
+- **Where "Live" comes from.** The server, not the client, decides: the SSE stream starts with `hello { live }`.
+- **Finished runs.** Opening the live page of a finished run shows "This run has finished" with its date and time and a link to the report. It doesn't replay the recorded events as if they were happening.
+- **History and Report** label every run "Finished run · <date and time it started>".
+- **AI use.** A cache replay is labelled "AI answers replayed from cache" on the live page, the report and the exports. The report also says how many AI answers came from the cache.
+
+**D84 — "Not a bug" writes `data/suppressions.json` only** (Rohit).
+- It's keyed by the app's origin and the finding's fingerprint, and is never written to `eval/labels.json`. Eval scoring reads labels, not suppressions.
+- **Effect.** A suppressed finding appears under Discarded in later scans ("Suppressed by you on …").
+- **Guard.** `pnpm demo:check` lists every suppression for the bench's URL, so a rehearsal click can't hide a bug in the real demo. The New scan page also says how many findings are marked for the typed address.
+
+**D85 — Demo scripts are Node, run from the repo root** (DEMO_RUNBOOK §1). `scripts/procs.mjs` starts processes with prefixed output and stops them together on Ctrl+C.
+- **`demo:up`**: builds the dashboard and the bench, starts the bench with every bug on (`DEMO_BENCH_BUGS` overrides) and Witness, and prints a pre-filled New scan link. The bench listens on `[::1]`, so readiness is probed via `localhost`.
+- **`demo:test <spec>`**: runs one exported test against the bench with the test account from `.env`. Verified red → `bench:fix` → green → `bench:break` for B01 and for B06 (a logged-in test).
+- **`demo:replay <run>`**: resets the bench's data, then re-runs the recorded scan's settings with `--llm-cache replay`, in the dashboard if Witness is running, else through the CLI.
+- **`demo:check [run]`** also checks:
+  - the provider and the credit balance (warns under $2);
+  - that the server is up and the dashboard is built;
+  - bench suppressions;
+  - how many of the rehearsal run's AI answers are in the cache.
+- **`dev`**: server (restarts on change) + Vite (hot reload) on :5317.
+
+**D86 — The response cache ignores the IDs a run makes up** (found while testing `demo:replay`).
+- **What went wrong.** A cache replay of the Quick smoke run got the Planner's answer from the cache, then missed on the Explorer's first turn and skipped the journeys (honestly reported). The cause: every run generates new `jr_`/`ex_`/`ev_` IDs, and the Explorer's prompt contains them, so no prompt after the plan could ever match. The offline fallback (NFR-5) could never have worked past planning; it had never been tested end to end.
+- **Fix.**
+  - Before hashing, the gateway replaces those IDs with placeholders numbered by first appearance (`ex_@1`, `ev_@2`), over the prompt's raw strings. An ID after a newline sits next to an escape in the JSON text, which is why the first attempt missed evidence IDs.
+  - The answer is cached in placeholder form and mapped back to this run's IDs on read.
+  - New entries live in `.witness-cache/v2/`, so old entries (under the old keys) are ignored rather than miscounted.
+- **Proof, with mock models:** a full scan with `rw`, then the same scan with `replay` and models that fail if called. Every AI answer came from the cache, and the two runs have the same bugs at the same tiers and the same journey outcomes (`test/ai-scan.test.ts`). The replay made fewer AI calls (15 vs 19) with the same results.
+- **Not yet proven on the real bench.** That needs a new paid `rw` run (the gate run's cache used the old keys). It belongs with P5's "offline replay tested with Wi-Fi off".
+
+### Dependencies added in P4
+
+None new to the lockfile: every package is one the bench already uses, at the same versions.
+- **Server:** `express`, `zod` (+ `@types/express`).
+- **Web:** `react`, `react-dom`, `vite`, `@vitejs/plugin-react`, `tailwindcss`, `@tailwindcss/vite` (+ React types).
+- Recharts was dropped for plain SVG (D81).
+
+### P4 — 28 Sep 2026
+
+**Gate P4 — passed.** A full Standard scan from the UI on this Mac (the presentation laptop). It was driven through the real New scan form: bench URL, test account, `bench/SCOPE.md` uploaded as requirements, plan auto-approved as in the demo.
+
+| Gate item | Result |
+| --- | --- |
+| Full Standard scan from the UI, < 8 min | **7:56** (476 s from clicking Start scan to the verdict on screen; run `…220027_dpi0`, 475.9 s in the engine). Phases: map 2 s, plan 37 s, explore 72 s, verify 317 s, report 455 s, done 476 s |
+| Hard cap held (D78) | The report stage ended 4 s before the cap. The cap cut: 1 journey ("Book a clean and view confirmation", out of its time share), 15 unusual inputs, 8 findings not replayed (Needs review) |
+| B01 found? (Rohit asked) | **Yes, Confirmed**: "Quote page shows a total that doesn't match its own subtotal and GST" (a `numericRelation` total = subtotal + GST check). Two more B01 findings came from the Explorer's own checks (Likely). Not tuned for |
+| Recall (before labelling; 8 v1 findings unlabelled) | v1: Confirmed 78%, C+L **89%**. v2: C 60%, C+L 80%. Bug precision 100% on labelled findings. `eval/results/p4-gate/` |
+| D75 in a real run | B06's cancel check targeted `{ role: button, name: "Cancel booking HC-1002" }`, not bare text, and was Confirmed |
+| Demo path | `demo:test` on the run's B01 spec failed, passed after `bench:fix B01`, and failed again after `bench:break B01`. The same for B06's logged-in spec |
+| Quick smoke run from the UI (plan approved by clicking) | `…215558_yic4`: 160 s against a 3 min cap. Both journeys stopped at their time share (listed under what the cap cut). No page errors in the dashboard |
+| Free checks | A no-AI Standard scan through the live view (`…214916_rcpk`, 81 s) and a cache replay (`…221012_znj4`), which found D86 |
+| Tests | 35 files, 603 tests, all pass (engine, server 19, web 9, bench, eval); typecheck and lint clean |
+
+**Standard scan time: 7:56. Under 8 minutes, but only just, and far from the runbook's 5-minute target.**
+- The cap now guarantees the run ends by 8:00, whatever happens. What varies is how much the cap cuts: this run cut one journey and 8 replays.
+- The demo preset (option a) is for P5, after timing a full rehearsal, as agreed.
+
+**Spend (D48).**
+- **This phase:** $0.657 (Quick smoke $0.164, gate Standard $0.493). The free runs cost $0.
+- **Totals:** OpenRouter usage **$7.47** (after P3b: $6.81). **Balance $2.53**, above the $2 line.
+- **Outlook.** At about $0.45 per Standard run with requirements, the P5 matrix (8 runs) needs the $10 top-up.
+
+**Teach-back — P4, the dashboard and server.**
+
+*What was built.* A local web app for Witness and the scripts to run the demo.
+- **Pages:**
+  - **New scan** is a form.
+  - **Live run** shows what Witness is doing, in plain words.
+  - **Report** reads top-down: the verdict, then the requirements, then security, then the rest.
+  - **History** lists every past run with its date and time.
+  - **Evaluation** shows the scored results.
+- **Behind it**, a small server starts scans, streams their progress and serves their files.
+- **Engine changes** the dashboard needed: a hard time cap, plan review, cancel, and an offline cache that actually replays.
+
+*How data flows.*
+1. The form posts to the server. The password goes into memory for that scan only.
+2. The server starts the engine with three hooks: an event sink, a plan approver and a cancel signal.
+3. Every engine event goes to the run's `events.ndjson` and to an in-memory list for the live stream.
+4. The browser opens an event stream. The server first says whether this run is live. A finished run gets a "this has finished" page, never a replay dressed up as live.
+5. When the plan is ready, the live page shows it with a 10-second countdown. If nobody answers, the engine approves it itself.
+6. When the scan ends, the server writes the same reports and tests the CLI does, and the report page reads `run.json`.
+7. "Not a bug" goes to `data/suppressions.json`, which the next scan uses. Evaluation labels are separate.
+
+*The key decision, and its alternative.* The key decision is making the 8-minute cap hard, inside the engine.
+- **The alternative** was to kill the scan from outside at 8 minutes. It's simpler, but you get no report, which is the worst outcome for a live demo.
+- **What it does instead.** Every AI call and every replay carries the deadline, and is stopped when it arrives. The last few seconds are kept for writing the result. The report then lists what the cap cut, so a rushed run is honest about being rushed.
+
+*The most likely failure mode.* A Standard run with requirements uses almost all 8 minutes (7:56 here).
+- Verification is what gets squeezed. When exploring runs long, findings aren't replayed and land in Needs review instead of Confirmed. The verdict can be milder than it should be, and says so.
+- **Second risk: the offline fallback.** It's now proven with mock models only. The cache holds nothing from the real bench under the new keys until the next paid run.
+
+*Say plainly in the talk.*
+- The live view is live: History never shows a past run as live.
+- A cache replay is labelled as one.
+- The Standard scan is capped at 8 minutes, and the report lists whatever the cap cut.

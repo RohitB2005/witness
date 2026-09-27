@@ -15,7 +15,7 @@ import { createContext } from "../browser/context";
 import type { SafetyPolicy } from "../browser/policy";
 import type { SecretVault } from "../browser/vault";
 import { routePattern } from "../crawl/normalise";
-import { log, type EventSink } from "../events";
+import { candidateEvent, log, type EventSink } from "../events";
 import { newId } from "../ids";
 import type { LlmGateway } from "../llm/gateway";
 import { withoutLlm } from "../llm/guard";
@@ -657,10 +657,7 @@ export async function runEdgeInputs(runs: JourneyRun[], deps: EdgeDeps): Promise
   });
   metrics.candidates = result.candidates.length;
   for (const c of result.candidates) {
-    deps.sink({
-      t: "candidate",
-      candidate: { id: c.id, category: c.category, summary: c.summary, route: c.route },
-    });
+    deps.sink(candidateEvent(c));
   }
   return result;
 }

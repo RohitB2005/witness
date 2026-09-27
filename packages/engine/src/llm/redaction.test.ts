@@ -119,7 +119,7 @@ describe("redaction", () => {
       schemaName: "echo",
     });
     const { readdir, readFile } = await import("node:fs/promises");
-    const dir = `${t.cacheDir}/planner`;
+    const dir = `${t.cacheDir}/v2/planner`;
     for (const f of await readdir(dir))
       expect(await readFile(`${dir}/${f}`, "utf8")).not.toContain(PASSWORD);
   });

@@ -2,7 +2,7 @@
 // the crawl. Any failure here degrades: the scan still reports its deterministic findings and says which
 // AI stage was skipped and why (NFR-3).
 import type { Browser } from "playwright";
-import { TIME_SPLIT, type Budget } from "./config/budgets";
+import { PLAN_AUTO_APPROVE_MS, TIME_SPLIT, type Budget } from "./config/budgets";
 import type { SafetyPolicy } from "./browser/policy";
 import type { SecretVault } from "./browser/vault";
 import type { CrawlResult } from "./crawl/crawler";
@@ -40,7 +40,19 @@ export interface AiStagesInput {
   cacheDir: string;
   /** min(budget preset cap, WITNESS_MAX_COST_USD). */
   costCapUsd: number;
+  /** Lets a person review the plan (live view); see PlanApprover. */
+  approvePlan?: PlanApprover;
 }
+
+/**
+ * Shown the planned journeys; resolves with the IDs to run (undefined: all of them). The engine approves
+ * everything itself if no answer comes within PLAN_AUTO_APPROVE_MS (plus a little slack), so a missing
+ * reviewer can never stall a scan.
+ */
+export type PlanApprover = (
+  journeys: Journey[],
+  autoApproveInMs: number,
+) => Promise<string[] | undefined>;
 
 export interface AiStagesOutput {
   journeys: Journey[];
@@ -74,8 +86,11 @@ export async function runAiStages(i: AiStagesInput): Promise<AiStagesOutput> {
     cache: new LlmCache(i.cacheDir, config.llmCache),
     costCapUsd: i.costCapUsd,
     promptCaching: true,
+    hardDeadline: i.started + budget.wallClockMs - TIME_SPLIT.finalizeMs,
     onCall: (e) => {
       logs.push(i.store.appendLlmCall(i.runId, { ...e }).catch(() => undefined));
+      // The live view's cost meter, after every call (planner, explorer, judge, writer…).
+      i.sink({ t: "cost", llmCalls: gateway.totals.calls, costUsd: gateway.totals.costUsd });
     },
   });
   const states = i.states;
@@ -127,7 +142,27 @@ export async function runAiStages(i: AiStagesInput): Promise<AiStagesOutput> {
       ok.has(j.id) ? j : { ...j, status: "skipped" as const, incompleteReason: "Not approved." },
     );
   }
-  sink({ t: "plan", journeys, autoApproveInMs: 0 });
+  if (i.approvePlan) {
+    sink({ t: "plan", journeys, autoApproveInMs: PLAN_AUTO_APPROVE_MS });
+    const approved = await Promise.race([
+      i.approvePlan(journeys, PLAN_AUTO_APPROVE_MS).catch(() => undefined),
+      new Promise<undefined>((r) => setTimeout(() => r(undefined), PLAN_AUTO_APPROVE_MS + 2_000)),
+    ]);
+    if (approved) {
+      const ok = new Set(approved);
+      journeys = journeys.map((j) =>
+        ok.has(j.id) || j.status === "skipped"
+          ? j
+          : {
+              ...j,
+              status: "skipped" as const,
+              incompleteReason: "Not approved in the plan review.",
+            },
+      );
+      for (const j of journeys)
+        if (j.status === "skipped") sink({ t: "journey", journeyId: j.id, status: "skipped" });
+    }
+  } else sink({ t: "plan", journeys, autoApproveInMs: 0 });
   log(sink, "info", `The app looks like: ${plan.appModel.purpose}`);
 
   // ---- Explore

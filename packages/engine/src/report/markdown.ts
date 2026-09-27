@@ -1,21 +1,19 @@
 // Markdown report (SPEC FR-10). Page-controlled text is escaped; severity and tier are written as words.
 import type { Finding, RunResult } from "../types";
-import { replayText } from "../verify/tier";
-import { CRITERION_LABEL } from "./requirements";
+import {
+  CRITERION_LABEL,
+  SEVERITY_LABEL,
+  TIER_LABEL,
+  aiUseLabel,
+  replayText,
+  reportView,
+} from "./view";
 
 const VERDICT_LABEL = {
   ready: "READY",
   caveats: "READY WITH CAVEATS",
   not_ready: "NOT READY",
 } as const;
-const TIER_LABEL: Record<Finding["tier"], string> = {
-  confirmed: "Confirmed",
-  likely: "Likely",
-  needs_review: "Needs review",
-  discarded: "Discarded",
-  evidence_based: "Evidence-based",
-  suggestion: "Suggestion",
-};
 
 /** Escapes text so page-controlled strings can't inject Markdown/HTML structure into the report. */
 export function mdEscape(text: string): string {
@@ -23,9 +21,7 @@ export function mdEscape(text: string): string {
 }
 
 export function renderMarkdown(r: RunResult): string {
-  const bugs = r.findings.filter((f) => f.kind === "bug" && f.tier !== "discarded");
-  const improvements = r.findings.filter((f) => f.kind === "improvement" && f.tier !== "discarded");
-  const discarded = r.findings.filter((f) => f.tier === "discarded");
+  const { bugs, improvements, discarded, security } = reportView(r);
   const mins = (r.stats.durationMs / 60_000).toFixed(1);
   const lines: string[] = [
     `# Witness report — ${mdEscape(r.scope)}`,
@@ -35,22 +31,12 @@ export function renderMarkdown(r: RunResult): string {
     `- Scope: ${mdEscape(r.scope)} (mode: ${r.config.mode}, budget: ${r.config.budget}, pipeline: ${r.config.pipeline})`,
     `- Run: ${r.runId}, ${r.startedAt} (${mins} min)`,
     `- Pages mapped: ${r.stats.pages}; candidates: ${r.stats.candidates}; bugs: ${bugs.length}; improvements: ${improvements.length}`,
-    `- LLM calls: ${r.stats.llmCalls} (US$${r.stats.costUsd.toFixed(2)})`,
+    `- AI: ${aiUseLabel(r)}`,
   ];
   if (r.config.loggedInAs) lines.push(`- Logged in as: ${mdEscape(r.config.loggedInAs)}`);
   if (r.stats.capsHit.length) lines.push(`- Budget caps hit: ${r.stats.capsHit.join(", ")}`);
   if (r.aiStagesSkipped) lines.push(`- AI stages skipped: ${mdEscape(r.aiStagesSkipped)}`);
   if (r.error) lines.push(`- **Scan error:** ${mdEscape(r.error)}`);
-  if (r.notes?.length) {
-    lines.push("", "## Notes", "");
-    for (const n of r.notes) lines.push(`- ${mdEscape(n)}`);
-  }
-  lines.push("", "## What wasn't tested", "");
-  for (const n of r.notTested.length ? r.notTested : ["Nothing noted."])
-    lines.push(`- ${mdEscape(n)}`);
-  if (r.appModel) {
-    lines.push("", "## What Witness understood the app to be", "", mdEscape(r.appModel.purpose));
-  }
   if (r.requirements) {
     const cs = r.requirements.criteria;
     const n = (s: string) => cs.filter((c) => c.status === s).length;
@@ -68,6 +54,29 @@ export function renderMarkdown(r: RunResult): string {
         `| ${c.id} | ${mdEscape(c.quote)} | ${CRITERION_LABEL[c.status]} | ${mdEscape(c.reason)} |`,
       );
     }
+  }
+  lines.push("", `## Security (${security.length})`, "");
+  if (!security.length) lines.push("No security findings.");
+  else {
+    lines.push("| Finding | Kind | Severity | Tier |", "| --- | --- | --- | --- |");
+    for (const f of security)
+      lines.push(
+        `| ${mdEscape(f.title)} | ${f.kind === "bug" ? "Bug" : "Improvement"} | ${SEVERITY_LABEL[f.severity]} | ${TIER_LABEL[f.tier]} |`,
+      );
+  }
+  if (r.notes?.length) {
+    lines.push("", "## Notes", "");
+    for (const n of r.notes) lines.push(`- ${mdEscape(n)}`);
+  }
+  lines.push("", "## What wasn't tested", "");
+  for (const n of r.notTested.length ? r.notTested : ["Nothing noted."])
+    lines.push(`- ${mdEscape(n)}`);
+  if (r.timeCap?.cut.length) {
+    lines.push("", `## What the ${Math.round(r.timeCap.capMs / 60_000)}-minute time cap cut`, "");
+    for (const n of r.timeCap.cut) lines.push(`- ${mdEscape(n)}`);
+  }
+  if (r.appModel) {
+    lines.push("", "## What Witness understood the app to be", "", mdEscape(r.appModel.purpose));
   }
   if (r.journeys.length) {
     lines.push("", `## Journeys and automatic checks (${r.journeys.length})`, "");

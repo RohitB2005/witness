@@ -18,6 +18,7 @@ import type { SecretVault } from "../browser/vault";
 import {
   CacheMissError,
   cacheKey,
+  RunIdMap,
   stableStringify,
   type CachedResponse,
   type LlmCache,
@@ -62,9 +63,17 @@ export interface GatewayOptions {
   maxRetries?: number;
   /** Mark the system prompt cacheable (Anthropic prompt caching through OpenRouter). */
   promptCaching?: boolean;
+  /**
+   * The run's hard stop (epoch ms). No provider call starts within MIN_CALL_MS of it, and a call in flight
+   * is cut off when it arrives, so AI work can never push a run past its time cap (D78).
+   */
+  hardDeadline?: number;
 }
 
-export type LlmFailureReason = "invalid" | "budget" | "provider" | "cache-miss";
+/** A provider call needs at least this long to be worth starting. */
+const MIN_CALL_MS = 2_000;
+
+export type LlmFailureReason = "invalid" | "budget" | "provider" | "cache-miss" | "deadline";
 export type LlmResult<T> =
   | { ok: true; value: T; repaired: boolean; partial?: boolean }
   | { ok: false; reason: LlmFailureReason; error: string };
@@ -89,10 +98,17 @@ export interface StructuredRequest<T> {
   reasoning?: ReasoningEffort;
   /** Per-call timeout (default: the gateway's, 60 s). */
   timeoutMs?: number;
+  /** This call must end by then (epoch ms), e.g. verification's deadline; the run's hard stop always applies. */
+  deadline?: number;
 }
 
 export type ReasoningEffort = "none" | "minimal" | "low" | "medium" | "high";
-type CallKnobs = { temperature: number; reasoning: ReasoningEffort; timeoutMs?: number };
+type CallKnobs = {
+  temperature: number;
+  reasoning: ReasoningEffort;
+  timeoutMs?: number;
+  deadline?: number;
+};
 
 export interface ToolSpec {
   description: string;
@@ -117,6 +133,7 @@ export interface ToolRequest {
   temperature?: number;
   reasoning?: ReasoningEffort;
   timeoutMs?: number;
+  deadline?: number;
 }
 
 export interface ToolCallValue {
@@ -129,6 +146,7 @@ export class SecretLeakError extends Error {
 }
 
 class BudgetError extends Error {}
+class DeadlineError extends Error {}
 
 /** The log entry of one in-flight call. */
 interface EntryRef {
@@ -144,6 +162,8 @@ export interface GatewayTotals {
   repaired: number;
   cacheHits: number;
   failures: number;
+  /** Calls not started, or stopped, because the run's time cap arrived (D78). */
+  cutByDeadline: number;
 }
 
 export class LlmGateway {
@@ -156,6 +176,7 @@ export class LlmGateway {
     repaired: 0,
     cacheHits: 0,
     failures: 0,
+    cutByDeadline: 0,
   };
 
   constructor(private readonly o: GatewayOptions) {}
@@ -187,6 +208,7 @@ export class LlmGateway {
           temperature: req.temperature ?? 0,
           reasoning: req.reasoning ?? "none",
           timeoutMs: req.timeoutMs,
+          deadline: req.deadline,
         });
         raw = res.text ?? "";
       } catch (err) {
@@ -235,6 +257,7 @@ export class LlmGateway {
           temperature: req.temperature ?? 0,
           reasoning: req.reasoning ?? "none",
           timeoutMs: req.timeoutMs,
+          deadline: req.deadline,
         });
         call = res.toolCall;
       } catch (err) {
@@ -282,7 +305,10 @@ export class LlmGateway {
         ? "budget"
         : err instanceof CacheMissError
           ? "cache-miss"
-          : "provider";
+          : err instanceof DeadlineError
+            ? "deadline"
+            : "provider";
+    if (reason === "deadline") this.totals.cutByDeadline++;
     const error = firstLine(err);
     if (ref.entry) {
       ref.entry.error = error;
@@ -345,7 +371,9 @@ export class LlmGateway {
     if (this.o.vault.leaks(serialized)) {
       throw new SecretLeakError(`Refusing to send a ${role} prompt that contains a secret value.`);
     }
-    const key = cacheKey(payload);
+    // Keyed on the prompt with this run's generated IDs replaced by placeholders (D86).
+    const ids = new RunIdMap([instructions, ...(promptPrefix ?? []), prompt].join("\n"));
+    const key = cacheKey({ v: 2, payload: ids.normalizeValue(payload) });
     const entry: LlmCallLogEntry = {
       at: new Date().toISOString(),
       role,
@@ -372,13 +400,20 @@ export class LlmGateway {
       entry.outputTokens = hit.outputTokens;
       this.totals.cacheHits++;
       this.totals.calls++;
-      return { text: hit.text, toolCall: hit.toolCall };
+      return {
+        text: hit.text === undefined ? undefined : ids.restore(hit.text),
+        toolCall: ids.restoreValue(hit.toolCall),
+      };
     }
     if (this.budgetExhausted) {
       throw new BudgetError(
         `LLM spend cap reached (US$${this.o.costCapUsd.toFixed(2)}); no further AI calls in this run.`,
       );
     }
+    const until = Math.min(spec.deadline ?? Infinity, this.o.hardDeadline ?? Infinity);
+    const remaining = until - Date.now();
+    if (remaining < MIN_CALL_MS)
+      throw new DeadlineError("The run's time cap was reached; no further AI calls.");
 
     const system = this.o.promptCaching
       ? {
@@ -423,7 +458,8 @@ export class LlmGateway {
       ...input,
       temperature: spec.temperature,
       maxRetries: this.o.maxRetries ?? 3,
-      timeout: spec.timeoutMs ?? this.o.timeoutMs ?? 60_000,
+      // A total timeout (retries included), never past the deadline.
+      timeout: Math.min(spec.timeoutMs ?? this.o.timeoutMs ?? 60_000, remaining),
       providerOptions: { openrouter: { reasoning: { effort: spec.reasoning } } },
     };
     try {
@@ -462,6 +498,8 @@ export class LlmGateway {
         usage = err.usage ?? {};
       } else {
         entry.latencyMs = Date.now() - started;
+        if (Date.now() >= until - 250)
+          throw new DeadlineError("The run's time cap arrived while this AI call was running.");
         throw err;
       }
     }
@@ -478,8 +516,8 @@ export class LlmGateway {
     this.totals.costUsd += entry.costUsd;
 
     const cached: CachedResponse = {
-      text,
-      toolCall,
+      text: text === undefined ? undefined : ids.normalize(text),
+      toolCall: ids.normalizeValue(toolCall),
       inputTokens: entry.inputTokens,
       outputTokens: entry.outputTokens,
       costUsd: entry.costUsd,

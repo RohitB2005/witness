@@ -100,15 +100,19 @@ Spec: `docs/ADDENDUM_QA_COVERAGE.md` (approved by Rohit, 26 Sep). Build in this 
 
 ## P4 — Dashboard and server (Thu 1 – Fri 2 Oct)
 
-- [ ] Express server: REST + SSE, artifact route (traversal-safe), one-scan lock, bind 127.0.0.1
-- [ ] New scan page (mode warning, credentials, hint, budget; requirements textarea + `.md`/`.txt` upload — addendum A5)
-- [ ] Live run page (phases, map, plan review with auto-approve, action log with thumbnails, candidate → tier transitions, cost meter)
-- [ ] Report page (verdict banner, not-tested list, tabs, finding cards with evidence, Download test, Copy as issue, Not a bug, Discarded list; **Requirements coverage** table and **Security** section — addendum)
-- [ ] History page; Evaluation page (reads latest `summary.json`)
-- [ ] Demo scripts (`DEMO_RUNBOOK.md` §1)
-- [ ] **By Thu 1 Oct:** full scan from the UI on the presentation laptop
+- [x] Express server: REST + SSE, artifact route (traversal-safe), one-scan lock, bind 127.0.0.1
+- [x] New scan page (mode warning, credentials, hint, budget; requirements textarea + `.md`/`.txt` upload — addendum A5)
+- [x] Live run page (phases, map, plan review with auto-approve, action log with thumbnails, candidate → tier transitions, cost meter)
+- [x] Report page (verdict banner, not-tested list, tabs, finding cards with evidence, Download test, Copy as issue, Not a bug, Discarded list; **Requirements coverage** table and **Security** section — addendum)
+- [x] History page; Evaluation page (reads latest `summary.json`)
+- [x] Demo scripts (`DEMO_RUNBOOK.md` §1)
+- [x] **By Thu 1 Oct:** full scan from the UI on the presentation laptop
 
 **Gate P4:** full Standard scan from the UI on the presentation laptop in < 8 min. Teach-back written.
+
+**Also in P4 (Rohit, 28 Sep):** P3b loose ends first (labels, D75 removal targeting, D76 replay honesty, D77 UX snapshot rule); plain-language live view for non-technical readers; report order verdict → Requirements coverage → Security → rest; past runs always labelled with date and time; Standard's 8 minutes made a hard cap that reports what it cut (D78); "Not a bug" never touches eval labels, and `demo:check` lists bench suppressions (D84).
+
+**P4 gate — passed 28 Sep 2026.** Standard scan from the UI with `bench/SCOPE.md`: **7:56** (476 s), inside the now-hard cap. The cap cut 1 journey, 15 unusual inputs and 8 replays (listed in the report). B01 found and Confirmed. v1 recall C+L 89%, v2 80% (before labelling 8 findings). `demo:test` red → `bench:fix` → green verified for B01 and B06. Found and fixed while testing `demo:replay`: the response cache couldn't replay past planning because prompts carry per-run IDs (D86; proven with mock models). P4 cost $0.66 (total usage $7.47, balance $2.53). Details in `DEVLOG.md` (D78–D86) and `eval/results/p4-gate/`.
 
 ## P5 — Evaluate and stabilise; FEATURE FREEZE (Sat 3 Oct)
 
@@ -116,7 +120,9 @@ Spec: `docs/ADDENDUM_QA_COVERAGE.md` (approved by Rohit, 26 Sep). Build in this 
 - [ ] Combined v1+v2 scoring (Rohit, 28 Sep): one finding counts for at most one seeded bug across both files (the DB-error "possible SQL injection" finding is B22, not v1 B15, whose frozen keyword rule also matches it); precision is only reported combined
 - [ ] Clean-run rows show "–" for recall and precision (there's nothing to recall), not 0%
 - [ ] Fix only bugs that affect the demo or the numbers' validity
-- [ ] Offline replay tested with Wi-Fi off; screen recording made
+- [ ] Offline replay tested with Wi-Fi off; screen recording made. Needs a rehearsal run made with `--llm-cache rw` **after D86** (earlier cache entries use the old keys); then `pnpm demo:check <run>` should show all its answers cached, and `pnpm demo:replay <run>` should complete its journeys
+- [ ] Decide the demo preset (Rohit, 28 Sep: option a) after timing a full rehearsal; the UI Standard scan took 7:56 with requirements (P4 gate)
+- [ ] Choose the live demo bug (B01 was found in 1 of 3 P3b buggy runs and in the P4 gate run); label the P4 gate run's 8 unlabelled findings
 - [ ] README: what it is, how to run, architecture sketch, results, limitations
 - [ ] Tag `demo-v1`
 

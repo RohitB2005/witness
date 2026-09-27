@@ -4,7 +4,7 @@
 // - DET-SORT: each sort option on the unfiltered list (both modes; read-only).
 // - Interaction sweep: collapsed accordions, disclosures and tabs, clicked once (staging mode only).
 // - Reflected input: the inert canary in GET parameters and search boxes, then DET-XSS (both modes).
-import { log } from "../events";
+import { candidateEvent, log } from "../events";
 import { withoutLlm } from "../llm/guard";
 import type { Candidate, Journey } from "../types";
 import type { ProbeDeps } from "./common";
@@ -49,10 +49,7 @@ export async function runProbes(deps: ProbeDeps): Promise<ProbeResult> {
     await run("reflect", () => reflectProbe(deps));
   });
   for (const c of out.candidates) {
-    deps.sink({
-      t: "candidate",
-      candidate: { id: c.id, category: c.category, summary: c.summary, route: c.route },
-    });
+    deps.sink(candidateEvent(c));
   }
   return out;
 }

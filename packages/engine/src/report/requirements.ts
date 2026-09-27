@@ -224,10 +224,4 @@ export function criteriaCoverage(i: {
   });
 }
 
-/** Plain-language labels (never colour alone). */
-export const CRITERION_LABEL: Record<Criterion["status"], string> = {
-  verified: "Verified",
-  failed: "Failed",
-  not_found: "Not found in the app",
-  not_tested: "Not tested",
-};
+export { CRITERION_LABEL } from "./view";

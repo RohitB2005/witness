@@ -212,6 +212,7 @@ export async function crawl(deps: CrawlDeps): Promise<CrawlResult> {
             routePattern: state.routePattern,
             title: state.title,
           },
+          thumb: `${capture.evidence.screenshot}.jpg`,
         });
 
         const detected = await runPageDetectors(

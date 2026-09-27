@@ -2,22 +2,15 @@
 // data URIs. Every interpolated value goes through `esc` — page text can contain markup, and the report must
 // never render it. Severity and tier are always written as words, never shown by colour alone.
 import type { Finding, RunResult } from "../types";
-import { replayText } from "../verify/tier";
-import { CRITERION_LABEL } from "./requirements";
-
-const VERDICT = {
-  ready: "Ready",
-  caveats: "Ready with caveats",
-  not_ready: "Not ready",
-} as const;
-const TIER: Record<Finding["tier"], string> = {
-  confirmed: "Confirmed",
-  likely: "Likely",
-  needs_review: "Needs review",
-  discarded: "Discarded",
-  evidence_based: "Evidence-based",
-  suggestion: "Suggestion",
-};
+import {
+  CRITERION_LABEL,
+  SEVERITY_LABEL,
+  TIER_LABEL as TIER,
+  aiUseLabel,
+  VERDICT_LABEL as VERDICT,
+  replayText,
+  reportView,
+} from "./view";
 
 function requirementsTable(r: RunResult): string {
   const cs = r.requirements!.criteria;
@@ -32,6 +25,20 @@ function requirementsTable(r: RunResult): string {
     )
     .join("");
   return `<h2>Requirements coverage (${cs.length} criteria)</h2><table><thead><tr><th>#</th><th>Criterion (from the requirements)</th><th>Status</th><th>Why</th></tr></thead><tbody>${rows}</tbody></table>`;
+}
+
+function securitySection(security: Finding[]): string {
+  const rows = security
+    .map(
+      (f) =>
+        `<tr><td><a href="#${esc(f.id)}">${esc(f.title)}</a></td><td>${esc(f.kind === "bug" ? "Bug" : "Improvement")}</td><td>${esc(SEVERITY_LABEL[f.severity])}</td><td>${esc(TIER[f.tier])}</td></tr>`,
+    )
+    .join("");
+  return `<h2>Security (${security.length})</h2>${
+    security.length
+      ? `<table><thead><tr><th>Finding</th><th>Kind</th><th>Severity</th><th>Tier</th></tr></thead><tbody>${rows}</tbody></table>`
+      : "<p>No security findings.</p>"
+  }`;
 }
 
 export function esc(value: unknown): string {
@@ -68,7 +75,7 @@ function card(f: Finding, n: number, o: HtmlOptions): string {
     .find((x) => x && x.startsWith("data:image/"));
   return `<article class="card" id="${esc(f.id)}">
 <h3>${n}. ${esc(f.title)}</h3>
-<div class="badges"><span>Severity: ${esc(f.severity)}</span><span>Tier: ${esc(TIER[f.tier])}</span><span>Category: ${esc(f.category)}</span><span>Route: <code>${esc(f.route)}</code></span></div>
+<div class="badges"><span>Severity: ${esc(SEVERITY_LABEL[f.severity])}</span><span>Tier: ${esc(TIER[f.tier])}</span><span>Category: ${esc(f.category)}</span><span>Route: <code>${esc(f.route)}</code></span></div>
 <p>${esc(f.impact)}</p>
 <dl>
 <dt>Expected</dt><dd>${esc(f.expected)}</dd>
@@ -89,23 +96,22 @@ ${img ? `<img src="${esc(img)}" alt="Screenshot for this finding">` : ""}
 }
 
 export function renderHtml(r: RunResult, o: HtmlOptions = {}): string {
-  const bugs = r.findings.filter((f) => f.kind === "bug" && f.tier !== "discarded");
-  const improvements = r.findings.filter((f) => f.kind === "improvement" && f.tier !== "discarded");
-  const discarded = r.findings.filter((f) => f.tier === "discarded");
-  const count = (t: Finding["tier"]) => bugs.filter((f) => f.tier === t).length;
+  const { bugs, improvements, discarded, security, counts } = reportView(r);
   const mins = (r.stats.durationMs / 60_000).toFixed(1);
   return `<!doctype html>
 <html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Witness report: ${esc(r.scope)}</title><style>${CSS}</style></head><body>
 <h1>Witness report</h1>
-<p class="meta">${esc(r.scope)} · ${esc(r.config.mode)} mode · ${esc(r.config.budget)} budget · pipeline ${esc(r.config.pipeline)} · ${esc(r.startedAt)} · ${esc(mins)} min · ${esc(r.stats.llmCalls)} AI calls (US$${esc(r.stats.costUsd.toFixed(2))})</p>
+<p class="meta">${esc(r.scope)} · ${esc(r.config.mode)} mode · ${esc(r.config.budget)} budget · pipeline ${esc(r.config.pipeline)} · ${esc(r.startedAt)} · ${esc(mins)} min · ${esc(aiUseLabel(r))}</p>
 <section class="verdict v-${esc(r.verdict.level)}"><strong>Verdict: ${esc(VERDICT[r.verdict.level])}.</strong> ${esc(r.verdict.reason)}</section>
-<p>Bugs: ${bugs.length} (Confirmed ${count("confirmed")}, Likely ${count("likely")}, Needs review ${count("needs_review")}) · Improvements: ${improvements.length} · Discarded: ${discarded.length} · Pages mapped: ${esc(r.stats.pages)}</p>
+<p>Bugs: ${bugs.length} (Confirmed ${counts.confirmed}, Likely ${counts.likely}, Needs review ${counts.needsReview}) · Improvements: ${improvements.length} · Discarded: ${discarded.length} · Pages mapped: ${esc(r.stats.pages)}</p>
+${r.requirements ? requirementsTable(r) : ""}
+${securitySection(security)}
 ${r.notes?.length ? `<h2>Notes</h2><ul>${r.notes.map((n) => `<li>${esc(n)}</li>`).join("")}</ul>` : ""}
 ${r.error ? `<p><strong>Scan error:</strong> ${esc(r.error)}</p>` : ""}
 <h2>What wasn't tested</h2><ul>${(r.notTested.length ? r.notTested : ["Nothing noted."]).map((n) => `<li>${esc(n)}</li>`).join("")}</ul>
+${r.timeCap?.cut.length ? `<h2>What the ${esc(Math.round(r.timeCap.capMs / 60_000))}-minute time cap cut</h2><ul>${r.timeCap.cut.map((n) => `<li>${esc(n)}</li>`).join("")}</ul>` : ""}
 ${r.appModel ? `<h2>What Witness understood the app to be</h2><p>${esc(r.appModel.purpose)}</p>` : ""}
-${r.requirements ? requirementsTable(r) : ""}
 <h2>Bugs (${bugs.length})</h2>${bugs.length ? bugs.map((f, i) => card(f, i + 1, o)).join("\n") : "<p>None found.</p>"}
 <h2>Improvements (${improvements.length})</h2>${improvements.length ? improvements.map((f, i) => card(f, i + 1, o)).join("\n") : "<p>None found.</p>"}
 ${

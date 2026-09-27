@@ -119,12 +119,20 @@ interface Holder {
   context?: BrowserContext;
 }
 
-async function withTimeout<T>(ms: number, holder: Holder, run: () => Promise<T>): Promise<T> {
+/** Not worth starting an attempt with less time than this before the deadline. */
+const MIN_ATTEMPT_MS = 5_000;
+
+async function withTimeout<T>(
+  ms: number,
+  holder: Holder,
+  run: () => Promise<T>,
+  why = `the replay took longer than ${ms / 1000} s and was stopped`,
+): Promise<T> {
   let timer: ReturnType<typeof setTimeout> | undefined;
   const timeout = new Promise<never>((_, reject) => {
     timer = setTimeout(() => {
       void holder.context?.close().catch(() => undefined);
-      reject(new ReplayInfraError(`the replay took longer than ${ms / 1000} s and was stopped`));
+      reject(new ReplayInfraError(why));
     }, ms);
   });
   try {
@@ -283,7 +291,10 @@ async function runUnit(u: Unit, deps: ReplayDeps, results: Map<string, ReplayRes
     // D49: a third attempt only for candidates whose first two disagreed.
     const active = attempt === 3 ? u.targets.filter(disagreeing) : u.targets;
     if (!active.length) return;
-    if (Date.now() > deps.deadline) {
+    // The time cap is hard (D78): an attempt never starts too close to the deadline, and one in flight
+    // is stopped when the deadline arrives.
+    const left = deps.deadline - Date.now();
+    if (left < MIN_ATTEMPT_MS) {
       for (const t of active)
         if (results.get(t.target.key)!.attempts === 0)
           results.get(t.target.key)!.skipped = "the time for verifying ran out";
@@ -292,8 +303,15 @@ async function runUnit(u: Unit, deps: ReplayDeps, results: Map<string, ReplayRes
     let outcome: Map<string, AttemptOutcome>;
     const holder: Holder = {};
     try {
-      outcome = await withTimeout(ATTEMPT_TIMEOUT_MS[u.kind], holder, () =>
-        u.kind === "static" ? attemptStatic(u, deps, holder) : attemptPath(u, active, deps, holder),
+      const cut = left < ATTEMPT_TIMEOUT_MS[u.kind];
+      outcome = await withTimeout(
+        Math.min(ATTEMPT_TIMEOUT_MS[u.kind], left),
+        holder,
+        () =>
+          u.kind === "static"
+            ? attemptStatic(u, deps, holder)
+            : attemptPath(u, active, deps, holder),
+        cut ? "the time for verifying ran out during the replay" : undefined,
       );
     } catch (err) {
       const why =

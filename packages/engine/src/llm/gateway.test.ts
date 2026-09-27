@@ -152,6 +152,63 @@ describe("cache", () => {
     expect(miss).toMatchObject({ ok: false, reason: "cache-miss" });
   });
 
+  it("a replay matches a prompt whose run-generated IDs differ, and answers with this run's IDs (D86)", async () => {
+    const tools = {
+      assert: {
+        description: "Assert an expectation",
+        schema: z.object({ expectationId: z.string(), evidence: z.array(z.string()) }),
+      },
+    };
+    const turn = (ex: string, ev: string, other: string) => ({
+      role: "explorer" as const,
+      tier: "fast" as const,
+      instructions: "Explore.",
+      prompt: `<expectations>\n- ${ex} "Total is right"\n- ${other} "Search works"\n</expectations>\n<evidence_ids>${ev}</evidence_ids>`,
+      tools,
+    });
+    const first = await testGateway(
+      [],
+      [
+        {
+          tool: "assert",
+          input: { expectationId: "ex_aaaa1111", evidence: ["ev_bbbb2222", "ev_notinprmt"] },
+        },
+      ],
+      {
+        cacheMode: "rw",
+      },
+    );
+    const r1 = await first.gateway.toolCall(turn("ex_aaaa1111", "ev_bbbb2222", "ex_cccc3333"));
+    expect(r1.ok).toBe(true);
+
+    const second = await testGateway([], [{ error: new Error("network is off") }], {
+      cache: new LlmCache(first.cacheDir, "replay"),
+    });
+    const r2 = await second.gateway.toolCall(turn("ex_zzzz9999", "ev_yyyy8888", "ex_xxxx7777"));
+    expect(r2).toMatchObject({
+      ok: true,
+      value: {
+        name: "assert",
+        input: { expectationId: "ex_zzzz9999", evidence: ["ev_yyyy8888", "ev_notinprmt"] },
+      },
+    });
+    expect(second.fast.prompts).toHaveLength(0);
+    // Different content still misses: only the IDs are normalised.
+    const miss = await second.gateway.toolCall({
+      ...turn("ex_zzzz9999", "ev_yyyy8888", "ex_xxxx7777"),
+      prompt: "other",
+    });
+    expect(miss).toMatchObject({ ok: false, reason: "cache-miss" });
+    // The order IDs appear in matters: swapping two expectations is a different prompt.
+    const swapped = await second.gateway.toolCall(
+      turn("ex_xxxx7777", "ev_yyyy8888", "ex_zzzz9999"),
+    );
+    expect(swapped.ok).toBe(true); // same shape → same key; the answer names the first expectation shown
+    expect(swapped.ok && (swapped.value.input as { expectationId: string }).expectationId).toBe(
+      "ex_xxxx7777",
+    );
+  });
+
   it("the key covers role, model, prompt and schema", async () => {
     const t = await testGateway([{ json: { purpose: "x", entities: [] } }], undefined, {
       cacheMode: "rw",
@@ -241,5 +298,42 @@ describe("concurrent calls (P3)", () => {
     );
     expect(t.calls).toHaveLength(4);
     expect(t.gateway.totals.calls).toBe(4);
+  });
+});
+
+describe("the run's hard deadline (D78)", () => {
+  it("doesn't start a call when too little time is left", async () => {
+    const t = await testGateway([{ json: { purpose: "x", entities: [] } }], undefined, {
+      hardDeadline: Date.now() + 1_000,
+    });
+    const r = await t.gateway.structured(req);
+    expect(r).toMatchObject({ ok: false, reason: "deadline" });
+    expect(t.smart.prompts).toHaveLength(0);
+    expect(t.gateway.totals.cutByDeadline).toBe(1);
+  });
+
+  it("a request's own deadline applies too", async () => {
+    const t = await testGateway([{ json: { purpose: "x", entities: [] } }]);
+    const r = await t.gateway.structured({ ...req, deadline: Date.now() + 500 });
+    expect(r).toMatchObject({ ok: false, reason: "deadline" });
+  });
+
+  it("cuts off a call still running when the deadline arrives", async () => {
+    const t = await testGateway([{ json: { purpose: "x", entities: [] } }], undefined, {
+      hardDeadline: Date.now() + 2_500,
+    });
+    // A provider that takes 10 s (it honours the abort signal, as real providers' fetch does).
+    t.smart.model.doGenerate = (options) =>
+      new Promise((_, reject) => {
+        const timer = setTimeout(() => reject(new Error("finished too late")), 10_000);
+        options.abortSignal?.addEventListener("abort", () => {
+          clearTimeout(timer);
+          reject(new Error("aborted"));
+        });
+      });
+    const started = Date.now();
+    const r = await t.gateway.structured(req);
+    expect(Date.now() - started).toBeLessThan(4_000);
+    expect(r).toMatchObject({ ok: false, reason: "deadline" });
   });
 });

@@ -83,6 +83,7 @@ export async function verify(input: VerifyInput): Promise<VerifyOutput> {
   // replay guard stays absolute (an LLM call from inside a replay still throws).
   const gateway = input.gateway;
   const llmStages = !!gateway && pipeline !== "ai-no-verify" && pipeline !== "deterministic";
+  let aiSkippedTime = 0;
   const llmOk = () => !!gateway && !gateway.budgetExhausted && Date.now() < input.deadline;
   const byKey = new Map(groups.map((g) => [g.rep.groupKey, g]));
   const queue = channel<GroupFacts>();
@@ -104,17 +105,24 @@ export async function verify(input: VerifyInput): Promise<VerifyOutput> {
     const judged = g.rep.source.kind === "judgement";
     const argue = pipeline === "full" && skepticApplies(g.rep);
     if (judged) {
-      if (!llmOk()) return;
+      if (!llmOk()) {
+        if (Date.now() >= input.deadline) aiSkippedTime++;
+        return;
+      }
       const facts = await factSheet(g.rep, input, steps, stateById);
-      const r = await judge(gateway, {
-        claim: g.rep.summary,
-        route: g.rep.route,
-        steps: facts.steps,
-        pageText: facts.pageText,
-        previousPageText: facts.previousPageText,
-        errors: facts.errors,
-        evidenceIds: g.rep.evidenceIds,
-      });
+      const r = await judge(
+        gateway,
+        {
+          claim: g.rep.summary,
+          route: g.rep.route,
+          steps: facts.steps,
+          pageText: facts.pageText,
+          previousPageText: facts.previousPageText,
+          errors: facts.errors,
+          evidenceIds: g.rep.evidenceIds,
+        },
+        input.deadline,
+      );
       if (r.ok) g.judge = r.value;
       else log(sink, "warn", `The judge couldn't decide on "${g.rep.summary}": ${r.error}`);
       sink({
@@ -127,20 +135,25 @@ export async function verify(input: VerifyInput): Promise<VerifyOutput> {
     }
     if (!argue) return;
     if (!llmOk()) {
+      if (Date.now() >= input.deadline) aiSkippedTime++;
       g.skepticSkipped = "time or spend ran out";
       return;
     }
     const facts = await factSheet(g.rep, input, steps, stateById);
-    const r = await skeptic(gateway, {
-      statement: g.rep.detail.expected,
-      grounding: g.rep.detail.whyFlagged,
-      check: g.rep.check ? JSON.stringify(g.rep.check) : undefined,
-      actual: g.rep.detail.actual,
-      route: g.rep.route,
-      steps: facts.steps,
-      pageText: facts.pageText,
-      replay: replayText(g.replay!),
-    });
+    const r = await skeptic(
+      gateway,
+      {
+        statement: g.rep.detail.expected,
+        grounding: g.rep.detail.whyFlagged,
+        check: g.rep.check ? JSON.stringify(g.rep.check) : undefined,
+        actual: g.rep.detail.actual,
+        route: g.rep.route,
+        steps: facts.steps,
+        pageText: facts.pageText,
+        replay: replayText(g.replay!),
+      },
+      input.deadline,
+    );
     if (r.ok) g.skeptic = r.value;
     else g.skepticSkipped = r.error;
     sink({
@@ -178,6 +191,7 @@ export async function verify(input: VerifyInput): Promise<VerifyOutput> {
     "verify.discardedEvidence": 0,
     "verify.discardedReplay": 0,
     "verify.notReplayed": 0,
+    "verify.notReplayedTime": 0,
     "verify.couldntRepeat": 0,
     "verify.intermittent": 0,
     "verify.downgradedSkeptic": 0,
@@ -211,6 +225,8 @@ export async function verify(input: VerifyInput): Promise<VerifyOutput> {
       funnel["verify.discardedReplay"]!++;
     else if (outcome === "not_replayed" && pipeline !== "ai-no-verify")
       funnel["verify.notReplayed"]!++;
+    if (/time for verifying ran out/.test(replay.skipped ?? ""))
+      funnel["verify.notReplayedTime"]!++;
     else if (outcome === "couldnt_repeat" && pipeline !== "ai-no-verify")
       funnel["verify.couldntRepeat"]!++;
     else if (outcome === "intermittent") funnel["verify.intermittent"]!++;
@@ -222,6 +238,7 @@ export async function verify(input: VerifyInput): Promise<VerifyOutput> {
       ...(replay.skipped ? [`Not replayed: ${replay.skipped}.`] : []),
       ...(g.skepticSkipped ? [`Skeptic skipped: ${g.skepticSkipped}.`] : []),
     ];
+    sink({ t: "tier", candidateIds: g.group.map((c) => c.id), tier: t.tier, reason: t.reason });
     verdicts.set(g.rep.groupKey, {
       tier: t.tier,
       tierReason: t.reason,
@@ -252,6 +269,7 @@ export async function verify(input: VerifyInput): Promise<VerifyOutput> {
       extraEvidenceIds: replay.evidenceIds.slice(0, 4),
     });
   }
+  funnel["verify.aiReviewSkippedTime"] = aiSkippedTime;
   return { verdicts, funnel };
 }
 

@@ -38,7 +38,7 @@ The canary input is an **inert** element (`"><i data-witness-canary="TOKEN"></i>
 | `explore/executor.test.ts` — destructive-verb controls blocked per mode | T1 |
 | `llm/redaction.test.ts` — gateway throws if a vault value appears in a payload | T5 |
 | `export/secrets.test.ts` — exported specs contain env lookups, not secret values | T14 |
-| `server/artifacts.test.ts` — traversal attempts return 400 | T8 |
+| `apps/server/src/app.test.ts` — traversal attempts return 400; requests to other host names and writes from other origins return 403 (T11); the password stays out of config, responses and run files (T5) | T8, T11, T5 |
 | `report/html.test.ts` — page text with `<script>` is escaped in the HTML export | T7 |
 | Eval experiment E4 (canary on vs off) | T4 |
 

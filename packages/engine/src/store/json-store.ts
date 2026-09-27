@@ -104,12 +104,26 @@ export class JsonRunStore implements RunStore {
       const dir = this.runDir(runId);
       const result = await this.getResult(runId).catch(() => undefined);
       if (result) {
+        const bugs = (t: string) =>
+          result.findings.filter((f) => f.kind === "bug" && f.tier === t).length;
         out.push({
           runId,
           url: result.config.url,
           startedAt: result.startedAt,
           verdict: result.verdict,
           findings: result.findings.length,
+          finishedAt: result.finishedAt,
+          budget: result.config.budget,
+          pipeline: result.config.pipeline,
+          durationMs: result.stats.durationMs,
+          bugs: {
+            confirmed: bugs("confirmed"),
+            likely: bugs("likely"),
+            needsReview: bugs("needs_review"),
+          },
+          costUsd: result.stats.costUsd,
+          ...(result.cancelled ? { cancelled: true } : {}),
+          ...(result.error ? { error: result.error } : {}),
         });
       } else if (existsSync(path.join(dir, "meta.json"))) {
         const meta = JSON.parse(await readFile(path.join(dir, "meta.json"), "utf8")) as {

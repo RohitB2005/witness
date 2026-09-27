@@ -12,6 +12,11 @@ export class SecretVault {
     this.#secrets.set(name, value);
   }
 
+  /** Forgets every secret (the dashboard calls it when a scan and its exports are done). */
+  clear(): void {
+    this.#secrets.clear();
+  }
+
   has(name: string): boolean {
     return this.#secrets.has(name);
   }
