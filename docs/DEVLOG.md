@@ -754,3 +754,21 @@ On this bench, the work is done by grounding and the skeptic, not by replay: eve
 - **E3:** 12 tests; 11 of 11 real seeded bugs behave. The 12th is the count-check false positive above. Its test fails on a correct app too, which is right, since the test encodes the wrong expectation.
 
 **Spend.** OpenRouter total usage **$5.24** (after the P3 gate: $4.93). This wrap-up (one Standard run) cost $0.31. Balance: $4.76.
+
+### P3b decisions (27 Sep 2026)
+
+**D64 — Four test-design habits added to the Planner and Explorer guidance** (Rohit, 27 Sep). They're standard QA practice, written generically, and motivated by the P3 misses (B03, B06, B08 in the confirmation run):
+- **Removals:** check that the specific item is gone (`notVisible`) and another remains (`visible`), not a count. ← B06: the cancel check compared counts, which B06 doesn't change.
+- **Saves:** change a value, save, capture, reload, compare against the new value. ← B08: the profile check saved without editing anything.
+- **Coverage (Planner):** every main interactive feature in the map (search, sort, filters, forms) is exercised by at least one journey, combining features when journeys are scarce. ← B03: no search journey was planned.
+- **Finish when done (Explorer):** once the goal is reached, don't repeat its action. ← the booking journey made a second booking and ran out of time.
+
+No bench words in either prompt (the example for "repeat" is "creating a second record"). Measured by a dedicated buggy Standard run *without* requirements in the P3b gate (Rohit chose option b), because the requirements run would confound it: `SCOPE.md` mentions search and cancelling.
+
+**Second freeze: `bench/bugs-v2.yaml` frozen at `576591a`** (27 Sep), together with `bench/SCOPE.md` and the bench's v2 flags B19–B23 and decoys D05–D06, before any detector was written. `bench/bugs.yaml` is untouched. Bench tests: 61 pass, and each new flag's test fails when only that flag is on. The clean-build audit now includes the new booking details page and its reschedule states.
+
+**D65 — How the v2 bench bugs are built.**
+- **B19 and D05 live in a server-generated `/config.js`**, not the Vite bundle. Flags toggle at runtime, but the bundle is built once, and esbuild folds `"sk_" + "live_" + …` into one literal, which would put a full fake key in `dist/` whatever the flag. The server assembles the keys from fragments per request.
+- **B20** builds hidden source maps (no `sourceMappingURL` comment). With the flag on, the server serves the maps and adds a `SourceMap` header.
+- **B21 and B23 needed a new page.** The booking details page (`/bookings/:ref`, linked from My bookings) is what calls `GET /api/bookings/:ref`, and it is where rescheduling lives when B23 is off. Because the logged-in crawl reaches it, DET-AUTHZ can find B21 without the AI.
+- **B22** triggers on `'` only. The XSS canary contains `"` and no `'`, so B15 and B22 don't mask each other when both are on.
