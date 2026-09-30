@@ -965,6 +965,7 @@ async function runVariant(
             journeyId: form.journey.id,
             stepIds: ex.steps.map((s) => s.id),
             evidenceIds: [r.evidenceId, ...(cur ? [cur.capture.evidence.screenshot] : [])],
+            afterBlocked: recorder.blockedHost(),
           }),
         );
       }
@@ -1094,6 +1095,7 @@ async function runLoginPair(
       journeyId,
       stepIds: ex.steps.map((s) => s.id),
       evidenceIds: [r.evidenceId, ...(ex.current ? [ex.current.capture.evidence.screenshot] : [])],
+      afterBlocked: recorder.blockedHost(),
     });
     cand.category = "security";
     cand.detail = {

@@ -167,6 +167,13 @@ export async function exploreJourney(input: Journey, deps: ExploreDeps): Promise
     history.push(`1. ${start.step.description} → ${start.ok ? "ok" : start.message}`);
 
     let consecutiveErrors = 0;
+    /**
+     * Evaluation errors per check statement. One check the Explorer can't express (e.g. an order check
+     * on a list a search has narrowed) used to end the whole journey through the 3-failures rule, before
+     * it reached the rest of its goal (P5 E1 runs). After two errors it's recorded as couldn't evaluate
+     * and the journey carries on (D91).
+     */
+    const evalErrors = new Map<string, number>();
     let badTurns = 0;
     let lastActionKey = "";
     let repeats = 0;
@@ -295,7 +302,10 @@ export async function exploreJourney(input: Journey, deps: ExploreDeps): Promise
           emitStep(r);
           addCandidates(r.candidates);
           outcome = { ok: r.ok, message: r.message, stepResult: r };
-          if (repeats >= 2 && ex.current?.state.id && key.endsWith(ex.current.state.id)) {
+          const unchanged = !!ex.current?.state.id && key.endsWith(ex.current.state.id);
+          // Say so the first time, so the Explorer can change course before the loop guard stops it (D92).
+          if (repeats === 1 && unchanged) outcome.message = `${r.message} ${REPEAT_NUDGE}`;
+          if (repeats >= 2 && unchanged) {
             metrics.loopAborts++;
             finish(
               "incomplete",
@@ -350,6 +360,7 @@ export async function exploreJourney(input: Journey, deps: ExploreDeps): Promise
               session,
               journeyId: journey.id,
               stepIds: ex.steps.map((s) => s.id),
+              afterBlocked: recorder.blockedHost(),
             }),
           ]);
           outcome = { ok: true, message: "Flag recorded; it will be verified separately." };
@@ -395,6 +406,12 @@ export async function exploreJourney(input: Journey, deps: ExploreDeps): Promise
       a: ReturnType<typeof AssertSchema.parse>,
     ): Promise<{ ok: boolean; message: string }> {
       metrics.asserts++;
+      const statement = a.expectationId
+        ? journey.expectations.find((e) => e.id === a.expectationId)?.statement
+        : a.statement;
+      if (statement && (evalErrors.get(normalise(statement)) ?? 0) >= EVAL_ERRORS_TO_GIVE_UP) {
+        return { ok: true, message: GAVE_UP_MESSAGE };
+      }
       let exp: Expectation | undefined;
       try {
         if (a.expectationId) {
@@ -421,7 +438,7 @@ export async function exploreJourney(input: Journey, deps: ExploreDeps): Promise
             const plannedCheck = exp.check;
             exp.check = await ex.storedCheck(a.check);
             const own = await evaluate(exp);
-            if (own.status === "error" && planned.status === "pass") {
+            if ((own.status === "error" || own.status === "gave_up") && planned.status === "pass") {
               exp.check = plannedCheck;
               status.set(exp.id, "passed");
               return { ok: true, message: `${planned.message} (your check couldn't be evaluated)` };
@@ -495,6 +512,15 @@ export async function exploreJourney(input: Journey, deps: ExploreDeps): Promise
       if (r.result.status === "error") {
         status.set(exp.id, "couldn't evaluate");
         metrics.assertErrors++;
+        const key = normalise(exp.statement);
+        const n = (evalErrors.get(key) ?? 0) + 1;
+        evalErrors.set(key, n);
+        // Not a failed action: the journey's other goals still matter more than this one check.
+        if (n >= EVAL_ERRORS_TO_GIVE_UP)
+          return {
+            status: "gave_up",
+            message: `ERROR (couldn't evaluate) again: ${r.result.message} ${GAVE_UP_MESSAGE}`,
+          };
         return {
           status: "error",
           message: `ERROR (couldn't evaluate): ${r.result.message} Try again with your own check using refs.`,
@@ -516,6 +542,7 @@ export async function exploreJourney(input: Journey, deps: ExploreDeps): Promise
             r.evidenceId,
             ...(cur ? [cur.capture.evidence.screenshot, cur.capture.evidence.snapshot] : []),
           ],
+          afterBlocked: recorder.blockedHost(),
         }),
       ]);
       return { status: "fail", message: `FAIL (recorded as a candidate): ${r.result.message}` };
@@ -526,6 +553,12 @@ export async function exploreJourney(input: Journey, deps: ExploreDeps): Promise
     deps.sink({ t: "journey", journeyId: journey.id, status: journey.status });
   }
 }
+
+const REPEAT_NUDGE =
+  "Note: you did exactly this last turn and the page didn't change. Doing it again will stop the journey: try a different action, or move on to the next part of the goal.";
+const EVAL_ERRORS_TO_GIVE_UP = 2;
+const GAVE_UP_MESSAGE =
+  "This check couldn't be evaluated twice, so it is recorded as couldn't evaluate. Don't retry it: carry on with the rest of the journey's goal.";
 
 const normalise = (s: string) =>
   s

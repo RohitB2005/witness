@@ -201,7 +201,7 @@ export async function verify(input: VerifyInput): Promise<VerifyOutput> {
   for (const g of groups) {
     const replay = g.replay ?? { attempts: 0, reproduced: 0, notes: [], evidenceIds: [] };
     const facts: TierInput = {
-      ...tierFacts(g.rep),
+      ...tierFacts(g.rep, g.group),
       evidenceValid: g.evidenceValid,
       evidenceNote: g.evidenceNote,
       replay: {

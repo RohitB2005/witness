@@ -326,6 +326,99 @@ describe("AI pipeline (mock models)", () => {
   );
 
   it(
+    "a check that can't be evaluated is given up after two errors; the journey carries on (D91)",
+    { timeout: 180_000 },
+    async () => {
+      // The Explorer keeps asserting an order check on a list that isn't on the page (as in P5's E1 runs,
+      // where a search had narrowed the list). Before D91 the third error ended the journey.
+      let attempts = 0;
+      const stubborn = (prompt: string): MockReply => {
+        const title = /Title: (.+)/.exec(prompt)?.[1] ?? "";
+        const history = /<recent_steps>([\s\S]*?)<\/recent_steps>/.exec(prompt)?.[1] ?? "";
+        if (
+          title.startsWith("Sort") &&
+          history.includes('Choose "Price: low to high"') &&
+          attempts < 4
+        ) {
+          attempts++;
+          return {
+            tool: "assert",
+            input: {
+              statement: "Prices in the results list go up from lowest to highest",
+              check: {
+                type: "ordered",
+                items: {
+                  by: "role",
+                  role: "listitem",
+                  within: { by: "role", role: "list", name: "No such list" },
+                },
+                read: "number",
+                direction: "asc",
+              },
+              grounding: { kind: "convention", rationale: "A price sort orders by price." },
+              impact: "wrong-info",
+            },
+          };
+        }
+        return explorerReply(prompt);
+      };
+      const smart = (prompt: string): MockReply =>
+        prompt.includes("<journey id=") ? stubborn(prompt) : smartReply(prompt);
+      const { result } = await scan("full", {
+        smart: mockModel([smart]),
+        fast: mockModel([stubborn]),
+      });
+      expect(attempts).toBe(4);
+      const sortJourney = result.journeys[0]!;
+      expect(sortJourney.incompleteReason ?? "").not.toMatch(/failed actions in a row/);
+      expect(sortJourney.status).toBe("completed");
+      // The rest of the journey still ran: the planned order check found the sort bug.
+      expect(
+        result.findings.some((f) => f.source.kind === "check" && f.source.id === "ordered"),
+      ).toBe(true);
+      // Two evaluations, not four: the later attempts were refused without re-running the check.
+      const tries = (sortJourney.steps ?? []).filter((st) =>
+        /lowest to highest$/.test(st.description ?? ""),
+      );
+      expect(tries.length).toBe(2);
+    },
+  );
+
+  it(
+    "a repeated action on an unchanged page is pointed out before the loop guard stops the journey (D92)",
+    { timeout: 180_000 },
+    async () => {
+      let clicks = 0;
+      const prompts: string[] = [];
+      const repeater = (prompt: string): MockReply => {
+        const title = /Title: (.+)/.exec(prompt)?.[1] ?? "";
+        if (title.startsWith("Request") && clicks < 3) {
+          clicks++;
+          prompts.push(prompt);
+          const line =
+            prompt.split("\n").find((l) => /textbox "Full name"/.test(l) && /\[ref=/.test(l)) ?? "";
+          const ref = /\[ref=([a-z0-9]+)\]/.exec(line)?.[1] ?? "e0";
+          return { tool: "click", input: { ref, why: "focus the name field" } };
+        }
+        return explorerReply(prompt);
+      };
+      const smart = (prompt: string): MockReply =>
+        prompt.includes("<journey id=") ? repeater(prompt) : smartReply(prompt);
+      const { result } = await scan("full", {
+        smart: mockModel([smart]),
+        fast: mockModel([repeater]),
+      });
+      expect(clicks).toBe(3);
+      expect(prompts[1]).not.toContain("the page didn't change");
+      expect(prompts[2]).toContain("you did exactly this last turn and the page didn't change");
+      const request = result.journeys.find((j) => j.title === "Request a book")!;
+      expect(request.incompleteReason).toBe(
+        "Stopped: the same action kept being repeated on an unchanged page.",
+      );
+    },
+  );
+
+  it(
     "degrades to deterministic findings when the planner fails (NFR-3)",
     { timeout: 120_000 },
     async () => {

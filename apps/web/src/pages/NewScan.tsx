@@ -7,6 +7,7 @@ import { originOf } from "../format";
 
 const BUDGETS = [
   { id: "quick", label: "Quick", detail: "About 3 minutes · 2 journeys · AI spend up to $0.50" },
+  { id: "demo", label: "Demo", detail: "Up to 5 minutes · 2 journeys · AI spend up to $1.50" },
   { id: "standard", label: "Standard", detail: "Up to 8 minutes · 3 journeys · AI spend up to $2" },
   { id: "deep", label: "Deep", detail: "Up to 15 minutes · 8 journeys · AI spend up to $5" },
 ] as const;
@@ -175,7 +176,7 @@ export function NewScanPage({ live }: { live: LiveInfo | null }) {
                 [
                   "production",
                   "Production (read-only)",
-                  "Every form submission and data change is blocked, except logging in.",
+                  "Every request that sends data, to this app or any other site, is blocked, except logging in.",
                 ],
               ] as const
             ).map(([id, name, desc]) => (
@@ -296,7 +297,7 @@ export function NewScanPage({ live }: { live: LiveInfo | null }) {
 
         <fieldset>
           <legend className={label}>How thorough</legend>
-          <div className="mt-2 grid gap-3 sm:grid-cols-3">
+          <div className="mt-2 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
             {BUDGETS.map((b) => (
               <label
                 key={b.id}

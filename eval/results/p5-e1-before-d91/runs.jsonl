@@ -1,0 +1,3 @@
+{"runDir":"runs/run_20260930-025209_3e4e","clean":false,"exp":"E1","pipeline":"full","budget":"standard","llmCache":"rw","benchBugs":"all","user":"demo@harbourclean.test","wallSeconds":361}
+{"runDir":"runs/run_20260930-025811_419u","clean":false,"exp":"E1","pipeline":"full","budget":"standard","llmCache":"off","benchBugs":"all","user":"demo@harbourclean.test","wallSeconds":340}
+{"runDir":"runs/run_20260930-030351_adys","clean":false,"exp":"E1","pipeline":"full","budget":"standard","llmCache":"off","benchBugs":"all","user":"demo@harbourclean.test","wallSeconds":443}

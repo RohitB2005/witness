@@ -4,7 +4,7 @@
 import type { Browser } from "playwright";
 import { BUDGETS, TIME_SPLIT } from "./config/budgets";
 import { launchBrowser, observeContexts } from "./browser/context";
-import { SafetyPolicy } from "./browser/policy";
+import { SafetyPolicy, blockedWriteNote } from "./browser/policy";
 import type { SecretVault } from "./browser/vault";
 import { crawl } from "./crawl/crawler";
 import { brokenLinkCandidate, isBrokenStatus } from "./detectors/brokenlink";
@@ -493,6 +493,8 @@ export async function runScan(config: ScanConfig, deps: RunScanDeps): Promise<Ru
         aiStagesSkipped,
       });
       notTested.push(...(probes?.notTested ?? []));
+      const blockedNote = blockedWriteNote(policy.blocked);
+      if (blockedNote) notTested.push(blockedNote);
       if (config.requirements?.trim() && !criteria)
         notTested.push(
           "The requirements weren't checked: the AI stages that split them into criteria didn't run.",

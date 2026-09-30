@@ -116,17 +116,40 @@ Spec: `docs/ADDENDUM_QA_COVERAGE.md` (approved by Rohit, 26 Sep). Build in this 
 
 ## P5 — Evaluate and stabilise; FEATURE FREEZE (Sat 3 Oct)
 
-- [ ] Cut matrix (budget, D48): A0 as needed (free), A2 buggy ×3, A2 clean ×2, SauceDemo ×2 (one per account), Friction ×1; the injection comparison ×1 only if budget allows. A1 and A3 are derived from the A2 runs (`EVALUATION.md` §2). Label findings; `summary.json` + charts. Report the v1 set (B01–B18) and the v2 set (B19–B24) separately and combined; the ablation stays on v1 so earlier numbers remain comparable (addendum)
-- [ ] Combined v1+v2 scoring (Rohit, 28 Sep): one finding counts for at most one seeded bug across both files (the DB-error "possible SQL injection" finding is B22, not v1 B15, whose frozen keyword rule also matches it); precision is only reported combined
-- [ ] Clean-run rows show "–" for recall and precision (there's nothing to recall), not 0%
-- [ ] Fix only bugs that affect the demo or the numbers' validity
-- [ ] Offline replay tested with Wi-Fi off; screen recording made. Needs a rehearsal run made with `--llm-cache rw` **after D86** (earlier cache entries use the old keys); then `pnpm demo:check <run>` should show all its answers cached, and `pnpm demo:replay <run>` should complete its journeys
-- [ ] Decide the demo preset (Rohit, 28 Sep: option a) after timing a full rehearsal; the UI Standard scan took 7:56 with requirements (P4 gate)
-- [ ] Choose the live demo bug (B01 was found in 1 of 3 P3b buggy runs and in the P4 gate run); label the P4 gate run's 8 unlabelled findings
-- [ ] README: what it is, how to run, architecture sketch, results, limitations
-- [ ] Tag `demo-v1`
+- [x] Cut matrix (budget, D48): A0 as needed (free), A2 buggy ×3, A2 clean ×2, SauceDemo ×2 (one per account), Friction ×1; the injection comparison ×1 only if budget allows. A1 and A3 are derived from the A2 runs (`EVALUATION.md` §2). Label findings; `summary.json` + charts. Report the v1 set (B01–B18) and the v2 set (B19–B24) separately and combined; the ablation stays on v1 so earlier numbers remain comparable (addendum). *Done 30 Sep; the 35 new labels approved by Rohit and applied.*
+- [x] Combined v1+v2 scoring (Rohit, 28 Sep): one finding counts for at most one seeded bug across both files (the DB-error "possible SQL injection" finding is B22, not v1 B15, whose frozen keyword rule also matches it); precision is only reported combined
+- [x] Clean-run rows show "–" for recall and precision (there's nothing to recall), not 0%
+- [x] Fix only bugs that affect the demo or the numbers' validity (D87 + refinement, D91, D92)
+- [ ] Offline replay tested with Wi-Fi off; screen recording made. *(Cache replay verified 30 Sep: the Standard rehearsal `…031814_2nd8` replays completely; the Demo rehearsal `…044424_04qv` replays with one Explorer miss. Wi-Fi-off run and recording: Rohit.)* Needs a rehearsal run made with `--llm-cache rw` **after D86** (earlier cache entries use the old keys); then `pnpm demo:check <run>` should show all its answers cached, and `pnpm demo:replay <run>` should complete its journeys
+- [x] Decide the demo preset (Rohit, 30 Sep: `demo`, 2 journeys, 5-min cap; 3:45–3:57 measured) (Rohit, 28 Sep: option a) after timing a full rehearsal; the UI Standard scan took 7:56 with requirements (P4 gate)
+- [x] Choose the live demo bug (Rohit, 30 Sep: **B02**, Confirmed in every buggy run) (B01 was found in 1 of 3 P3b buggy runs and in the P4 gate run); label the P4 gate run's 8 unlabelled findings (done: 0 unlabelled)
+- [x] README: what it is, how to run, architecture sketch, results, limitations
+- [x] Tag `demo-v1`
+
+**P5 progress (30 Sep, stopped for review before the README).**
+- **Done:**
+  - D87 read-only fix;
+  - the demo preset (D88);
+  - `pnpm eval` and combined scoring (D89, D90);
+  - the full matrix plus E4, the demo-preset run and A0;
+  - E3: 42/42 tests behave;
+  - the offline replay by cache: same bugs, tiers and journeys; 3 of 74 answers missed.
+- **Rohit's decisions (30 Sep), applied:** labels approved, Friction triaged (`eval/results/p5/e6/triage.json`), preset `demo`, demo bug B02, then the Demo rehearsal (with the cache on), README and the `demo-v1` tag.
+- **Still open (Rohit):** Wi-Fi-off replay and the screen recording.
+- Results and teach-back: `DEVLOG.md` "P5 — runs and scoring".
 
 **Gate P5:** every item in "What must be proven" (strategic plan §31) is ticked or explicitly noted as a limitation.
+
+**P5 gate — passed 30 Sep 2026, with one manual item open.**
+- The strategic plan (§31) isn't in the repo, so the gate was checked against the closest list here: the seven questions in EVALUATION.md §1.
+  - (1) Recall per category and tier;
+  - (2) precision 100%, 0 clean-build false bugs, no decoys flagged;
+  - (3) A0 52% vs A2 65–83%;
+  - (4) A1 precision 79–86% vs A2 100%;
+  - (5) stability 0.70, $0.20–0.42 and 5–8 min per Standard run;
+  - (6) 42/42 exported tests behave;
+  - (7) SauceDemo 4/7 Confirmed, Friction 0 false bugs above Needs review, injection canary without effect.
+- **Limitations, noted in README and DEVLOG:** the non-engineer read test (E7 and a reader test) wasn't run; the Wi-Fi-off replay and screen recording are Rohit's.
 
 ## P6 — Present (Sun 4 – Tue 6 Oct)
 

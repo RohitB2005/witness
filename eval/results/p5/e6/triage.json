@@ -1,0 +1,32 @@
+{
+  "run": "runs/run_20260930-040451_p7dv",
+  "app": "https://usefriction.vercel.app (production mode, not logged in, Standard, once)",
+  "triagedBy": "Rohit Balaji, 30 Sep 2026 (from the live app; Witness never read its code)",
+  "note": "Kept apart from eval/labels.json: fingerprints such as the security-header ones are the same on every app, so bench labels and Friction verdicts must not share a file.",
+  "findings": {
+    "fp_cd189aa5e7c70d10": { "tier": "needs_review", "label": "fp", "reason": "Caused by Witness blocking Firebase Auth's sign-in call (read-only mode); the app showed \"Couldn't reach the server\"." },
+    "fp_21202b955602eef2": { "tier": "needs_review", "label": "fp", "reason": "Same blocked sign-in call; not the app's own message for bad credentials." },
+    "fp_012d66d13e1a0357": { "tier": "needs_review", "label": "fp", "reason": "The live console shows 0 errors and 0 warnings on every page; the error came from the blocked Firebase Installations call." },
+    "fp_1ef99584b644c052": { "tier": "needs_review", "label": "fp", "reason": "The Study Assistant opens and answers on /about; the check wanted a heading element." },
+    "fp_e3ca8769e2a99531": { "tier": "evidence_based", "label": "tp_unseeded", "reason": "Colour contrast on /demo (axe)." },
+    "fp_87c9e18dbce9b192": { "tier": "evidence_based", "label": "tp_unseeded", "reason": "Colour contrast on /lesson (axe)." },
+    "fp_3ba12093e8992568": { "tier": "evidence_based", "label": "tp_unseeded", "reason": "Colour contrast on /about (axe)." },
+    "fp_3d68c0e834233698": { "tier": "evidence_based", "label": "tp_unseeded", "reason": "Content outside landmarks on /lesson (axe)." },
+    "fp_3495b0b40caea948": { "tier": "evidence_based", "label": "tp_unseeded", "reason": "Content outside landmarks on /about (axe)." },
+    "fp_b94959c05d373c4c": { "tier": "evidence_based", "label": "tp_unseeded", "reason": "No main landmark on /lesson (axe)." },
+    "fp_7b658f08338c5244": { "tier": "evidence_based", "label": "tp_unseeded", "reason": "No level-one heading on /lesson and /login (axe)." },
+    "fp_031bc07487cf3c29": { "tier": "evidence_based", "label": "tp_unseeded", "reason": "No X-Content-Type-Options header." },
+    "fp_cf5703bdcd814b7c": { "tier": "evidence_based", "label": "tp_unseeded", "reason": "No Content-Security-Policy header." },
+    "fp_6cc1851db0e7ecdd": { "tier": "evidence_based", "label": "tp_unseeded", "reason": "No frame protection (X-Frame-Options or frame-ancestors)." },
+    "fp_553634b0888123d6": { "tier": "suggestion", "label": "fp", "reason": "By design: every sample lives on /demo with its own \"Build this lesson\" button." },
+    "fp_824325047a06858e": { "tier": "suggestion", "label": "tp_unseeded", "reason": "\"Login\" vs \"Access ID\" / \"New User\" / \"Enter Archive\" / \"Create account\" wording is inconsistent." },
+    "fp_00aa86505a327764": { "tier": "suggestion", "label": "tp_unseeded", "reason": "Same wording inconsistency on the login page (\"Enter Archive\")." },
+    "fp_4caf4c472f8a719d": { "tier": "suggestion", "label": "tp_unseeded", "reason": "CamelCase simulation names such as \"LoanAmortization\" on /about." },
+    "fp_f579b1bdaf7e095e": { "tier": "suggestion", "label": "not_triaged", "reason": "'Create an account' button placed mid-sentence on /demo: not covered by Rohit's triage." }
+  },
+  "summary": {
+    "bugs": "4 reported, all at Needs review; 0 real. 0 false alarms reached Confirmed or Likely. 3 of the 4 came from Witness's own read-only block.",
+    "evidenceBased": "10 of 10 real.",
+    "suggestions": "3 real, 1 false, 1 not triaged (of 5)."
+  }
+}

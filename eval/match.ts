@@ -5,6 +5,9 @@
 //  - A rule marked `confirm: manual` gives a TENTATIVE match: listed for a human, not counted automatically.
 //  - One finding matches at most one entry: bugs are tried in file order, then decoys; the first matching
 //    rule wins, whether it's firm or tentative.
+//  - Combined scoring (v1 + v2, Rohit 28 Sep): each file still picks its own match as above; when both files
+//    match the same finding, the more specific rule wins (see `matchCombined`), so a finding counts for at
+//    most one seeded bug across both files.
 import type { Finding } from "@witness/engine";
 import type { Rule, Truth } from "./truth";
 
@@ -102,4 +105,36 @@ export function matchFinding(
     }
   }
   return undefined;
+}
+
+/**
+ * How specific a rule is: naming the finding's source (a detector or check) outranks any other field, then
+ * more fields outrank fewer. `confirm` isn't a condition. Pure; used only to arbitrate between files.
+ */
+export function ruleSpecificity(rule: Rule): number {
+  const fields = Object.entries(rule).filter(([k, v]) => k !== "confirm" && v !== undefined);
+  return (rule.source !== undefined ? 100 : 0) + fields.length;
+}
+
+/**
+ * Combined scoring over several ground-truth files. Each file's own first match (its frozen semantics)
+ * is a contender; the most specific rule wins, then a firm match over a tentative one, then file order.
+ * E.g. a DET-DBERROR finding: v1 B15's `{ category: security, keywords_any: [..."inject"] }` matches, and
+ * so does v2 B22's `{ source: DET-DBERROR, request_path: ... }`; B22's names the detector, so it wins.
+ */
+export function matchCombined(
+  f: MatchableFinding,
+  parts: readonly Pick<Truth, "bugs" | "decoys">[],
+): MatchResult | undefined {
+  let best: { m: MatchResult; spec: number } | undefined;
+  for (const part of parts) {
+    const m = matchFinding(f, part);
+    if (!m) continue;
+    const entry = (m.kind === "bug" ? part.bugs : part.decoys).find((e) => e.id === m.id)!;
+    const spec = ruleSpecificity(entry.match.any[m.ruleIndex]!);
+    const better =
+      !best || spec > best.spec || (spec === best.spec && best.m.tentative && !m.tentative);
+    if (better) best = { m, spec };
+  }
+  return best?.m;
 }

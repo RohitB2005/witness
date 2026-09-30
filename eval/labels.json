@@ -226,5 +226,145 @@
   "fp_110f442c2ba140c4": {
     "label": "fp",
     "reason": "Each price is labelled '$X per hour' or '$Y fixed price'; the distinction is stated in text."
+  },
+  "fp_76d3d2289ab2c3f2": {
+    "label": "tp:B06",
+    "reason": "Cancelling HC-1001 deleted HC-1002: exactly B06 (cancel deletes the next booking)."
+  },
+  "fp_449d0c265bbc6f6e": {
+    "label": "tp:B06",
+    "reason": "HC-1001 still listed after its cancel message: B06 deleted a different booking."
+  },
+  "fp_b329c9746deb9a6f": {
+    "label": "tp:B06",
+    "reason": "HC-1001 still listed after its cancel message: B06 deleted a different booking."
+  },
+  "fp_3170f5d615216ca1": {
+    "label": "tp:B06",
+    "reason": "HC-1002 still listed after its cancel message: B06 deleted a different booking."
+  },
+  "fp_63b54d4ffce4811f": {
+    "label": "tp:B06",
+    "reason": "HC-1002 missing when rescheduling because B06 deleted it; a symptom of B06 (Rohit, 30 Sep)."
+  },
+  "fp_9b9d805ff0f20ed6": {
+    "label": "tp:B07",
+    "reason": "Nav badge still says 3 after a cancel left 2 bookings: B07 (stale count)."
+  },
+  "fp_2a7cb135f8fd998e": {
+    "label": "tp:B08",
+    "reason": "Phone reverts to the old value after save and reload: B08."
+  },
+  "fp_54adf2597920f2f8": {
+    "label": "tp:B03",
+    "reason": "Lower-case 'deep' finds nothing while 'Deep clean' exists: B03 case-sensitive search."
+  },
+  "fp_f6072846ac73cb36": {
+    "label": "tp:B03",
+    "reason": "Lower-case 'deep' finds nothing while 'Deep clean' exists: B03 case-sensitive search."
+  },
+  "fp_a6591c8294d071db": {
+    "label": "tp:B02",
+    "reason": "ordered check on the sorted list (route /services?sort, rule wants /services): 8 after 75 is B02."
+  },
+  "fp_8c0366504f585955": {
+    "label": "fp",
+    "reason": "AI-guessed rule: an address without a dot-TLD is a valid email format and the page states no such rule."
+  },
+  "fp_cb44784a9cef33db": {
+    "label": "fp",
+    "reason": "AI-guessed rule: an address without a dot-TLD is a valid email format and the page states no such rule."
+  },
+  "fp_671d9aafb363b67b": {
+    "label": "fp",
+    "reason": "The contact form does confirm: \"Thanks — we'll reply within one working day\"; the check wanted the word 'sent'."
+  },
+  "fp_d326626f255f3124": {
+    "label": "fp",
+    "reason": "The contact form does confirm: \"Thanks — we'll reply within one working day\"; the check wanted the word 'sent'."
+  },
+  "fp_e62e019c26807637": {
+    "label": "fp",
+    "reason": "The contact form does confirm (judge discarded it correctly); counted only in A1."
+  },
+  "fp_42caa016dad38d74": {
+    "label": "fp",
+    "reason": "The contact form does confirm (judge discarded it correctly); counted only in A1."
+  },
+  "fp_931b020b8b743375": {
+    "label": "fp",
+    "reason": "Search isn't a form that should refuse input; an unmatched term shows 'No services match'."
+  },
+  "fp_6f71300d2d5abbd2": {
+    "label": "fp",
+    "reason": "Search isn't a form that should refuse input; a blank search just lists everything."
+  },
+  "fp_80179f070ddb7b95": {
+    "label": "fp",
+    "reason": "The page does say 'No services match \"…\"' for a term with no results."
+  },
+  "fp_68bf4477db350741": {
+    "label": "fp",
+    "reason": "AI-guessed phone-length rule; the profile page states no phone format."
+  },
+  "fp_4c4453166aa22bae": {
+    "label": "fp",
+    "reason": "AI-guessed phone-length rule; the profile page states no phone format."
+  },
+  "fp_e5d10df6fb28b74f": {
+    "label": "fp",
+    "reason": "AI-guessed phone-format rule; the profile page states no phone format."
+  },
+  "fp_c560f7c11131d309": {
+    "label": "fp",
+    "reason": "Today is a valid booking date (the date picker's min is today); only past dates are refused."
+  },
+  "fp_9ea86d79a4c84ee0": {
+    "label": "fp",
+    "reason": "Clean build: 'Booking summary' is a heading on /book, not the confirmation page (same FP as P3)."
+  },
+  "fp_96ffe94cc1374221": {
+    "label": "fp",
+    "reason": "Clean build has a Reschedule button (B23 off); the replays couldn't repeat the steps."
+  },
+  "fp_8d7685f6db9cd9a1": {
+    "label": "fp",
+    "reason": "Clean build's contact button reads 'Send' (B12 off)."
+  },
+  "fp_772ae4eb7df0e9f7": {
+    "label": "fp",
+    "reason": "Cancelling already asks 'Yes, cancel' before it acts."
+  },
+  "fp_d264ddc49c2fe030": {
+    "label": "fp",
+    "reason": "Nav and page both say 'My bookings'; 'Upcoming bookings' is screen-reader text for the badge."
+  },
+  "fp_ead92e2dda2ace1a": {
+    "label": "fp",
+    "reason": "Quote and Book both label the field 'Hours'."
+  },
+  "fp_64267b7cb3576c9c": {
+    "label": "fp",
+    "reason": "'Choose a service' is a standard empty placeholder option; nothing wrong."
+  },
+  "fp_9a22dcdb711142d6": {
+    "label": "fp",
+    "reason": "The unlabelled 'status' region is the notice area for screen readers, empty until something happens."
+  },
+  "fp_f90827b9e3ff44a9": {
+    "label": "fp",
+    "reason": "One /services UX fingerprint: carpet is priced per hour like the rest; 'Sold out' is clear enough."
+  },
+  "fp_ac677906d22ad168": {
+    "label": "tp_unseeded",
+    "reason": "Logged out, 'My bookings' in the nav gives no hint that it needs a login."
+  },
+  "fp_decd04ddbb1ecb4c": {
+    "label": "tp_unseeded",
+    "reason": "The login page has no forgot-password option."
+  },
+  "fp_c073c8b62fd3ce70": {
+    "label": "tp:B02",
+    "reason": "ordered check on the sorted list (route /services?sort, rule wants /services): 8 after 75 is B02."
   }
 }

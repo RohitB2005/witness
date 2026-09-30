@@ -1,5 +1,7 @@
 // pnpm eval:score <run.json | runs/<id> | results-dir-with-runs.jsonl>... [--clean] [--labels file] [--out dir]
 //   [--bugs bench/bugs-v2.yaml]   score against another ground-truth file (v2: the QA coverage pack)
+//   [--bugs bench/bugs.yaml,bench/bugs-v2.yaml]   both lists combined: each finding counts for at most one
+//                                                 seeded bug; precision is reported only in this mode
 // Matches each run's findings against bench/bugs.yaml and writes summary.json + summary.md.
 import { execFileSync } from "node:child_process";
 import { existsSync, readFileSync, statSync } from "node:fs";
@@ -8,7 +10,7 @@ import path from "node:path";
 import { parseArgs } from "node:util";
 import { RunResultSchema, type RunResult } from "@witness/engine";
 import { LabelsFileSchema, scoreRun, summarise, type Labels, type RunScore } from "./score-lib";
-import { BUGS_YAML, loadTruth, REPO_ROOT } from "./truth";
+import { BUGS_YAML, loadTruth, mergeTruth, REPO_ROOT, type Truth } from "./truth";
 
 interface RunRef {
   file: string;
@@ -125,8 +127,12 @@ async function main(): Promise<void> {
     );
     process.exit(2);
   }
-  const bugsFile = path.resolve(values.bugs!);
-  const { truth, sha256 } = loadTruth(bugsFile);
+  const bugsFiles = values.bugs!.split(",").map((f) => path.resolve(f.trim()));
+  const loaded = bugsFiles.map((f) => loadTruth(f));
+  const combined = loaded.length > 1;
+  const parts: Truth[] | undefined = combined ? loaded.map((l) => l.truth) : undefined;
+  const truth = combined ? mergeTruth(parts!) : loaded[0]!.truth;
+  const sha256 = loaded.map((l) => l.sha256).join("+");
   const labels: Labels = existsSync(values.labels!)
     ? LabelsFileSchema.parse(JSON.parse(readFileSync(values.labels!, "utf8")))
     : {};
@@ -144,15 +150,21 @@ async function main(): Promise<void> {
     const derived =
       result.config.pipeline === "full"
         ? (["aiNoVerify", "noSkeptic"] as const).map((stage) =>
-            scoreRun(result, truth, labels, { clean, stage }),
+            scoreRun(result, truth, labels, { clean, stage, parts, precision: combined }),
           )
         : [];
-    return [scoreRun(result, truth, labels, { clean }), ...derived];
+    return [scoreRun(result, truth, labels, { clean, parts, precision: combined }), ...derived];
   });
   const summary = summarise(scores, truth, { bugsYamlHash: sha256, benchCommit });
-  const md = renderMarkdown(scores, summary, values.verbose!).replace(
+  let md = renderMarkdown(scores, summary, values.verbose!).replace(
     "bugs.yaml sha256",
-    `${path.basename(bugsFile)} sha256`,
+    `${bugsFiles.map((f) => path.basename(f)).join(" + ")} sha256`,
+  );
+  md = md.replace(
+    "\n| Run |",
+    combined
+      ? `\nCombined: ${truth.bugs.length} seeded bugs; each finding counts for at most one of them (the more specific rule wins).\n\n| Run |`
+      : "\nPrecision is reported only when both lists are scored together (--bugs bench/bugs.yaml,bench/bugs-v2.yaml); here it shows –.\n\n| Run |",
   );
   console.log(md);
   if (values.out) {

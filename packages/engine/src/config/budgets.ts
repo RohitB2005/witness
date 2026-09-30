@@ -11,6 +11,8 @@ export interface Budget {
 
 export const BUDGETS: Record<BudgetPreset, Budget> = {
   quick: { pages: 15, journeys: 2, stepsPerJourney: 15, wallClockMs: 3 * 60_000, llmUsd: 0.5 },
+  // For the live demo (P5, being timed): Standard's depth on the core journeys only, hard-capped at 5 minutes.
+  demo: { pages: 40, journeys: 2, stepsPerJourney: 25, wallClockMs: 5 * 60_000, llmUsd: 1.5 },
   // 3 journeys (was 5): with replay, a Standard run must still fit 8 minutes (DEVLOG D50, measured in P3).
   standard: { pages: 40, journeys: 3, stepsPerJourney: 25, wallClockMs: 8 * 60_000, llmUsd: 2 },
   deep: { pages: 100, journeys: 8, stepsPerJourney: 35, wallClockMs: 15 * 60_000, llmUsd: 5 },

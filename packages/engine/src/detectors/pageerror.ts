@@ -28,6 +28,7 @@ export const pageErrorDetector: PageDetector = {
         },
         summary: `Uncaught ${err.name}`,
         evidenceIds: [capture.evidence.pageErrors],
+        ...(err.afterBlocked ? { afterBlocked: err.afterBlocked } : {}),
       });
     }
     return out;

@@ -35,7 +35,8 @@ if (!benchUp || !witnessUp) {
   stopAll(1);
 } else {
   const bench = `http://localhost:${benchPort}`;
-  const q = new URLSearchParams({ url: bench, mode: "staging", budget: "standard" });
+  // The live demo uses the demo preset: 2 journeys, 5-minute cap (Rohit, 30 Sep; DEVLOG D88).
+  const q = new URLSearchParams({ url: bench, mode: "staging", budget: "demo" });
   if (process.env.BENCH_TEST_EMAIL) q.set("user", process.env.BENCH_TEST_EMAIL);
   console.log(`
 Ready.

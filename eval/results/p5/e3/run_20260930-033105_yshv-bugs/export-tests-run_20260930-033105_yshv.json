@@ -1,0 +1,91 @@
+{
+  "runId": "run_20260930-033105_yshv",
+  "exported": 12,
+  "judged": 10,
+  "failOnBuggy": 9,
+  "passOnClean": 10,
+  "valid": 9,
+  "outcomes": [
+    {
+      "findingId": "fd_sjqi0m3g",
+      "testFile": "fd_sjqi0m3g.spec.ts",
+      "note": "not matched (matches no rule; needs a label)"
+    },
+    {
+      "findingId": "fd_u4o48byz",
+      "testFile": "fd_u4o48byz.spec.ts",
+      "note": "not matched (matches no rule; needs a label)"
+    },
+    {
+      "findingId": "fd_gwaw8j1o",
+      "testFile": "fd_gwaw8j1o.spec.ts",
+      "bugId": "B06",
+      "failsWithBug": true,
+      "passesWithoutBug": true
+    },
+    {
+      "findingId": "fd_7jrkwkj0",
+      "testFile": "fd_7jrkwkj0.spec.ts",
+      "bugId": "B15",
+      "failsWithBug": false,
+      "passesWithoutBug": true
+    },
+    {
+      "findingId": "fd_k8hvcgbe",
+      "testFile": "fd_k8hvcgbe.spec.ts",
+      "bugId": "B02",
+      "failsWithBug": true,
+      "passesWithoutBug": true
+    },
+    {
+      "findingId": "fd_txwv23v3",
+      "testFile": "fd_txwv23v3.spec.ts",
+      "bugId": "B11",
+      "failsWithBug": true,
+      "passesWithoutBug": true
+    },
+    {
+      "findingId": "fd_787pwbbt",
+      "testFile": "fd_787pwbbt.spec.ts",
+      "bugId": "B15",
+      "failsWithBug": true,
+      "passesWithoutBug": true
+    },
+    {
+      "findingId": "fd_kct2gd8c",
+      "testFile": "fd_kct2gd8c.spec.ts",
+      "bugId": "B03",
+      "note": "tentative match",
+      "failsWithBug": true,
+      "passesWithoutBug": true
+    },
+    {
+      "findingId": "fd_8wx6t2xa",
+      "testFile": "fd_8wx6t2xa.spec.ts",
+      "bugId": "B09",
+      "failsWithBug": true,
+      "passesWithoutBug": true
+    },
+    {
+      "findingId": "fd_iascbjvg",
+      "testFile": "fd_iascbjvg.spec.ts",
+      "bugId": "B18",
+      "failsWithBug": true,
+      "passesWithoutBug": true
+    },
+    {
+      "findingId": "fd_kdh3zl9r",
+      "testFile": "fd_kdh3zl9r.spec.ts",
+      "bugId": "B10",
+      "failsWithBug": true,
+      "passesWithoutBug": true
+    },
+    {
+      "findingId": "fd_me81yb82",
+      "testFile": "fd_me81yb82.spec.ts",
+      "bugId": "B16",
+      "failsWithBug": true,
+      "passesWithoutBug": true
+    }
+  ]
+}

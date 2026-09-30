@@ -1,0 +1,98 @@
+{
+  "runId": "run_20260930-032314_pap6",
+  "exported": 16,
+  "judged": 3,
+  "failOnBuggy": 3,
+  "passOnClean": 3,
+  "valid": 3,
+  "outcomes": [
+    {
+      "findingId": "fd_1izd5kia",
+      "testFile": "fd_1izd5kia.spec.ts",
+      "bugId": "B19",
+      "failsWithBug": true,
+      "passesWithoutBug": true
+    },
+    {
+      "findingId": "fd_38iuo1px",
+      "testFile": "fd_38iuo1px.spec.ts",
+      "bugId": "B21",
+      "failsWithBug": true,
+      "passesWithoutBug": true
+    },
+    {
+      "findingId": "fd_h1k3ld1f",
+      "testFile": "fd_h1k3ld1f.spec.ts",
+      "note": "not matched (matches no rule; needs a label)"
+    },
+    {
+      "findingId": "fd_7m1incnm",
+      "testFile": "fd_7m1incnm.spec.ts",
+      "note": "not matched (matches no rule; needs a label)"
+    },
+    {
+      "findingId": "fd_irru0ctf",
+      "testFile": "fd_irru0ctf.spec.ts",
+      "note": "not matched (matches no rule; needs a label)"
+    },
+    {
+      "findingId": "fd_aask8ojr",
+      "testFile": "fd_aask8ojr.spec.ts",
+      "bugId": "B01",
+      "note": "a real problem, but not a seeded bug"
+    },
+    {
+      "findingId": "fd_9d8g3bek",
+      "testFile": "fd_9d8g3bek.spec.ts",
+      "bugId": "B22",
+      "failsWithBug": true,
+      "passesWithoutBug": true
+    },
+    {
+      "findingId": "fd_7q3hb2e6",
+      "testFile": "fd_7q3hb2e6.spec.ts",
+      "note": "not matched (matches no rule; needs a label)"
+    },
+    {
+      "findingId": "fd_bbzvvs2t",
+      "testFile": "fd_bbzvvs2t.spec.ts",
+      "note": "not matched (matches no rule; needs a label)"
+    },
+    {
+      "findingId": "fd_szkqgabt",
+      "testFile": "fd_szkqgabt.spec.ts",
+      "note": "not matched (matches no rule; needs a label)"
+    },
+    {
+      "findingId": "fd_ambvylfx",
+      "testFile": "fd_ambvylfx.spec.ts",
+      "bugId": "B02",
+      "note": "a real problem, but not a seeded bug"
+    },
+    {
+      "findingId": "fd_ymk0ae6p",
+      "testFile": "fd_ymk0ae6p.spec.ts",
+      "note": "not matched (matches no rule; needs a label)"
+    },
+    {
+      "findingId": "fd_kwg93ooh",
+      "testFile": "fd_kwg93ooh.spec.ts",
+      "note": "not matched (matches no rule; needs a label)"
+    },
+    {
+      "findingId": "fd_6sq562cp",
+      "testFile": "fd_6sq562cp.spec.ts",
+      "note": "not matched (matches no rule; needs a label)"
+    },
+    {
+      "findingId": "fd_qf45r314",
+      "testFile": "fd_qf45r314.spec.ts",
+      "note": "not matched (matches no rule; needs a label)"
+    },
+    {
+      "findingId": "fd_g9bv84aa",
+      "testFile": "fd_g9bv84aa.spec.ts",
+      "note": "not matched (matches no rule; needs a label)"
+    }
+  ]
+}

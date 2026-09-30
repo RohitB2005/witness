@@ -23,7 +23,7 @@
     "dev": "node scripts/dev.mjs",
     "scan": "tsx apps/cli/src/index.ts scan",
     "witness": "tsx apps/cli/src/index.ts",
-    "eval": "node scripts/not-yet.mjs \"pnpm eval\" P5",
+    "eval": "node scripts/eval.mjs",
     "demo:up": "node scripts/demo-up.mjs",
     "demo:test": "node scripts/demo-test.mjs",
     "demo:replay": "node scripts/demo-replay.mjs",

@@ -1,0 +1,118 @@
+{
+  "runId": "run_20260930-032314_pap6",
+  "exported": 16,
+  "judged": 14,
+  "failOnBuggy": 13,
+  "passOnClean": 14,
+  "valid": 13,
+  "outcomes": [
+    {
+      "findingId": "fd_1izd5kia",
+      "testFile": "fd_1izd5kia.spec.ts",
+      "note": "not matched (matches no rule; needs a label)"
+    },
+    {
+      "findingId": "fd_38iuo1px",
+      "testFile": "fd_38iuo1px.spec.ts",
+      "note": "not matched (matches no rule; needs a label)"
+    },
+    {
+      "findingId": "fd_h1k3ld1f",
+      "testFile": "fd_h1k3ld1f.spec.ts",
+      "bugId": "B04",
+      "failsWithBug": true,
+      "passesWithoutBug": true
+    },
+    {
+      "findingId": "fd_7m1incnm",
+      "testFile": "fd_7m1incnm.spec.ts",
+      "bugId": "B17",
+      "failsWithBug": true,
+      "passesWithoutBug": true
+    },
+    {
+      "findingId": "fd_irru0ctf",
+      "testFile": "fd_irru0ctf.spec.ts",
+      "bugId": "B01",
+      "failsWithBug": true,
+      "passesWithoutBug": true
+    },
+    {
+      "findingId": "fd_aask8ojr",
+      "testFile": "fd_aask8ojr.spec.ts",
+      "bugId": "B01",
+      "failsWithBug": true,
+      "passesWithoutBug": true
+    },
+    {
+      "findingId": "fd_9d8g3bek",
+      "testFile": "fd_9d8g3bek.spec.ts",
+      "bugId": "B15",
+      "failsWithBug": false,
+      "passesWithoutBug": true
+    },
+    {
+      "findingId": "fd_7q3hb2e6",
+      "testFile": "fd_7q3hb2e6.spec.ts",
+      "bugId": "B05",
+      "failsWithBug": true,
+      "passesWithoutBug": true
+    },
+    {
+      "findingId": "fd_bbzvvs2t",
+      "testFile": "fd_bbzvvs2t.spec.ts",
+      "bugId": "B11",
+      "failsWithBug": true,
+      "passesWithoutBug": true
+    },
+    {
+      "findingId": "fd_szkqgabt",
+      "testFile": "fd_szkqgabt.spec.ts",
+      "bugId": "B15",
+      "failsWithBug": true,
+      "passesWithoutBug": true
+    },
+    {
+      "findingId": "fd_ambvylfx",
+      "testFile": "fd_ambvylfx.spec.ts",
+      "bugId": "B02",
+      "failsWithBug": true,
+      "passesWithoutBug": true
+    },
+    {
+      "findingId": "fd_ymk0ae6p",
+      "testFile": "fd_ymk0ae6p.spec.ts",
+      "bugId": "B08",
+      "failsWithBug": true,
+      "passesWithoutBug": true
+    },
+    {
+      "findingId": "fd_kwg93ooh",
+      "testFile": "fd_kwg93ooh.spec.ts",
+      "bugId": "B09",
+      "failsWithBug": true,
+      "passesWithoutBug": true
+    },
+    {
+      "findingId": "fd_6sq562cp",
+      "testFile": "fd_6sq562cp.spec.ts",
+      "bugId": "B18",
+      "failsWithBug": true,
+      "passesWithoutBug": true
+    },
+    {
+      "findingId": "fd_qf45r314",
+      "testFile": "fd_qf45r314.spec.ts",
+      "bugId": "B16",
+      "failsWithBug": true,
+      "passesWithoutBug": true
+    },
+    {
+      "findingId": "fd_g9bv84aa",
+      "testFile": "fd_g9bv84aa.spec.ts",
+      "bugId": "B10",
+      "failsWithBug": true,
+      "passesWithoutBug": true
+    }
+  ]
+}

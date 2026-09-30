@@ -25,6 +25,8 @@ export interface ConsoleEntry {
   text: string;
   sourceUrl?: string;
   at: number;
+  /** Host of a request Witness blocked earlier on the same page (see `PageRecorder.blockedHost`). */
+  afterBlocked?: string;
 }
 
 export interface PageErrorEntry {
@@ -35,6 +37,8 @@ export interface PageErrorEntry {
   message: string;
   stack?: string;
   at: number;
+  /** Host of a request Witness blocked earlier on the same page (see `PageRecorder.blockedHost`). */
+  afterBlocked?: string;
 }
 
 export interface RecorderMark {
@@ -55,6 +59,8 @@ export class PageRecorder {
   readonly errors: PageErrorEntry[] = [];
   readonly #byRequest = new Map<Request, NetworkEntry>();
   readonly #origin: string;
+  /** Requests made since the main frame last navigated (including in-page history changes). */
+  #sinceNavigation: { request: Request; host: string }[] = [];
   #seq = 0;
 
   constructor(
@@ -62,6 +68,9 @@ export class PageRecorder {
     private readonly policy: SafetyPolicy,
   ) {
     this.#origin = policy.origin;
+    page.on("framenavigated", (frame) => {
+      if (frame === page.mainFrame()) this.#sinceNavigation = [];
+    });
     page.on("request", (r) => this.#onRequest(r));
     page.on("response", (res) => {
       const e = this.#byRequest.get(res.request());
@@ -77,6 +86,7 @@ export class PageRecorder {
         text: msg.text(),
         sourceUrl: msg.location().url || undefined,
         at: Date.now(),
+        ...this.#afterBlocked(),
       });
     });
     page.on("pageerror", (err) => {
@@ -89,8 +99,28 @@ export class PageRecorder {
         message: err.message,
         stack: err.stack,
         at: Date.now(),
+        ...this.#afterBlocked(),
       });
     });
+  }
+
+  /**
+   * The host of the latest request Witness's safety policy blocked on this page since it last navigated,
+   * if any. An error or a failed check after it may be caused by the block rather than by the app, so the
+   * finding is capped at Needs review (D87). The policy marks a request as blocked before aborting it, so
+   * anything the abort causes is always seen after the mark.
+   */
+  blockedHost(): string | undefined {
+    for (let i = this.#sinceNavigation.length - 1; i >= 0; i--) {
+      const r = this.#sinceNavigation[i]!;
+      if (this.policy.wasBlocked(r.request)) return r.host;
+    }
+    return undefined;
+  }
+
+  #afterBlocked(): { afterBlocked?: string } {
+    const host = this.blockedHost();
+    return host ? { afterBlocked: host } : {};
   }
 
   mark(): RecorderMark {
@@ -151,6 +181,7 @@ export class PageRecorder {
       return;
     }
     if (url.protocol !== "http:" && url.protocol !== "https:") return;
+    this.#sinceNavigation.push({ request, host: url.host });
     const entry: NetworkEntry = {
       seq: this.#seq++,
       method: request.method(),

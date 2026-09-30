@@ -1,0 +1,2 @@
+{"runDir":"runs/run_20260930-035809_z47i","clean":false,"exp":"E5","pipeline":"full","budget":"standard","llmCache":"off","user":"problem_user","wallSeconds":188}
+{"runDir":"runs/run_20260930-040117_cpe9","clean":false,"exp":"E5","pipeline":"full","budget":"standard","llmCache":"off","user":"error_user","wallSeconds":194}

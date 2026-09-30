@@ -31,9 +31,9 @@ const USAGE = `Usage: witness scan <url> [options]
        witness suppress <fingerprint> --origin <url> --reason <text>
        witness export <run id or folder> [--format md,json,html]   rewrite a finished run's reports and tests
 
-  --mode staging|production   production blocks every write request except the login (default: staging for
+  --mode staging|production   production blocks every write request, to any site, except the login (default: staging for
                               localhost / *.local / *.test, production otherwise)
-  --budget quick|standard|deep  (default: standard)
+  --budget quick|demo|standard|deep  (default: standard; demo = 2 journeys, 5 min)
   --user <email or username>  log in with this account…
   --password-env <VAR>        …using the password in this environment variable (never pass it as an argument)
   --hint <text>               what the app is for (≤ 200 chars)
@@ -135,7 +135,7 @@ async function main(argv: string[]): Promise<number> {
 
   console.log(`Witness — scanning ${config.url} (${config.mode} mode, ${config.budget} budget)`);
   if (config.mode === "production")
-    console.log("Production mode: write requests are blocked except the login.");
+    console.log("Production mode: write requests to any site are blocked, except the login.");
   // LLM models for the AI stages (the deterministic pipeline doesn't need any).
   let models: Models | undefined;
   let modelsUnavailable: string | undefined;

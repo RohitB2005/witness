@@ -48,6 +48,7 @@ export const consoleDetector: PageDetector = {
         },
         summary: "Console error",
         evidenceIds: [capture.evidence.console],
+        ...(entry.afterBlocked ? { afterBlocked: entry.afterBlocked } : {}),
       });
     }
     return out;

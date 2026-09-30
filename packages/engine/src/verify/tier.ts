@@ -32,6 +32,8 @@ export interface TierInput {
   };
   /** A deterministic finding a person still has to decide (e.g. a key often meant to be public). */
   review?: string;
+  /** Host of a request the safety policy blocked just before this, on the same page (D87). */
+  afterBlocked?: string;
   evidenceValid: boolean;
   evidenceNote?: string;
   replay: ReplayFacts;
@@ -86,6 +88,19 @@ export function isGrounded(g: TierInput["grounding"]): boolean {
 
 /** The final tier (pipeline `full`). */
 export function decideTier(i: TierInput): TierDecision {
+  const d = decideUncapped(i);
+  // Witness's own read-only block may be what broke the page (D87): a person has to decide, and the
+  // reason always names the host, even when the finding was already at Needs review for another reason
+  // (E6: two login findings were the blocked sign-in call showing through, and didn't say so).
+  if (!i.afterBlocked || i.kind !== "bug" || d.tier === "discarded") return d;
+  const cause = `Witness blocked a request to ${i.afterBlocked} just before this, which may be the cause.`;
+  return {
+    tier: d.tier === "confirmed" || d.tier === "likely" ? "needs_review" : d.tier,
+    reason: `${cause} ${d.reason}`,
+  };
+}
+
+function decideUncapped(i: TierInput): TierDecision {
   if (i.suppressed) {
     return {
       tier: "discarded",

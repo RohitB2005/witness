@@ -1066,3 +1066,141 @@ None new to the lockfile: every package is one the bench already uses, at the sa
 - The live view is live: History never shows a past run as live.
 - A cache replay is labelled as one.
 - The Standard scan is capped at 8 minutes, and the report lists whatever the cap cut.
+
+### P5 decisions (30 Sep 2026)
+
+**D87 — Production mode is read-only on every origin, not just the app's own** (Rohit, 30 Sep).
+- **Before.** Production mode blocked only same-origin POST/PUT/PATCH/DELETE. Many small apps write straight from the browser to another service (a hosted database, a form or payment API), so those writes went through. DEMO_RUNBOOK §6 claimed "read-only mode blocks every write", which wasn't true.
+- **Now** (`browser/policy.ts`):
+  - POST/PUT/PATCH/DELETE to **any** origin are aborted in production mode, `sendBeacon` included (it's a POST through the same route).
+  - Every WebSocket is refused, because a socket's messages can't be sorted into reads and writes and some hosted databases write over one. Playwright's `route` never sees sockets, so this uses `context.routeWebSocket` (1.63); the page sees the socket close with code 1008.
+  - **The login window** admits writes to any origin (a login may post to a hosted auth API), but only writes *sent from the login page*. The first version admitted every write in the window. The fixture scan test caught the landing dashboard's `POST /api/track` getting through and being allowed for the rest of the run. Every login write is recorded as origin + method + path, and only exact repeats are allowed later.
+  - Staging is unchanged.
+- **Blocked requests never become findings.**
+  - Failed-request findings already skipped anything the policy blocked.
+  - A console error, crash or AI candidate that comes **after** a blocked request **on the same page** is capped at Needs review. The reason names the host: "Witness blocked a request to <host> just before this, which may be the cause."
+  - "Same page" means since the main frame last navigated, in-page history changes included. An error *before* the block is reported normally (Rohit: analytics beacons fire on almost every page, so discarding every error in a capture with a blocked write would hide real crashes).
+  - The cap applies to a group only if every sighting came after a block. A1 (raw AI claims) ignores it.
+- **The report says what was blocked.** "What wasn't tested" lists the hosts in plain words, because some services read over POST: "Read-only mode blocked requests that send data to …; parts of the app that rely on them may not have been fully tested."
+- **Not covered:** plain GET requests (an app that changes data on a GET isn't protected), and the after-block cap for refused WebSockets (the page gets no event to tie them to).
+- **Tests:** policy table (cross-origin writes per mode, login window per page); real browser (off-site POST blocked and never received; a hosted login with two POSTs works; `sendBeacon` and WebSocket refused; staging lets them through); the beacon case (a crash before the blocked beacon is Confirmed, one after it is Needs review naming the host); tier table.
+
+**D88 — A `demo` budget preset: 2 journeys, 5-minute hard cap** (Rohit, 30 Sep: build it, time it, then decide). Standard's page and step limits; AI spend up to $1.50. It's on New scan and in the CLI (`--budget demo`). It uses the same engine paths as Standard. Only the caps differ, so the time split (explore to 50%, unusual inputs to 64%, then verification) scales to 5 minutes.
+
+**D89 — Combined v1+v2 scoring arbitrates between files, never within one.**
+- **How it works.** Each frozen file still picks its own match: first match in file order, as its header says. When both files match the same finding, the more specific rule wins: one that names the finding's source (detector or check) beats any other, then more conditions beat fewer, then firm beats tentative, then file order.
+- **Example.** The DB-error finding matches v1 B15's `{category: security, keywords_any: […"inject"]}` and v2 B22's `{source: DET-DBERROR, request_path}`, so it's B22 (Rohit's ruling, 28 Sep, falls out of the rule rather than being special-cased).
+- **Precision** is printed only in combined mode (`--bugs bench/bugs.yaml,bench/bugs-v2.yaml`). A single list can't see the other list's true positives, so it shows "–" there.
+- **Clean runs** show "–" for recall and precision (their measure is false alarms). The summary's precision arrays now cover buggy runs only.
+- **Alternative rejected:** merging the two files and applying first-match order. That would make v1's keyword rule win B15 for the DB-error finding, and it changes each file's frozen semantics.
+
+**D90 — E1 runs the bench exactly as `demo:up` does, C01 canary included; E4 is the mirror (canary off).**
+- **What I found.** The bench's `BENCH_BUGS=all` includes the C01 prompt-injection canary. EVALUATION.md defines E4 as `all,C01`, which would have been the same run as E1. It also means every earlier "all bugs" gate run (P3, P3b, P4 via `demo:up`) had the canary on the page.
+- **Decision.** E1 keeps the bench's `all`, so it's comparable with every earlier gate, and the rehearsal run's cache matches what `demo:up` serves. E4, if the budget allows, is the same run with C01 off. It answers the same question: does the canary change what's found?
+- `pnpm eval --exp E1|E2|E4|E5|E6|DEMO` (`scripts/eval.mjs`) resets the bench's data and sets its flags before each run. It runs the CLI and appends to `runs.jsonl`. Only the first run may use the cache (`--first-cache rw`); the rest use `off`, so the runs are independent (the Planner's prompt is identical run to run, so a shared cache would make stability look perfect).
+
+**D91 — A check the Explorer can't express no longer ends the journey** (found in P5's first E1 runs).
+- **What happened.** In two of the first three E1 runs, the core "browse, quote and book" journey never reached the quote page, so B01 (the demo bug) was missed. The Explorer had typed into the service search, sorted, then asserted "sorting by price orders them ascending" four times with different locators. Each attempt was an evaluation error ("found 0 items"). The 3-failed-actions rule then ended the whole journey.
+- **Fix.** Evaluation errors are counted per check statement. After two, the check is recorded as "couldn't evaluate", the second error is not counted as a failed action, and further attempts at the same statement are refused with "Don't retry it: carry on with the rest of the journey's goal". A genuinely stuck Explorer still stops: other failed actions still count, and so do asserts that can't even be parsed.
+- **Alternative rejected:** raising the failure limit. That would spend more turns on the same dead end and still lose the journey.
+- **Test:** `ai-scan.test.ts` (mock models): four attempts at an uncheckable order check → two evaluations, the journey completes, and the planned check still finds the sort bug. With the limit disabled the same test stops the journey after three attempts.
+- **Effect on the numbers.** The first three E1 runs ran before this fix. They're kept, as always, in `eval/results/p5-e1-before-d91/` (they predate D92 too). E1 was run again on the fixed code, and those runs are the ones reported.
+
+**D92 — The loop guard warns once before it stops** (same E1 runs). In the third pre-fix run, the core quote journey typed "window" into the search, then clicked the search box three times; the loop guard stopped the journey on the third identical action. The guard never told the Explorer that its action had done nothing. Now the first repeat that leaves the page unchanged gets a note: "you did exactly this last turn and the page didn't change. Doing it again will stop the journey: try a different action, or move on to the next part of the goal." The stop on the next repeat is unchanged. The call log doesn't keep the model's reasons, so the cause of the clicking is a guess; this only gives the model the fact it was missing. Test: `ai-scan.test.ts`, three identical clicks → the third turn's prompt carries the note, and the journey still stops.
+
+**D87, refined after E6.** On Friction, production mode blocked Firebase Auth's sign-in call (`identitytoolkit.googleapis.com/v1/accounts:signInWithPassword`, 7 times) when the Explorer tried a made-up login. The app then said "Couldn't reach the server". Two findings came from that ("login lets you in with a wrong password", "server unreachable instead of wrong-password message"). Both were already at Needs review for other reasons (an AI-guessed rule, a 60%-confident judge), so the cap didn't touch them and their reasons didn't name the block. Now any bug that comes after a block names the host, whatever tier it ends at; only Confirmed and Likely are lowered. The E6 run was made before this change and isn't re-run (once, as agreed), so its report shows the old reasons. Tier test updated.
+
+### P5 — runs and scoring, 30 Sep 2026
+
+All bench runs: production build on :5180, Standard, the test account, `--requirements bench/SCOPE.md`, the bench's `all` flags (C01 canary included, D90). The first E1 run used `--llm-cache rw` (the rehearsal); every other run used `off`. Labels: 35 proposed, then approved by Rohit (30 Sep), including the judgement call (a reschedule failure caused by B06 → `tp:B06`), and merged into `eval/labels.json`; `eval/results/p5/scored/` is scored with them (0 unlabelled in the combined set).
+
+**Runs** (time from the engine; cost as reported per run).
+
+| Set | Runs | Time | Cost |
+| --- | --- | --- | --- |
+| E1 before D91/D92 (kept, `eval/results/p5-e1-before-d91/`) | 3 | 6:00, 5:39, 7:22 | $0.32, $0.34, $0.36 |
+| **E1 buggy** (`p5/e1`) | 3 | 4:58, 7:50, 6:13 | $0.20, $0.42, $0.38 |
+| **E2 clean** (`p5/e2`) | 2 | 5:44, 5:42 | $0.32, $0.29 |
+| DEMO preset, buggy (`p5/demo`) | 1 | **3:57** | $0.28 |
+| E4 canary off (`p5/e4`) | 1 | 7:56 | $0.42 |
+| E5 SauceDemo `problem_user`, `error_user` (`p5/e5`) | 2 | 3:07, 3:13 | $0.21, $0.28 |
+| E6 Friction, production, not logged in (`p5/e6`) | 1 | 4:17 | $0.28 |
+| A0 deterministic, buggy + clean (`p5/a0`) | 2 | 1:18, 1:00 | $0 |
+| Offline replay of the rehearsal (`…034929_o9e5`) | 1 | 3:34 | $0 |
+
+**Ablation (combined v1+v2, 23 seeded bugs; E1 × 3, E2 × 2, A0 × 1 + 1).**
+
+| Pipeline | Recall C+L per run | Bug precision C+L | Confirmed/Likely bugs on the clean build |
+| --- | --- | --- | --- |
+| A0 deterministic only | 52% | 100% | 0 |
+| A1 raw AI claims (derived) | 70 / 83 / 70% | 86 / 79 / 79% | 1, 2 |
+| A3 no skeptic (derived) | 65 / 83 / 70% | 94 / 100 / 93% | 1, 0 |
+| **A2 Witness** | **65 / 83 / 70%** | **100 / 100 / 100%** | **0, 0** |
+
+- **Separately (A2, recall C+L):** v1 (B01–B18) 67 / 83 / 67%; v2 (B19–B23) 60 / 80 / 80%. A0: v1 50%, v2 60%.
+- **Stability** (Jaccard of found sets across the three E1 runs): 0.70.
+- **Always found** (all 3 E1 runs, all 3 pre-fix runs, the demo run, E4 and the P4 gate): B02, B09, B10, B11, B15, B16, B19, B21, B22, all Confirmed every time.
+- **B01:** found in 2 of 3 E1 runs, in E4 and in the P4 gate; 0 of 3 before D91.
+- **Never found:** B20 (its detector is stretch, D47). B03 and B07 appear only through labelled findings (lower-case "deep"; the stale badge).
+
+**E3 (exported tests).** Across the three E1 runs, 42 of 42 tests matched to a seeded bug fail with that bug's flag on and pass with it off. Scored against v1 alone, three show "B15 PASSES ✗". Those are the DB-error tests, and against v2 they are B22 and behave. It's the same overlap the combined scoring settles (D89).
+
+**E4 (injection canary).** Canary off: recall C+L 78%, 14 Confirmed bugs, Not ready. With the canary on (E1): 65–83%, Not ready in every run, and the canary text reported as a Note ("Witness ignored it"). No run stopped early or dropped findings; the difference is within run-to-run variation.
+
+**E5 (SauceDemo, staging; influenced Witness in P3, see EVALUATION.md).** Found **S2, S4, S6, S7, all Confirmed**. Missed S1 (the wrong images), S3 and S5 (both in checkout: no planned journey reached it, and each run mapped only 2 pages). So 4 of 7; the items weren't re-checked by hand today, but each finding's own evidence (list order, the page error) shows the documented behaviour.
+
+**E6 (Friction, the untuned app).**
+- Production mode blocked writes to four Google hosts: Firebase Installations 26×, Firebase Auth sign-in 7×, and Analytics 13× + 13×. The report listed them under "What wasn't tested".
+- 4 bugs, all at Needs review. Two came after a block and say so. The two login findings were caused by the blocked sign-in call, and their reasons didn't say so; that led to the D87 refinement.
+- 15 improvements: axe, security headers, 5 UX suggestions. Triage is with Rohit.
+
+**Offline replay.**
+- `demo:check` found all 72 of the rehearsal run's answers in the cache.
+- `demo:replay` (CLI, no server) finished in 3:34 with 71 answers from the cache and none sent. It gave the same 20 bugs at the same tiers and the same journey outcomes and step counts.
+- Three answers missed: one skeptic call and two report-writer calls. Their prompts differ between runs (measured values, most likely). Those findings say "Skeptic skipped" or keep their template wording. Nothing about the verdict or tiers changed.
+- Not yet done: the Wi-Fi-off run and the screen recording.
+
+**Fixed in P5 because they affected the demo or the numbers:** D87 (and its refinement), D91, D92. D88 (the demo preset) and D89/D90 (scoring, E1/E4 setup) are tooling.
+
+**Spend (D48).** P5 so far **$4.09**: OpenRouter usage $7.47 → $11.57. Balance **$8.44**. Total usage stays under $15.
+
+**Teach-back — P5, evaluation and the read-only fix.**
+
+*What was built.*
+- **Read-only mode that really is read-only.** Every write to any site is blocked, sockets included, except the login page's own requests while logging in. The report names what it blocked. Anything that breaks after a block is capped at Needs review and names the host.
+- **An experiment runner** that sets up the bench the same way before every run.
+- **A scorer** that can mark two answer keys at once without counting a finding twice.
+- **A 5-minute `demo` preset.**
+- **Two Explorer fixes**, found by the evaluation itself.
+
+*How data flows.*
+1. `pnpm eval --exp …` resets the bench and sets its flags, runs the CLI, and appends each run's folder to `runs.jsonl`.
+2. `pnpm eval:score` reads those runs and matches every finding against both frozen lists (the more specific rule wins between lists). It applies human labels (each with a reason) and scores each run three times: as reported (A2), as the raw AI claims (A1), and before the skeptic (A3).
+3. The summary goes to `summary.json`, which the Evaluation page reads.
+
+*The key decision, and its alternative.*
+- **The decision:** block every write in production mode, then *cap* anything that happens after a block, rather than discard it.
+- **The alternative:** Rohit's first idea, discarding errors in a capture that had a blocked write. It would have hidden real crashes on any site with analytics, which fire a blocked beacon on almost every page.
+- **Friction proved the point both ways.** The blocked Firebase calls did produce misleading findings. They reached Needs review with the host named (after the refinement), never Confirmed.
+
+*The most likely failure mode.* Journey coverage, not verification.
+- Verification is doing its job: 100% precision and no clean-build false alarms, against 79–86% precision for the raw AI claims.
+- What varies run to run is how far the Explorer gets through its journeys (stability 0.70). That decides whether B01, B04, B05 or B08 appear at all.
+- The first three E1 runs lost the whole quote journey to one uncheckable assertion (D91) and to a loop with no warning (D92).
+- *Say plainly in the talk:* recall is 65–83% run to run on the bench; the missing bugs are ones the Explorer never reached, not ones it saw and dismissed.
+
+### P5 decisions applied — 30 Sep 2026 (Rohit)
+
+- **Labels.** All 35 proposals approved, the judgement call included (`tp:B06`, a symptom of B06), and merged into `eval/labels.json` (92 labels). Every P5 set was re-scored; the combined set has 0 unlabelled. With the final labels E4 (canary off) is recall C+L 78%. The pre-fix E1 set keeps 30 unlabelled findings (its precision isn't reported).
+- **Friction triage** is in `eval/results/p5/e6/triage.json`, kept out of `labels.json` because some fingerprints, such as the security-header ones, are the same on every app.
+  - **Bugs:** 4 reported, all false: 3 were caused by Witness's own read-only block, and the fourth was a check that wanted a heading element. None reached Confirmed or Likely.
+  - **Evidence-based improvements:** 10 of 10 real (contrast, landmarks and headings, security headers).
+  - **UX suggestions:** 3 real (login wording; CamelCase simulation names), 1 false (the notebooks all link to /demo by design), and 1 not covered by the triage (the "Create an account" button placed mid-sentence).
+- **Preset `demo`, demo bug B02.** `demo:up` pre-fills Demo; DEMO_RUNBOOK §3–5 updated (the B02 card, `bench:fix B02`, timings).
+- **Demo rehearsal with the cache on:** `…044424_04qv`, 3:45, $0.31. 13 bugs, B02 Confirmed; `demo:check`: 25 of 25 answers cached.
+  - **Replayed from the cache** (`…044833_zkx3`, 98 s, $0): the same 13 bugs at the same tiers, but one Explorer turn in the first journey missed the cache (turn 24), so that journey stopped there and the second was skipped, as the report says.
+  - **Likely cause:** replays run faster without AI latency, so a timing-dependent screen can differ from the recorded one. That's the documented limit of replaying against a live app.
+  - The DB-error finding came back with a different fingerprint in that replay; not investigated.
+  - **Offline fallback:** use the Standard rehearsal `…031814_2nd8`, which replayed completely (the same 20 bugs, tiers and journeys, 3:34).
+- **Wrapped up.** README written: what it is, how to run, how it works, results, limitations. P5 gate recorded in ROADMAP against EVALUATION.md §1, because the strategic plan's §31 isn't in the repo. Committed as `P5: …` and tagged `demo-v1`. Still open: Rohit's Wi-Fi-off replay and the screen recording.
+- **Spend (D48), final for P5:** $4.30. OpenRouter usage went from $7.47 to $11.77 (the Demo rehearsal $0.31; the E6 triage and the replays cost nothing). Balance $8.23.

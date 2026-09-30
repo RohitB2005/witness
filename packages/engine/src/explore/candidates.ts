@@ -86,6 +86,8 @@ export function checkCandidate(input: {
   journeyId: string;
   stepIds: string[];
   evidenceIds: string[];
+  /** `PageRecorder.blockedHost()` when the check ran (D87). */
+  afterBlocked?: string;
 }): Candidate {
   const { exp, result } = input;
   const route = routePattern(input.url);
@@ -118,6 +120,7 @@ export function checkCandidate(input: {
       ? { successCheck: input.successCheck }
       : {}),
     grounding: candidateGrounding(exp),
+    ...(input.afterBlocked ? { afterBlocked: input.afterBlocked } : {}),
   };
 }
 
@@ -130,6 +133,8 @@ export function flagCandidate(input: {
   session: PageState["session"];
   journeyId: string;
   stepIds: string[];
+  /** `PageRecorder.blockedHost()` when the Explorer flagged it (D87). */
+  afterBlocked?: string;
 }): Candidate {
   const route = routePattern(input.url);
   const id = newId("cd");
@@ -159,6 +164,7 @@ export function flagCandidate(input: {
         "Judgement: flagged by the Explorer (an LLM). Not yet confirmed by a check or a replay.",
     },
     summary: input.summary,
+    ...(input.afterBlocked ? { afterBlocked: input.afterBlocked } : {}),
   };
 }
 

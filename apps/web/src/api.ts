@@ -41,7 +41,7 @@ export interface LiveInfo {
 export interface NewScanBody {
   url: string;
   mode: "staging" | "production";
-  budget: "quick" | "standard" | "deep";
+  budget: "quick" | "demo" | "standard" | "deep";
   username?: string;
   password?: string;
   hint?: string;

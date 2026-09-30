@@ -237,3 +237,47 @@ describe("stage tiers (D51) and the unverified pipeline (A1)", () => {
     expect(tierWithStages(i, "ai-no-verify").tier).toBe("confirmed");
   });
 });
+
+describe("after a request Witness blocked (D87): Needs review at most, naming the host", () => {
+  const cause = "Witness blocked a request to db.example just before this, which may be the cause.";
+  it.each([
+    ["a reproduced crash", { ...base, source: { kind: "detector", id: "DET-PAGEERROR" } as const }],
+    ["a grounded failed check", { ...base, source: check, grounding: onPage }],
+    ["a convention check (Likely)", { ...base, source: check, grounding: convention }],
+    [
+      "a judged flag (Likely)",
+      { ...base, source: flag, judge: { verdict: "bug", confidence: 0.9 } as const },
+    ],
+  ] as [string, TierInput][])("%s → needs_review", (_name, input) => {
+    const d = decideTier({ ...input, afterBlocked: "db.example" });
+    expect(d.tier).toBe("needs_review");
+    expect(d.reason.startsWith(cause)).toBe(true);
+    // Without the block, the same facts reach Confirmed or Likely.
+    expect(["confirmed", "likely"]).toContain(decideTier(input).tier);
+  });
+  it("names the host on a finding already at Needs review; leaves Discarded and improvements alone", () => {
+    const notReplayed = {
+      ...base,
+      replay: { attempts: 0, reproduced: 0 },
+      afterBlocked: "x.example",
+    };
+    const plain = decideTier({ ...notReplayed, afterBlocked: undefined });
+    expect(decideTier(notReplayed)).toEqual({
+      tier: "needs_review",
+      reason: `Witness blocked a request to x.example just before this, which may be the cause. ${plain.reason}`,
+    });
+    const gone = { ...base, replay: { attempts: 2, reproduced: 0 }, afterBlocked: "x.example" };
+    expect(decideTier(gone).reason).not.toMatch(/Witness blocked/);
+    expect(decideTier(gone).tier).toBe("discarded");
+    const improvement: TierInput = { ...base, kind: "improvement", afterBlocked: "x.example" };
+    expect(decideTier(improvement).tier).toBe("evidence_based");
+  });
+  it("A1 (raw AI claims) ignores it: it's the face-value stage", () => {
+    const t = tierWithStages(
+      { ...base, source: check, grounding: onPage, afterBlocked: "x.example" },
+      "full",
+    );
+    expect(t.tier).toBe("needs_review");
+    expect(t.stageTiers.aiNoVerify).toBe("confirmed");
+  });
+});

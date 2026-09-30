@@ -4,9 +4,9 @@ import { readFileSync } from "node:fs";
 import path from "node:path";
 import { describe, expect, it } from "vitest";
 import type { Finding, RunResult } from "@witness/engine";
-import { failingField, matchFinding } from "./match";
+import { failingField, matchCombined, matchFinding, ruleSpecificity } from "./match";
 import { LabelsFileSchema, recallTier, scoreRun, stabilityJaccard, type Labels } from "./score-lib";
-import { loadTruth, REPO_ROOT, RuleSchema } from "./truth";
+import { loadTruth, mergeTruth, REPO_ROOT, RuleSchema } from "./truth";
 
 const { truth } = loadTruth();
 
@@ -244,6 +244,19 @@ describe("scoreRun", () => {
     expect(s.cleanFalsePositives).toBe(2); // b05 (likely) and unknown (likely); b13 is an improvement
   });
 
+  it("a clean run has no recall and no precision (shown as –), not 0%", () => {
+    const s = scoreRun(run([b05, unknown]), truth, {}, { clean: true });
+    expect(s.recall).toEqual({ confirmed: null, confirmedLikely: null, all: null });
+    expect(s.precision.bugs).toEqual({ confirmed: null, confirmedLikely: null, all: null });
+    expect(s.precision.improvements).toEqual({ evidenceBased: null, all: null });
+  });
+
+  it("precision: false (a single list) leaves precision null but keeps recall", () => {
+    const s = scoreRun(run([b05]), truth, {}, { clean: false, precision: false });
+    expect(s.recall.confirmedLikely).toBeCloseTo(1 / 18);
+    expect(s.precision.bugs.confirmedLikely).toBeNull();
+  });
+
   it("maps tiers for recall", () => {
     expect(recallTier("evidence_based")).toBe("confirmed");
     expect(recallTier("suggestion")).toBe("needs_review");
@@ -336,5 +349,59 @@ describe("P3: derived ablation stages and template matching (D51, D53)", () => {
     });
     const s = scoreRun(run([f]), truth, {}, { clean: false });
     expect(s.findings[0]!.outcome).toBe("unlabelled"); // only the manual rule (keyword "cancel") matches
+  });
+});
+
+describe("combined v1 + v2 scoring (Rohit, 28 Sep)", () => {
+  const v2 = loadTruth(path.join(REPO_ROOT, "bench", "bugs-v2.yaml")).truth;
+  const parts = [truth, v2];
+  const both = mergeTruth(parts);
+  const dbError = finding({
+    fingerprint: "fp_dberror",
+    category: "security",
+    route: "/services",
+    source: { kind: "detector", id: "DET-DBERROR" },
+    title: "Search shows a database error: possible SQL injection",
+    signals: { request: { method: "GET", path: "/api/services", status: 500 } },
+  });
+
+  it("the union has every bug and decoy of both lists", () => {
+    expect(both.bugs.length).toBe(truth.bugs.length + v2.bugs.length);
+    expect(both.decoys.map((d) => d.id)).toEqual(["D01", "D02", "D03", "D04", "D05", "D06"]);
+    expect(() => mergeTruth([truth, truth])).toThrow(/B01 appears in more than one/);
+  });
+
+  it("the DB-error finding is B22, not v1 B15 whose keyword rule also matches it", () => {
+    expect(matchFinding(dbError, truth)?.id).toBe("B15"); // v1 alone: the frozen keyword rule
+    expect(matchFinding(dbError, v2)?.id).toBe("B22");
+    expect(matchCombined(dbError, parts)).toMatchObject({
+      kind: "bug",
+      id: "B22",
+      tentative: false,
+    });
+  });
+
+  it("a rule naming the source outranks any number of other fields", () => {
+    expect(ruleSpecificity({ source: "DET-XSS" })).toBeGreaterThan(
+      ruleSpecificity({ category: "security", route: "^/x", keywords_any: ["a"], method: "GET" }),
+    );
+    expect(ruleSpecificity({ category: "security", keywords_any: ["a"], confirm: "manual" })).toBe(
+      2,
+    );
+  });
+
+  it("a finding counts for one seeded bug at most, and recall is over both lists", () => {
+    const s = scoreRun(run([dbError]), both, {}, { clean: false, parts });
+    expect(s.found).toEqual({ B22: "confirmed" });
+    expect(s.recall.confirmed).toBeCloseTo(1 / both.bugs.length);
+    expect(s.precision.bugs.confirmed).toBe(1);
+  });
+
+  it("a finding only one list matches keeps that match", () => {
+    const b05 = finding({
+      route: "/book",
+      signals: { request: { method: "POST", path: "/api/bookings", status: 500 } },
+    });
+    expect(matchCombined(b05, parts)?.id).toBe("B05");
   });
 });

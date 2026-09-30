@@ -72,3 +72,13 @@ export function loadTruth(file = BUGS_YAML): { truth: Truth; sha256: string } {
     sha256: createHash("sha256").update(text).digest("hex"),
   };
 }
+
+/** The union of several ground-truth files, for combined scoring. IDs must not repeat across files. */
+export function mergeTruth(parts: readonly Truth[]): Truth {
+  const bugs = parts.flatMap((t) => t.bugs);
+  const decoys = parts.flatMap((t) => t.decoys);
+  const ids = [...bugs, ...decoys].map((e) => e.id);
+  const dup = ids.find((id, i) => ids.indexOf(id) !== i);
+  if (dup) throw new Error(`${dup} appears in more than one ground-truth file`);
+  return { ...parts[0]!, bugs, decoys };
+}

@@ -1,0 +1,2 @@
+{"runDir":"runs/run_20260930-041939_0xz5","clean":false,"exp":"E1","pipeline":"deterministic","budget":"standard","llmCache":"off","benchBugs":"all","user":"demo@harbourclean.test","wallSeconds":82}
+{"runDir":"runs/run_20260930-042101_0py6","clean":true,"exp":"E2","pipeline":"deterministic","budget":"standard","llmCache":"off","benchBugs":"none","user":"demo@harbourclean.test","wallSeconds":61}

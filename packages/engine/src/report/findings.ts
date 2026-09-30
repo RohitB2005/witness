@@ -92,11 +92,15 @@ export function groupCandidates(candidates: Candidate[]): Candidate[][] {
 /** The facts about a representative candidate that the tier rules use (before verification adds its own). */
 export function tierFacts(
   c: Candidate,
-): Pick<TierInput, "kind" | "source" | "grounding" | "review"> {
+  group: readonly Candidate[] = [c],
+): Pick<TierInput, "kind" | "source" | "grounding" | "review" | "afterBlocked"> {
+  // The block explains the group only if every sighting came after one (D87).
+  const afterBlocked = group.every((m) => m.afterBlocked) ? c.afterBlocked : undefined;
   return {
     kind: c.kind,
     source: c.source,
     ...(c.review ? { review: c.review } : {}),
+    ...(afterBlocked ? { afterBlocked } : {}),
     grounding: c.grounding
       ? {
           kind: c.grounding.kind,
@@ -111,9 +115,13 @@ export function tierFacts(
 }
 
 /** Tier for a group nobody verified: A1 reports grounding alone; any other pipeline says "not verified". */
-function unverifiedVerdict(c: Candidate, pipeline: Pipeline = "full"): GroupVerdict {
+function unverifiedVerdict(
+  c: Candidate,
+  pipeline: Pipeline = "full",
+  group: readonly Candidate[] = [c],
+): GroupVerdict {
   const replay = { attempts: 0, reproduced: 0, skipped: "not verified" };
-  const t = tierWithStages({ ...tierFacts(c), evidenceValid: true, replay }, pipeline);
+  const t = tierWithStages({ ...tierFacts(c, group), evidenceValid: true, replay }, pipeline);
   return {
     tier: t.tier,
     tierReason: t.reason,
@@ -142,7 +150,7 @@ export function buildFindings(candidates: Candidate[], ctx: BuildContext): Findi
         }),
       )
       .reduce(maxSeverity);
-    const v = ctx.verdicts?.get(first.groupKey) ?? unverifiedVerdict(first, ctx.pipeline);
+    const v = ctx.verdicts?.get(first.groupKey) ?? unverifiedVerdict(first, ctx.pipeline, group);
     const instances = dedupeBy(
       group.map((c) => ({ route: c.route, url: c.url, evidenceIds: c.evidenceIds })),
       (i) => i.url,

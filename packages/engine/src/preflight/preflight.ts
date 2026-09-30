@@ -24,7 +24,7 @@ export interface PreflightSuccess {
   loginUrl?: string;
   session?: {
     storageState: StorageState; // in memory only
-    loginRequest?: WriteAllowance;
+    loginRequests: WriteAllowance[];
     signal: string;
     /** Where the login landed (often a dashboard the start page doesn't link to). */
     landingUrl: string;
@@ -126,7 +126,7 @@ export async function preflight(deps: PreflightDeps): Promise<PreflightResult> {
       if (!login.ok) return login;
       result.session = {
         storageState: await context.storageState(),
-        loginRequest: policy.loginRequest,
+        loginRequests: [...policy.loginRequests],
         signal: login.signal,
         landingUrl: page.url(),
       };
@@ -205,7 +205,7 @@ export async function logIn(
   const submit = scope
     .locator("button[type=submit]:visible, input[type=submit]:visible, button:not([type]):visible")
     .first();
-  policy.armLoginWindow();
+  policy.armLoginWindow(page.url());
   try {
     if ((await submit.count()) > 0) await submit.click();
     else await password.press("Enter");

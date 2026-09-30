@@ -1,7 +1,7 @@
 // Scoring (docs/EVALUATION.md §3). Pure functions: RunResult + ground truth + labels → numbers.
 import type { Finding, RunResult } from "@witness/engine";
 import { z } from "zod";
-import { matchFinding, type MatchResult } from "./match";
+import { matchCombined, matchFinding, type MatchResult } from "./match";
 import type { Truth } from "./truth";
 
 /** eval/labels.json: fingerprint → human verdict + one-line reason. A label overrides the automatic match (D23). */
@@ -72,7 +72,16 @@ export interface FindingScore {
   why: string;
 }
 
-export function scoreFinding(f: Finding, truth: Truth, labels: Labels): FindingScore {
+/**
+ * `parts`: the separate ground-truth files for combined scoring (then `truth` is their union); each
+ * finding matches at most one entry across them (`matchCombined`).
+ */
+export function scoreFinding(
+  f: Finding,
+  truth: Truth,
+  labels: Labels,
+  parts?: readonly Truth[],
+): FindingScore {
   const base = {
     findingId: f.id,
     fingerprint: f.fingerprint,
@@ -82,7 +91,7 @@ export function scoreFinding(f: Finding, truth: Truth, labels: Labels): FindingS
     category: f.category,
     route: f.route,
   };
-  const match = matchFinding(f, truth);
+  const match = parts?.length ? matchCombined(f, parts) : matchFinding(f, truth);
   const entry = labels[f.fingerprint];
   if (entry) {
     const { label, reason } = entry;
@@ -121,7 +130,8 @@ export interface RunScore {
   findings: FindingScore[];
   /** Seeded bug → best tier among its true-positive findings. */
   found: Record<string, RecallTier>;
-  recall: Record<keyof typeof RECALL_SETS, number>;
+  /** Null on a clean build: there is nothing to recall. */
+  recall: Record<keyof typeof RECALL_SETS, number | null>;
   precision: {
     bugs: Record<keyof typeof RECALL_SETS, number | null>;
     improvements: { evidenceBased: number | null; all: number | null };
@@ -147,7 +157,17 @@ export function scoreRun(
   result: RunResult,
   truth: Truth,
   labels: Labels,
-  opts: { clean: boolean; stage?: ScoreStage },
+  opts: {
+    clean: boolean;
+    stage?: ScoreStage;
+    /** Combined scoring: the separate files `truth` is the union of. */
+    parts?: readonly Truth[];
+    /**
+     * Precision needs every finding scored against every list (a v2 finding is unmatched in v1), so it is
+     * reported only when scoring the lists combined (Rohit, 28 Sep). False → precision fields are null.
+     */
+    precision?: boolean;
+  },
 ): RunScore {
   const stage = opts.stage ?? "final";
   // A1 is the raw AI claims (D62): every bug at face value, including ones verification discarded. It is
@@ -165,7 +185,7 @@ export function scoreRun(
   const findings = result.findings
     .map((f) => ({ ...f, tier: tierAt(f) }))
     .filter((f) => f.tier !== "discarded")
-    .map((f) => scoreFinding(f, truth, labels));
+    .map((f) => scoreFinding(f, truth, labels, opts.parts));
 
   const found: Record<string, RecallTier> = {};
   const seeded = new Set(truth.bugs.map((b) => b.id));
@@ -177,9 +197,11 @@ export function scoreRun(
   }
   const total = truth.bugs.length;
   const recallAt = (set: readonly RecallTier[]) =>
-    Object.values(found).filter((t) => set.includes(t)).length / total;
+    opts.clean ? null : Object.values(found).filter((t) => set.includes(t)).length / total;
 
+  const withPrecision = opts.precision !== false && !opts.clean;
   const precisionOver = (items: FindingScore[]) => {
+    if (!withPrecision) return null;
     const tp = items.filter((s) => s.outcome === "tp").length;
     const fp = items.filter((s) => s.outcome === "fp").length;
     return tp + fp === 0 ? null : tp / (tp + fp);
@@ -278,9 +300,10 @@ export function summarise(
         confirmedLikely: buggy.map((s) => s.recall.confirmedLikely),
         all: buggy.map((s) => s.recall.all),
       },
+      // Clean runs have no recall and no precision ("–"); their measure is cleanFalsePositives.
       precision: {
-        bugs: runs.map((s) => s.precision.bugs.confirmedLikely),
-        improvements: runs.map((s) => s.precision.improvements.all),
+        bugs: buggy.map((s) => s.precision.bugs.confirmedLikely),
+        improvements: buggy.map((s) => s.precision.improvements.all),
       },
       cleanFalsePositives: runs.filter((s) => s.clean).map((s) => s.cleanFalsePositives),
       tierAccuracy: buggy.map((s) => s.tierAccuracy),

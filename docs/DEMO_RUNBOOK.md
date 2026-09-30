@@ -16,7 +16,7 @@ The live demo must work first time on the presentation laptop, with honest fallb
 
 ## 2. The day before
 
-- [ ] Full rehearsal on the presentation laptop, on battery, from a cold start: `pnpm demo:check`, `pnpm demo:up`, Standard scan of the bench, walk the report, run one exported test red → fix → green. Time it.
+- [ ] Full rehearsal on the presentation laptop, on battery, from a cold start: `pnpm demo:check`, `pnpm demo:up`, Demo-budget scan of the bench, walk the report, run one exported test red → fix → green. Time it.
 - [ ] Keep that rehearsal run's LLM cache (`.witness-cache/`) and note its run ID — this is the offline fallback.
 - [ ] Screen-record one complete run (OBS or the OS recorder), about 6 minutes. Save the HTML report and the recording to the laptop **and** your phone.
 - [ ] Run SauceDemo (`problem_user`) and save the report — shown in the evidence section, timestamped.
@@ -35,7 +35,7 @@ The live demo must work first time on the presentation laptop, with honest fallb
 
 1. `pnpm demo:check <rehearsal run id>` → all green, and no "Not a bug" marks on the bench.
 2. `pnpm demo:up`; `pnpm bench:reset`; confirm B01 is on (`GET /__bench/bugs`).
-3. Open tabs: Witness *New scan* with the bench URL pre-filled (`http://localhost:5180`), mode Staging, test account filled, budget Standard; the SauceDemo report; the Evaluation page.
+3. Open tabs: Witness *New scan* with the bench URL pre-filled (`http://localhost:5180`), mode Staging, test account filled, budget Demo (`demo:up` pre-fills it); the SauceDemo report; the Evaluation page.
 4. Terminal open in the repo root, command typed but not run: `pnpm demo:test <path printed by the last rehearsal>` (the new run's path will be similar; copy from the card's *Download test* button during the demo).
 
 ## 5. Script (fits the 10-minute talk)
@@ -44,15 +44,15 @@ The live demo must work first time on the presentation laptop, with honest fallb
 | --- | --- | --- |
 | 0:00 | Before the first slide, click **Scan** | "Before I start, I'm pointing Witness at this booking app. It'll test while I talk." |
 | ~3:30 | Switch to the live view | Point to the plan (journeys and grounded expectations), the action log, a candidate being verified, one Discarded item with its reason |
-| ~5:00 | Report | Read the verdict line aloud |
-| ~5:15 | Open the GST card | "Customers are charged GST twice." Show screenshot, steps, expected vs actual, and the on-screen label it's grounded in |
-| ~5:45 | *Download test* → terminal → `pnpm demo:test …` (red) → `pnpm bench:fix B01` → run again (green) | "Every confirmed bug becomes a test that stays red until it's fixed." |
-| ~6:15 | Improvements tab | Accessibility, a slow API, one labelled UX suggestion |
-| after talk | `pnpm bench:break B01`; `pnpm bench:reset` | — |
+| ~4:00 | Report | Read the verdict line aloud |
+| ~4:15 | Open the "Price: low to high" card (B02) | "Sorting by lowest price puts the $8 service last, after $75." Show screenshot, steps, expected vs actual, and that the promise is the sort option's own label |
+| ~4:45 | *Download test* → terminal → `pnpm demo:test …` (red) → `pnpm bench:fix B02` → run again (green) | "Every confirmed bug becomes a test that stays red until it's fixed." |
+| ~5:15 | Improvements tab | Accessibility, a slow API, one labelled UX suggestion |
+| after talk | `pnpm bench:break B02`; `pnpm bench:reset` | — |
 
-**Measured (P4 gate, 28 Sep):** a Standard scan with `SCOPE.md` from the UI took **7:56**. The 8-minute cap is hard: the scan always ends with a report, which lists what the cap cut. The demo preset is decided in P5.
+**Preset: Demo** (Rohit, 30 Sep; DEVLOG D88): 2 journeys, a hard 5-minute cap. Measured with `SCOPE.md` (CLI): **3:57**, recall C+L 65% (the same as the Standard median). Standard took 4:58–7:56 over the P5 runs. **Demo bug: B02** (price sort), Confirmed in every buggy run in P5 and in the P4 gate. B01 (GST) is a good second card when it's there, but it was found in only 2 of 3 Standard runs and missed by the Demo run.
 
-**Target:** the demo scan finishes within 5 minutes on the presentation laptop. If rehearsals run longer, add a `demo` budget preset limited to core journeys rather than rushing the talk. If it's still running at ~5:00, talk through the architecture slide and come back; it's hard-capped at 8 minutes.
+**Target:** the demo scan finishes within 5 minutes. The cap is hard: the scan always ends with a report, which lists what the cap cut. The UI's 10-second plan review counts against it. If it's still running at ~4:30, talk through the architecture slide and come back.
 
 ## 6. Fallback decision tree
 
@@ -62,7 +62,7 @@ The live demo must work first time on the presentation laptop, with honest fallb
 | No internet | Phone hotspot; if that fails, `pnpm demo:replay <runId>` (fully offline) | "No network here, so this is a replay of a real run using cached AI responses." |
 | Dashboard or server crash | Restart with `pnpm demo:up`; open the saved HTML report meanwhile | — |
 | Laptop fails | Play the screen recording from your phone or a borrowed machine; hand the HTML report around | "Here's a recording of the same run." |
-| Someone asks for a live run on a URL they give you | Only on a site you have permission to test; use **Production (read-only)** mode and the Quick budget | "Read-only mode blocks every write at the network layer, so this is safe on a live site." |
+| Someone asks for a live run on a URL they give you | Only on a site you have permission to test; use **Production (read-only)** mode and the Quick budget | "Read-only mode blocks every request that sends data, to this site or any other service, at the network layer, except logging in. The report lists what it blocked." |
 
 ## 7. Q&A live options
 

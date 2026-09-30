@@ -1,0 +1,77 @@
+{
+  "runId": "run_20260930-033105_yshv",
+  "exported": 12,
+  "judged": 3,
+  "failOnBuggy": 3,
+  "passOnClean": 3,
+  "valid": 3,
+  "outcomes": [
+    {
+      "findingId": "fd_sjqi0m3g",
+      "testFile": "fd_sjqi0m3g.spec.ts",
+      "bugId": "B19",
+      "failsWithBug": true,
+      "passesWithoutBug": true
+    },
+    {
+      "findingId": "fd_u4o48byz",
+      "testFile": "fd_u4o48byz.spec.ts",
+      "bugId": "B21",
+      "failsWithBug": true,
+      "passesWithoutBug": true
+    },
+    {
+      "findingId": "fd_gwaw8j1o",
+      "testFile": "fd_gwaw8j1o.spec.ts",
+      "note": "not matched (matches no rule; needs a label)"
+    },
+    {
+      "findingId": "fd_7jrkwkj0",
+      "testFile": "fd_7jrkwkj0.spec.ts",
+      "bugId": "B22",
+      "failsWithBug": true,
+      "passesWithoutBug": true
+    },
+    {
+      "findingId": "fd_k8hvcgbe",
+      "testFile": "fd_k8hvcgbe.spec.ts",
+      "bugId": "B02",
+      "note": "a real problem, but not a seeded bug"
+    },
+    {
+      "findingId": "fd_txwv23v3",
+      "testFile": "fd_txwv23v3.spec.ts",
+      "note": "not matched (matches no rule; needs a label)"
+    },
+    {
+      "findingId": "fd_787pwbbt",
+      "testFile": "fd_787pwbbt.spec.ts",
+      "note": "not matched (matches no rule; needs a label)"
+    },
+    {
+      "findingId": "fd_kct2gd8c",
+      "testFile": "fd_kct2gd8c.spec.ts",
+      "note": "not matched (matches no rule; needs a label)"
+    },
+    {
+      "findingId": "fd_8wx6t2xa",
+      "testFile": "fd_8wx6t2xa.spec.ts",
+      "note": "not matched (matches no rule; needs a label)"
+    },
+    {
+      "findingId": "fd_iascbjvg",
+      "testFile": "fd_iascbjvg.spec.ts",
+      "note": "not matched (matches no rule; needs a label)"
+    },
+    {
+      "findingId": "fd_kdh3zl9r",
+      "testFile": "fd_kdh3zl9r.spec.ts",
+      "note": "not matched (matches no rule; needs a label)"
+    },
+    {
+      "findingId": "fd_me81yb82",
+      "testFile": "fd_me81yb82.spec.ts",
+      "note": "not matched (matches no rule; needs a label)"
+    }
+  ]
+}

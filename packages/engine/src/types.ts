@@ -9,7 +9,7 @@ export type { Locator, Check, AgentCheck, NumExpr, TextExpr } from "./oracle/lan
 export const ScanModeSchema = z.enum(["staging", "production"]);
 export type ScanMode = z.infer<typeof ScanModeSchema>;
 
-export const BudgetPresetSchema = z.enum(["quick", "standard", "deep"]);
+export const BudgetPresetSchema = z.enum(["quick", "demo", "standard", "deep"]);
 export type BudgetPreset = z.infer<typeof BudgetPresetSchema>;
 
 export const PipelineSchema = z.enum(["deterministic", "ai-no-verify", "full", "full-no-skeptic"]);
@@ -356,6 +356,11 @@ export const CandidateSchema = z.object({
    * public): reported at Needs review at most, with this reason.
    */
   review: z.string().optional(),
+  /**
+   * Host of a request Witness's safety policy blocked earlier on the same page. The block may be the
+   * cause, so the finding is reported at Needs review at most (D87).
+   */
+  afterBlocked: z.string().optional(),
   /** Detector-supplied severity hint (e.g. axe impact); final severity is decided by report/severity.ts. */
   severityHint: z.enum(["critical", "high", "medium", "low"]).optional(),
   signals: SignalsSchema,
