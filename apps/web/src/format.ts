@@ -34,3 +34,9 @@ export function originOf(url: string): string | undefined {
     return undefined;
   }
 }
+
+/** The terminal command that runs a finding's exported test (DEMO_RUNBOOK §4–5), relative to the
+ * repo root, where the server writes runs/<run id>/tests/. */
+export function testCommand(runId: string, testFile: string): string {
+  return `pnpm demo:test runs/${runId}/tests/${testFile}`;
+}

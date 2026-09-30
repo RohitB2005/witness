@@ -24,7 +24,7 @@ import {
   TierBadge,
   VerdictBanner,
 } from "../components/ui";
-import { hostOf, originOf } from "../format";
+import { hostOf, originOf, testCommand } from "../format";
 
 type Tab = "bugs" | "review" | "improvements" | "discarded";
 
@@ -341,6 +341,7 @@ function FindingCard({
 }) {
   const [shot, setShot] = useState(true);
   const [copied, setCopied] = useState(false);
+  const [cmdCopied, setCmdCopied] = useState(false);
   const [dismiss, setDismiss] = useState<"closed" | "form" | "saving" | "done">("closed");
   const [reason, setReason] = useState("");
   const [err, setErr] = useState<string>();
@@ -438,6 +439,22 @@ function FindingCard({
               <a className={btnSecondary} href={urls.test(run.runId, f.id)} download={f.testFile}>
                 Download test
               </a>
+            )}
+            {f.testFile && (
+              <button
+                className={btnSecondary}
+                onClick={() =>
+                  void navigator.clipboard.writeText(testCommand(run.runId, f.testFile ?? "")).then(
+                    () => {
+                      setCmdCopied(true);
+                      setTimeout(() => setCmdCopied(false), 2000);
+                    },
+                    () => setErr("Couldn't copy to the clipboard."),
+                  )
+                }
+              >
+                {cmdCopied ? "Copied" : "Copy test command"}
+              </button>
             )}
             <button
               className={btnSecondary}

@@ -36,7 +36,7 @@ The live demo must work first time on the presentation laptop, with honest fallb
 1. `pnpm demo:check <rehearsal run id>` → all green, and no "Not a bug" marks on the bench.
 2. `pnpm demo:up`; `pnpm bench:reset`; confirm B01 is on (`GET /__bench/bugs`).
 3. Open tabs: Witness *New scan* with the bench URL pre-filled (`http://localhost:5180`), mode Staging, test account filled, budget Demo (`demo:up` pre-fills it); the SauceDemo report; the Evaluation page.
-4. Terminal open in the repo root, command typed but not run: `pnpm demo:test <path printed by the last rehearsal>` (the new run's path will be similar; copy from the card's *Download test* button during the demo).
+4. Terminal open in the repo root (`pnpm demo:test` paths are relative to it). During the demo, the B02 card's *Copy test command* button puts `pnpm demo:test runs/<run id>/tests/<file>.spec.ts` on the clipboard; rehearse the paste once with the last rehearsal's card.
 
 ## 5. Script (fits the 10-minute talk)
 
@@ -46,7 +46,7 @@ The live demo must work first time on the presentation laptop, with honest fallb
 | ~3:30 | Switch to the live view | Point to the plan (journeys and grounded expectations), the action log, a candidate being verified, one Discarded item with its reason |
 | ~4:00 | Report | Read the verdict line aloud |
 | ~4:15 | Open the "Price: low to high" card (B02) | "Sorting by lowest price puts the $8 service last, after $75." Show screenshot, steps, expected vs actual, and that the promise is the sort option's own label |
-| ~4:45 | *Download test* → terminal → `pnpm demo:test …` (red) → `pnpm bench:fix B02` → run again (green) | "Every confirmed bug becomes a test that stays red until it's fixed." |
+| ~4:45 | *Copy test command* → terminal → paste and run (red) → `pnpm bench:fix B02` → run again (green) | "Every confirmed bug becomes a test that stays red until it's fixed." |
 | ~5:15 | Improvements tab | Accessibility, a slow API, one labelled UX suggestion |
 | after talk | `pnpm bench:break B02`; `pnpm bench:reset` | — |
 
