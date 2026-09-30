@@ -13,7 +13,7 @@ import {
   type FixtureRoute,
   type FixtureServer,
 } from "../../test/fixture-server";
-import { exportTests, valueCode } from "./playwright";
+import { exportTests, testName, valueCode } from "./playwright";
 
 const REPO = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../../../..");
 const OUT = path.join(REPO, ".witness-export-test", `run_${process.pid}`);
@@ -147,6 +147,26 @@ describe("exportTests", () => {
     const out = exportTests({ ...r, findings: [missing] });
     expect(out.tests.size).toBe(0);
     expect(out.skipped[0]!.reason).toMatch(/missing from the app/);
+  });
+
+  it("a test is named after the expected behaviour, so a pass reads as the fix", () => {
+    const f = {
+      id: "fd_sort",
+      title: "Sorting by price low to high does not put items in order",
+      expected: "Sorting by price low to high puts items in order.\n",
+    };
+    expect(testName(f)).toBe("Sorting by price low to high puts items in order [fd_sort]");
+    expect(testName({ ...f, expected: "  " })).toBe(
+      "Regression: Sorting by price low to high does not put items in order [fd_sort]",
+    );
+    const long = testName({ ...f, expected: `${"word ".repeat(40)}end.` });
+    expect(long.length).toBeLessThanOrEqual(120 + " [fd_sort]".length);
+    expect(long).toMatch(/^word( word)*… \[fd_sort\]$/);
+
+    const out = exportTests(run()); // the fixture finding has no expected text
+    expect(out.files.find((x) => x.name === "fd_total.spec.ts")?.content).toContain(
+      `test("Regression: The total doesn't add up [fd_total]", async ({ page }) => {`,
+    );
   });
 
   it(

@@ -328,6 +328,18 @@ function signatureLines(f: Finding): string[] {
   }
 }
 
+/**
+ * The test's name: the expected behaviour, so a passing test reads as the fix ("… puts items in order")
+ * rather than the bug; "Regression: <title>" when there's no expected text. Long names are cut at a word.
+ */
+export function testName(f: Pick<Finding, "id" | "title" | "expected">): string {
+  const oneLine = (s: string) => s.replace(/\s+/g, " ").trim();
+  const expected = oneLine(f.expected ?? "").replace(/[\s.]+$/, "");
+  let name = expected || `Regression: ${oneLine(f.title)}`;
+  if (name.length > 120) name = `${name.slice(0, 119).replace(/\s+\S*$/, "")}…`;
+  return `${name} [${f.id}]`;
+}
+
 export function exportTests(result: RunResult): ExportResult {
   const steps = new Map<string, Step>();
   for (const j of result.journeys) for (const s of j.steps ?? []) steps.set(s.id, s);
@@ -382,7 +394,7 @@ export function exportTests(result: RunResult): ExportResult {
       ...(r.viewport === "mobile"
         ? [`test.use({ viewport: { width: 375, height: 667 } });`, ""]
         : []),
-      `test(${q(`${f.title.slice(0, 100)} [${f.id}]`)}, async ({ page }) => {`,
+      `test(${q(testName(f))}, async ({ page }) => {`,
       "  const w = watch(page, BASE_URL);",
       ...(needsCaptures ? ["  const captures: Record<string, string | number> = {};"] : []),
       ...body.map((l) => `  ${l}`),
