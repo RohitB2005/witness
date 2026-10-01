@@ -44,10 +44,21 @@ export interface NewScanBody {
   budget: "quick" | "demo" | "standard" | "deep";
   username?: string;
   password?: string;
+  /** `pnpm demo:up` only: the server logs in with the test account from .env. */
+  useDemoAccount?: boolean;
   hint?: string;
   requirements?: string;
   confirmStagingOnNonLocal?: boolean;
   llmCache?: "off" | "rw" | "replay";
+}
+
+/** GET /api/demo (`pnpm demo:up` only). Never holds the password. */
+export interface DemoSettings {
+  url: string;
+  mode: NewScanBody["mode"];
+  budget: NewScanBody["budget"];
+  account?: { username: string };
+  requirements?: { file: string; text: string };
 }
 
 export interface Suppression {
@@ -61,6 +72,7 @@ export const api = {
   runs: () =>
     call<{ live: LiveInfo | null; runs: (RunSummary & { live: boolean })[] }>("GET", "/api/scans"),
   run: (id: string) => call<RunResult>("GET", `/api/scans/${encodeURIComponent(id)}`),
+  demo: () => call<DemoSettings>("GET", "/api/demo"),
   start: (body: NewScanBody) => call<{ runId: string }>("POST", "/api/scans", body),
   approve: (id: string, approvedJourneyIds: string[]) =>
     call<{ ok: true }>("POST", `/api/scans/${encodeURIComponent(id)}/plan`, { approvedJourneyIds }),

@@ -14,6 +14,7 @@ import {
   type RunStore,
   type WitnessEvent,
 } from "@witness/engine";
+import { publicDemo, type DemoSettings } from "./demo";
 import { BusyError, InputError, NewScanSchema, type ScanManager } from "./scans";
 
 export interface AppOptions {
@@ -23,6 +24,8 @@ export interface AppOptions {
   evalDir: string;
   /** Built dashboard (apps/web/dist); served with an SPA fallback when present. */
   webDir?: string;
+  /** Set only by `pnpm demo:up` (--demo): New scan fills itself from GET /api/demo. */
+  demo?: DemoSettings;
 }
 
 const LOCAL_HOSTS = new Set(["localhost", "127.0.0.1", "[::1]", "::1"]);
@@ -95,6 +98,13 @@ export function createApp(o: AppOptions): express.Express {
 
   app.get("/api/health", (_req, res) => {
     res.json({ ok: true, live: o.scans.live ?? null });
+  });
+
+  // Never includes the password: the form sends useDemoAccount and the server fills it in.
+  app.get("/api/demo", (_req, res) => {
+    if (!o.demo)
+      res.status(404).json({ error: "Demo settings are only available with pnpm demo:up." });
+    else res.json(publicDemo(o.demo));
   });
 
   app.get("/api/scans", async (_req, res) => {
@@ -381,6 +391,7 @@ async function evalSummaries(dir: string): Promise<{ path: string; generatedAt: 
     if ((newest.get(top(s.path)) ?? "") < s.generatedAt) newest.set(top(s.path), s.generatedAt);
   return out.sort(
     (a, b) =>
-      newest.get(top(b.path))!.localeCompare(newest.get(top(a.path))!) || a.path.localeCompare(b.path),
+      newest.get(top(b.path))!.localeCompare(newest.get(top(a.path))!) ||
+      a.path.localeCompare(b.path),
   );
 }

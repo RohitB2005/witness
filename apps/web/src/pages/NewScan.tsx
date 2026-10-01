@@ -1,8 +1,16 @@
 // New scan (FR-1, ADDENDUM A5): URL, mode with its warning, test account, hint, requirements, budget.
 import { useEffect, useState, type FormEvent } from "react";
-import { api, ApiError, type LiveInfo, type NewScanBody, type Suppression } from "../api";
+import {
+  api,
+  ApiError,
+  type DemoSettings,
+  type LiveInfo,
+  type NewScanBody,
+  type Suppression,
+} from "../api";
 import { navigate, Link } from "../router";
-import { btnPrimary, input, Notice } from "../components/ui";
+import { btnPrimary, btnSecondary, input, Notice } from "../components/ui";
+import { accountFields, demoForm } from "../demo";
 import { originOf } from "../format";
 
 const BUDGETS = [
@@ -44,6 +52,10 @@ export function NewScanPage({ live }: { live: LiveInfo | null }) {
   );
   const [username, setUsername] = useState(q.get("user") ?? saved.username ?? "");
   const [password, setPassword] = useState("");
+  /** `pnpm demo:up` only: the server logs in with .env's test account; the browser never has the password. */
+  const [demoAccount, setDemoAccount] = useState(false);
+  const [demo, setDemo] = useState<DemoSettings>();
+  const [demoFilled, setDemoFilled] = useState(false);
   const [hint, setHint] = useState(saved.hint ?? "");
   const [requirements, setRequirements] = useState("");
   const [reqFile, setReqFile] = useState<string>();
@@ -52,6 +64,40 @@ export function NewScanPage({ live }: { live: LiveInfo | null }) {
   const [error, setError] = useState<string>();
   const [busy, setBusy] = useState(false);
   const [suppressed, setSuppressed] = useState<Suppression[]>([]);
+
+  const fillDemo = (d: DemoSettings) => {
+    const f = demoForm(d);
+    setUrl(f.url);
+    setMode(f.mode);
+    setBudget(f.budget);
+    setUsername(f.username);
+    setPassword("");
+    setDemoAccount(f.demoAccount);
+    setRequirements(f.requirements);
+    setReqFile(f.reqFile);
+    setConfirmStaging(false);
+    setOffline(false);
+    setError(undefined);
+    setDemoFilled(true);
+  };
+
+  // Only the demo:up server answers /api/demo; elsewhere the request 404s and nothing changes.
+  const autoFill = q.get("demo") === "1";
+  useEffect(() => {
+    let gone = false;
+    api
+      .demo()
+      .then((d) => {
+        if (gone) return;
+        setDemo(d);
+        if (autoFill) fillDemo(d);
+      })
+      .catch(() => {});
+    return () => {
+      gone = true;
+    };
+    // Once, on arrival.
+  }, []);
 
   const needsConfirm = mode === "staging" && !!url && !isLocal(url);
   const origin = originOf(url);
@@ -106,7 +152,7 @@ export function NewScanPage({ live }: { live: LiveInfo | null }) {
         url: url.trim(),
         mode,
         budget,
-        ...(username.trim() ? { username: username.trim(), password } : {}),
+        ...accountFields(username, password, demoAccount),
         ...(hint.trim() ? { hint: hint.trim() } : {}),
         ...(requirements.trim() ? { requirements } : {}),
         ...(needsConfirm ? { confirmStagingOnNonLocal: confirmStaging } : {}),
@@ -129,6 +175,18 @@ export function NewScanPage({ live }: { live: LiveInfo | null }) {
         Witness maps the app, tries its main journeys like a careful tester, and reports only what
         it can check and repeat.
       </p>
+      {demo && (
+        <div className="mt-4 flex flex-wrap items-center gap-3">
+          <button type="button" className={btnSecondary} onClick={() => fillDemo(demo)}>
+            Fill in demo settings
+          </button>
+          <span className="text-sm text-stone-600 dark:text-stone-400" role="status">
+            {demoFilled
+              ? "Demo settings filled in. Check them, then start the scan."
+              : "Bench app, Staging, Demo budget, the test account from .env and the requirements file."}
+          </span>
+        </div>
+      )}
       {live && (
         <div className="mt-4">
           <Notice tone="warn">
@@ -232,18 +290,40 @@ export function NewScanPage({ live }: { live: LiveInfo | null }) {
               placeholder="Username or email"
               value={username}
               onChange={(e) => setUsername(e.target.value)}
+              readOnly={demoAccount}
               autoComplete="off"
             />
-            <input
-              className={input}
-              aria-label="Password"
-              placeholder="Password"
-              type="password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              autoComplete="new-password"
-            />
+            {demoAccount ? (
+              <div
+                className={`${input} bg-stone-100 text-stone-700 dark:bg-stone-800 dark:text-stone-300`}
+                aria-label="Password"
+              >
+                Demo account (from .env)
+              </div>
+            ) : (
+              <input
+                className={input}
+                aria-label="Password"
+                placeholder="Password"
+                type="password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                autoComplete="new-password"
+              />
+            )}
           </div>
+          {demoAccount && (
+            <button
+              type="button"
+              className="mt-1 text-sm underline"
+              onClick={() => {
+                setDemoAccount(false);
+                setUsername("");
+              }}
+            >
+              Use a different account
+            </button>
+          )}
         </fieldset>
 
         <div>

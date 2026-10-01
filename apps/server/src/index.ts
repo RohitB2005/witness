@@ -11,6 +11,7 @@ import {
   runScan,
 } from "@witness/engine";
 import { createApp } from "./app";
+import { loadDemoSettings } from "./demo";
 import { ScanManager } from "./scans";
 
 const REPO_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..", "..", "..");
@@ -25,7 +26,20 @@ const store = new JsonRunStore({
   dataDir: path.join(REPO_ROOT, "data"),
 });
 
+// `pnpm demo:up` passes --demo <bench URL>; `pnpm dev` doesn't, so it never offers demo settings.
+const demoArg = process.argv.indexOf("--demo");
+const demo =
+  demoArg >= 0 && process.argv[demoArg + 1]
+    ? loadDemoSettings({
+        url: process.argv[demoArg + 1]!,
+        env: process.env,
+        requirementsFile: path.join(REPO_ROOT, "bench", "SCOPE.md"),
+        warn: (m) => console.warn(m),
+      })
+    : undefined;
+
 const scans = new ScanManager({
+  demo,
   store,
   runner: runScan,
   llmCacheDir: cacheDir,
@@ -45,6 +59,7 @@ const app = createApp({
   scans,
   evalDir: path.join(REPO_ROOT, "eval", "results"),
   webDir: path.join(REPO_ROOT, "apps", "web", "dist"),
+  demo,
 });
 
 const server = app.listen(PORT, HOST, () => {

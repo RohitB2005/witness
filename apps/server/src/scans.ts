@@ -25,6 +25,7 @@ import {
   type ScanConfig,
   type WitnessEvent,
 } from "@witness/engine";
+import type { DemoSettings } from "./demo";
 
 /** The engine's entry point (injected so tests can use a scripted scan). */
 export type ScanRunner = (config: ScanConfig, deps: RunScanDeps) => Promise<RunResult>;
@@ -35,6 +36,8 @@ export const NewScanSchema = z.strictObject({
   budget: BudgetPresetSchema.optional(),
   username: z.string().max(200).optional(),
   password: z.string().max(500).optional(),
+  /** `pnpm demo:up` only: log in with the test account from .env, which the server holds. */
+  useDemoAccount: z.boolean().optional(),
   hint: z.string().max(200).optional(),
   requirements: z.string().max(5000).optional(),
   /** FR-1: staging mode on a non-local host must be confirmed by the person. */
@@ -81,6 +84,8 @@ export interface ScanManagerOptions {
   models: () => { models?: Models; unavailable?: string; maxCostUsd?: number };
   llmCacheDir: string;
   newRunId: () => string;
+  /** Set only by `pnpm demo:up` (--demo): its account backs `useDemoAccount`. */
+  demo?: DemoSettings;
 }
 
 export class ScanManager {
@@ -102,6 +107,16 @@ export class ScanManager {
 
   start(input: NewScan): { runId: string } {
     if (this.live) throw new BusyError(this.live.runId);
+    if (input.useDemoAccount) {
+      const account = this.o.demo?.account;
+      if (!account)
+        throw new InputError(
+          "The demo account is only available when Witness is started with pnpm demo:up and .env sets WITNESS_TEST_USER and WITNESS_TEST_PASSWORD.",
+        );
+      if (input.username || input.password)
+        throw new InputError("Use the demo account or type an account, not both.");
+      input = { ...input, username: account.username, password: account.password };
+    }
     let config: ScanConfig;
     const vault = new SecretVault();
     try {

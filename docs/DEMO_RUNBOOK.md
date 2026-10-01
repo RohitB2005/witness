@@ -35,7 +35,12 @@ The live demo must work first time on the presentation laptop, with honest fallb
 
 1. `pnpm demo:check <rehearsal run id>` → all green, and no "Not a bug" marks on the bench.
 2. `pnpm demo:up`; `pnpm bench:reset`; confirm B01 is on (`GET /__bench/bugs`).
-3. Open tabs: Witness *New scan* with the bench URL pre-filled (`http://localhost:5180`), mode Staging, test account filled, budget Demo (`demo:up` pre-fills it); the SauceDemo report; the Evaluation page.
+3. Open tabs:
+   - **Witness New scan from the link `demo:up` prints:** `http://localhost:4317/?demo=1`. It fills everything: app address `http://localhost:5180`, Staging, budget Demo, the test account from .env (`WITNESS_TEST_USER`; the password field reads "Demo account (from .env)"), and the requirements from `bench/SCOPE.md` ("Loaded SCOPE.md"). Nothing to type; on stage, click **Start scan**.
+     - On the plain New scan page, click **Fill in demo settings** at the top; it does the same.
+     - The server holds the password (DEVLOG D93). It's never in the link, the browser or the run's files. Only `demo:up` offers this; `pnpm dev` doesn't.
+     - If the password field asks for a password, .env lacks `WITNESS_TEST_USER` or `WITNESS_TEST_PASSWORD` (`demo:up` prints a warning saying so).
+   - The SauceDemo report; the Evaluation page.
 4. Terminal open in the repo root (`pnpm demo:test` paths are relative to it). During the demo, the B02 card's *Copy test command* button puts `pnpm demo:test runs/<run id>/tests/<file>.spec.ts` on the clipboard; rehearse the paste once with the last rehearsal's card.
 
 ## 5. Script (fits the 10-minute talk)
