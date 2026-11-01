@@ -27,6 +27,8 @@
     "demo:up": "node scripts/demo-up.mjs",
     "demo:test": "node scripts/demo-test.mjs",
     "demo:replay": "node scripts/demo-replay.mjs",
+    "video:record": "node scripts/video/record.mjs",
+    "video:build": "node scripts/video/build.mjs",
     "eval:score": "tsx eval/score.ts",
     "eval:tests": "tsx eval/export-tests.ts"
   },

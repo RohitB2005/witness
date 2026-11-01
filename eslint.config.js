@@ -41,5 +41,18 @@ export default tseslint.config(
       },
     },
   },
+  {
+    // The video recorder passes functions to page.evaluate / addInitScript; they run in the browser.
+    files: ["scripts/video/**/*.mjs"],
+    languageOptions: {
+      globals: {
+        window: "readonly",
+        document: "readonly",
+        addEventListener: "readonly",
+        performance: "readonly",
+        requestAnimationFrame: "readonly",
+      },
+    },
+  },
   prettier,
 );
