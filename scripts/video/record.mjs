@@ -19,6 +19,7 @@ import {
   OUT_DIR,
   RAW_DIR,
   REPO_ROOT,
+  camera,
   click,
   launch,
   moveTo,
@@ -114,7 +115,7 @@ async function recordScan(browser) {
   // "Paste" the scope: the demo settings already loaded SCOPE.md; clear it and paste it back in view.
   const req = page.locator("#req");
   const scope = await req.inputValue();
-  await scrollToElement(page, page.getByText("Test account (optional)"), { offset: 20, ms: 800 });
+  await scrollToElement(page, page.getByText("Requirements (optional)"), { offset: 20, ms: 900 });
   await click(page, req, { ms: 500 });
   await page.keyboard.press("ControlOrMeta+A");
   await page.keyboard.press("Backspace");
@@ -142,11 +143,11 @@ async function recordScan(browser) {
   console.log(`Scan started: ${runId} — recording until the verdict (up to 9 minutes).`);
   await sleep(1500); // the edit cuts here, then plays the scan sped up
   await showCursor(page, false);
-  await setZoom(page, 1.3); // smaller, so the plan and the activity panels fit
+  await setZoom(page, 1.25); // smaller, so the plan and the activity panels fit
   rec.throttle(8);
   rec.mark("live");
   const report = page.getByRole("button", { name: "Open the full report" });
-  // Once the plan is approved, scroll down to the "Now" line so the plan and the agent's actions show.
+  // Once the plan is approved, scroll down to the progress stepper so the plan and the agent's actions show.
   const plan = page.getByRole("heading", { name: /^The plan:/ });
   await Promise.race([
     report.waitFor({ timeout: 9 * 60_000 }),
@@ -157,7 +158,7 @@ async function recordScan(browser) {
       .getByText(/Starting automatically/)
       .waitFor({ state: "hidden", timeout: 30_000 })
       .catch(() => {});
-    await scrollToElement(page, page.locator("p[aria-live=polite]"), { offset: 14, ms: 1400 });
+    await scrollToElement(page, page.locator("ol[aria-label=Progress]"), { offset: 16, ms: 1400 });
   }
   await report.waitFor({ timeout: 9 * 60_000 });
   rec.throttle(0);
@@ -249,11 +250,14 @@ async function recordTerminal(browser) {
   const failCode = await command(`pnpm demo:test ${spec}`, ["demo:test", spec], "paste");
   rec.mark("failed");
   await sleep(1200);
-  // Scroll back to the assertion's message (the prices in the order shown), then down again.
+  // Scroll back to the assertion's message (the prices in the order shown), lean in, then back down.
   await page.evaluate(() => window.term.reveal("order: \\d", 900));
-  await sleep(3200);
+  const message = page.locator("#out span", { hasText: /order: \d/ }).first();
+  await camera(page, message, { scale: 1.3, anchorLeft: true, ms: 850 });
+  await sleep(2500);
+  await camera(page, null, { scale: 1, ms: 650 });
   await page.evaluate(() => window.term.reveal(null, 700));
-  await sleep(500);
+  await sleep(400);
   await prompt();
   await sleep(400);
   await command(`pnpm bench:fix ${BUG}`, ["bench:fix", BUG]);
@@ -263,7 +267,13 @@ async function recordTerminal(browser) {
   await sleep(300);
   const passCode = await command(`pnpm demo:test ${spec}`, ["demo:test", spec], "paste");
   rec.mark("passed");
-  await sleep(2600);
+  await sleep(500);
+  await camera(page, page.locator("#out span", { hasText: "PASSED:" }).last(), {
+    scale: 1.3,
+    anchorLeft: true,
+    ms: 850,
+  });
+  await sleep(1700);
   console.log(await rec.stop({ runId, finding: f.id, failCode, passCode }));
   await bench("break", BUG); // leave the bench as demo:up started it
   if (failCode === 0 || passCode !== 0)
@@ -297,7 +307,7 @@ function evalRows() {
 }
 
 async function recordCards(browser) {
-  const page = await newPage(browser, { cursor: false });
+  const page = await newPage(browser, { cursor: false, full: true });
   const rows = evalRows();
   const [plain, ai, witness] = rows;
   const footnote =
@@ -356,7 +366,7 @@ async function shot(browser) {
   const ctx = await browser.newContext({
     viewport: { width: 1600, height: 1000 },
     deviceScaleFactor: 2,
-    colorScheme: "light",
+    colorScheme: "dark",
   });
   const page = await ctx.newPage();
   await page.goto(`${WITNESS}/runs/${runId}`);

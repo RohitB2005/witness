@@ -3,8 +3,8 @@
 //
 // Why a drawn cursor: headless Chromium shows none, and screencast.showActions() also prints the
 // action's selector as a title, which can't be turned off. Why CSS zoom: screencast frames are
-// captured at CSS-pixel size (deviceScaleFactor is ignored), so the page is laid out at 1920×1080
-// and zoomed to make the dashboard readable in a video.
+// captured at CSS-pixel size (deviceScaleFactor is ignored), so the page is laid out at the size it
+// will appear in the video and zoomed to make the dashboard readable.
 import { mkdirSync, rmSync, writeFileSync } from "node:fs";
 import { writeFile } from "node:fs/promises";
 import path from "node:path";
@@ -16,6 +16,8 @@ export const OUT_DIR = path.join(REPO_ROOT, "video-out");
 export const RAW_DIR = path.join(OUT_DIR, "raw");
 export const W = 1920;
 export const H = 1080;
+/** Where app and terminal recordings sit in the frame: a window with a 40 px title bar, captions below. */
+export const WIN = { x: 120, y: 70, w: 1680, h: 870, bar: 40 };
 
 export const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
@@ -23,14 +25,21 @@ export function launch() {
   return chromium.launch();
 }
 
-/** A 1920×1080 page. `zoom` enlarges the app; `cursor` draws a pointer that follows the mouse. */
-export async function newPage(browser, { zoom = 1, cursor = true, clipboardOrigin } = {}) {
-  const ctx = await browser.newContext({ viewport: { width: W, height: H }, colorScheme: "light" });
+/**
+ * A dark-theme page, window-sized by default (`full` for 1920×1080 cards). `zoom` enlarges the app;
+ * `cursor` draws a pointer that follows the mouse.
+ */
+export async function newPage(
+  browser,
+  { zoom = 1, cursor = true, clipboardOrigin, full = false } = {},
+) {
+  const viewport = full ? { width: W, height: H } : { width: WIN.w, height: WIN.h };
+  const ctx = await browser.newContext({ viewport, colorScheme: "dark" });
   if (clipboardOrigin)
     await ctx.grantPermissions(["clipboard-read", "clipboard-write"], { origin: clipboardOrigin });
   await ctx.addInitScript(pageSetup, { zoom, cursor });
   const page = await ctx.newPage();
-  page.mouseAt = { x: W * 0.62, y: H * 0.55 };
+  page.mouseAt = { x: viewport.width * 0.62, y: viewport.height * 0.55 };
   return page;
 }
 
@@ -85,7 +94,7 @@ export async function startRecording(page, name) {
   let minGap = 0;
   let lastT = -Infinity;
   await page.screencast.start({
-    size: { width: W, height: H },
+    size: page.viewportSize(),
     quality: 92,
     onFrame: ({ data, timestamp }) => {
       if (timestamp - lastT < minGap) return;
@@ -137,6 +146,34 @@ export async function setZoom(page, zoom) {
     const c = document.getElementById("__vcursor");
     if (c) c.style.zoom = String(1 / z);
   }, zoom);
+}
+
+/**
+ * A camera move: scales the page by `scale` so the element's centre drifts towards the middle of
+ * the view (`anchorLeft` keeps the left edge in place, for left-aligned text), or back with scale 1.
+ * Done in the browser, so text stays sharp.
+ */
+export async function camera(page, locator, { scale = 1, ms = 900, anchorLeft = false } = {}) {
+  const handle = locator ? await locator.elementHandle() : null;
+  await page.evaluate(
+    async ({ el, s, ms, anchorLeft }) => {
+      const b = document.body;
+      b.style.transition = `transform ${ms}ms cubic-bezier(.45,0,.2,1)`;
+      if (s !== 1 && el) {
+        const z = Number(document.documentElement.style.zoom || 1);
+        const r = el.getBoundingClientRect();
+        const W = window.innerWidth;
+        const H = window.innerHeight;
+        const clamp = (v, max) => Math.min(Math.max(v, 0), max);
+        const fx = anchorLeft ? 0 : clamp((s * (r.left + r.width / 2) - W / 2) / (s - 1), W);
+        const fy = clamp((s * (r.top + r.height / 2) - H / 2) / (s - 1), H);
+        b.style.transformOrigin = `${fx / z}px ${(fy + window.scrollY) / z}px`;
+      }
+      b.style.transform = s === 1 ? "none" : `scale(${s})`;
+      await new Promise((r) => setTimeout(r, ms));
+    },
+    { el: handle, s: scale, ms, anchorLeft },
+  );
 }
 
 /** Glides the mouse (and the drawn cursor) to a point. */

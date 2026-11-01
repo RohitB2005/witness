@@ -1,6 +1,8 @@
-// HTML for the demo video's cards, caption overlays and terminal page. Everything is rendered by
-// Chromium (scripts/video/record.mjs and build.mjs), so the type is the system UI font and no
+// HTML for the demo video's cards, captions, window frame and terminal page. Everything is rendered
+// by Chromium (scripts/video/record.mjs and build.mjs), so the type is the system UI font and no
 // image editor or ffmpeg text filter is needed.
+import { H, W, WIN } from "./lib.mjs";
+
 const esc = (s) =>
   String(s).replace(
     /[&<>"']/g,
@@ -20,29 +22,37 @@ const C = {
   accent: "#2dd4bf",
   neutral: "#5f5d57",
 };
+// The one backdrop behind cards and the app window, so every section looks like the same set.
+const BACKDROP = `radial-gradient(1500px 820px at 50% 42%,#1f2b2a 0%,${C.bg} 72%)`;
 
 const page = (
   body,
   css = "",
-  bg = C.bg,
+  { bg = C.bg, w = W, h = H } = {},
 ) => `<!doctype html><html><head><meta charset="utf-8"><style>
 *{box-sizing:border-box;margin:0;padding:0}
-html,body{width:1920px;height:1080px;overflow:hidden;background:${bg};color:${C.text};font-family:${FONT};-webkit-font-smoothing:antialiased}
+html,body{width:${w}px;height:${h}px;overflow:hidden;background:${bg};color:${C.text};font-family:${FONT};-webkit-font-smoothing:antialiased}
 .rise{opacity:0;transform:translateY(18px);animation:rise .7s cubic-bezier(.2,.7,.2,1) forwards}
 @keyframes rise{to{opacity:1;transform:none}}
 ${css}</style></head><body>${body}</body></html>`;
 
 export function titleCard({ subtitle }) {
   return page(
-    `<main>
-      <h1 class="rise"><span class="w">Witness</span><span class="dash"> — </span><span class="t">AI App Tester</span></h1>
-      <p class="rise" style="animation-delay:.35s">${esc(subtitle)}</p>
+    `<main><div class="glow"></div>
+      <h1><span class="rise w">Witness</span><span class="rise dash" style="animation-delay:.18s"> — </span><span class="rise t" style="animation-delay:.3s">AI App Tester</span></h1>
+      <i class="line"></i>
+      <p class="rise" style="animation-delay:.75s">${esc(subtitle)}</p>
     </main>`,
-    `main{height:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:34px;
-      background:radial-gradient(1200px 600px at 50% 45%,#1f2b2a 0%,${C.bg} 70%)}
-     h1{font-size:112px;font-weight:750;letter-spacing:-2.5px}
+    `main{position:relative;height:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:30px;background:${BACKDROP}}
+     .glow{position:absolute;left:50%;top:44%;width:900px;height:300px;transform:translate(-50%,-50%);border-radius:50%;
+       background:radial-gradient(closest-side,rgba(45,212,191,.16),transparent);opacity:0;animation:glow 2.4s ease-out .2s forwards}
+     @keyframes glow{to{opacity:1}}
+     h1{position:relative;font-size:112px;font-weight:750;letter-spacing:-2.5px}
+     h1 span{display:inline-block;white-space:pre}
      .dash,.t{color:${C.text2};font-weight:500}
-     p{font-size:34px;color:${C.muted};letter-spacing:.2px}`,
+     .line{display:block;width:0;height:4px;border-radius:2px;background:${C.accent};animation:line .9s cubic-bezier(.65,0,.2,1) .55s forwards}
+     @keyframes line{to{width:240px}}
+     p{position:relative;font-size:32px;color:${C.muted};letter-spacing:.2px}`,
   );
 }
 
@@ -53,8 +63,7 @@ export function endCard({ name, links }) {
       <ul>${links.map((l, i) => `<li class="rise" style="animation-delay:${0.3 + i * 0.15}s">${esc(l)}</li>`).join("")}</ul>
       <p class="rise" style="animation-delay:.8s">Witness · AI proposes, code proves.</p>
     </main>`,
-    `main{height:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:30px;
-      background:radial-gradient(1200px 600px at 50% 45%,#1f2b2a 0%,${C.bg} 70%)}
+    `main{height:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:30px;background:${BACKDROP}}
      h1{font-size:104px;font-weight:750;letter-spacing:-2px}
      ul{list-style:none;display:flex;flex-direction:column;align-items:center;gap:14px}
      li{font-size:40px;color:${C.text2};letter-spacing:.2px}
@@ -88,7 +97,7 @@ export function resultsCard({ headline, accent, rows, footnote }) {
       <p class="foot rise" style="animation-delay:1.6s">${esc(footnote)}</p>
     </main>`,
     `main{height:100%;padding:96px 150px 0;display:flex;flex-direction:column;gap:22px;
-      background:radial-gradient(1400px 700px at 50% 40%,#1c2423 0%,${C.bg} 70%)}
+      background:${BACKDROP}}
      h2{font-size:60px;font-weight:700;letter-spacing:-1px;margin-bottom:40px;line-height:1.18}
      h2 em{font-style:normal;color:${C.accent}}
      .head,.row{display:grid;grid-template-columns:430px 1fr 190px;align-items:center;column-gap:36px}
@@ -111,27 +120,68 @@ export function resultsCard({ headline, accent, rows, footnote }) {
   );
 }
 
-/** A full-frame transparent overlay: one caption pill near the bottom, optionally a badge top-right. */
-export function captionOverlay({ text, badge }) {
-  return `<!doctype html><html><head><meta charset="utf-8"><style>
+const overlay = (body, css) => `<!doctype html><html><head><meta charset="utf-8"><style>
 *{box-sizing:border-box;margin:0}
-html,body{width:1920px;height:1080px;background:transparent;font-family:${FONT};-webkit-font-smoothing:antialiased}
-.cap{position:absolute;left:50%;bottom:64px;transform:translateX(-50%);max-width:1560px;width:max-content;
-  padding:18px 34px;border-radius:16px;background:rgba(12,12,12,.74);color:#fff;font-size:42px;font-weight:600;
-  line-height:1.25;text-align:center;letter-spacing:-.2px;box-shadow:0 6px 28px rgba(0,0,0,.25)}
-.badge{position:absolute;right:44px;top:30px;padding:10px 20px;border-radius:999px;background:rgba(12,12,12,.74);
-  color:#fff;font-size:28px;font-weight:600}
-</style></head><body>
-${text ? `<div class="cap">${esc(text)}</div>` : ""}
-${badge ? `<div class="badge">${esc(badge)}</div>` : ""}
-</body></html>`;
+html,body{width:${W}px;height:${H}px;background:transparent;font-family:${FONT};-webkit-font-smoothing:antialiased}
+${css}</style></head><body>${body}</body></html>`;
+
+/** A caption under the window: a numbered teal kicker and one line of text (transparent full frame). */
+export function captionOverlay({ step, kicker, text }) {
+  const top = WIN.y + WIN.h;
+  return overlay(
+    `<div class="cap"><div class="k">${step ? `<span class="n">${esc(step)}</span>` : ""}${esc(kicker ?? "")}</div>
+      <div class="t">${esc(text)}</div></div>`,
+    `.cap{position:absolute;left:0;right:0;top:${top}px;height:${H - top}px;display:flex;flex-direction:column;
+       align-items:center;justify-content:center;gap:9px;text-shadow:0 2px 14px rgba(0,0,0,.45)}
+     .k{display:flex;align-items:center;gap:12px;font-size:19px;font-weight:700;letter-spacing:3.5px;text-transform:uppercase;color:${C.accent}}
+     .n{display:inline-grid;place-items:center;width:28px;height:28px;border-radius:50%;border:2px solid ${C.accent};font-size:15px;letter-spacing:0}
+     .t{font-size:37px;font-weight:600;color:${C.text};letter-spacing:-.3px}`,
+  );
 }
 
-/** A terminal window. The recorder drives it through window.term (type, write, prompt). */
-export function terminalPage({ title = "witness — zsh", cwd = "~/witness" } = {}) {
+/** A small chip at the right end of the window's title bar (e.g. how much the scan is sped up). */
+export function titleBarChip({ text }) {
+  return overlay(
+    `<div class="chip"><span class="dot"></span>${esc(text)}</div>`,
+    `.chip{position:absolute;right:${W - WIN.x - WIN.w + 14}px;top:${WIN.y - WIN.bar + 7}px;height:${WIN.bar - 14}px;
+       display:flex;align-items:center;gap:9px;padding:0 13px;border-radius:999px;background:rgba(45,212,191,.12);
+       border:1px solid rgba(45,212,191,.35);color:${C.accent};font-size:16px;font-weight:600;letter-spacing:.2px}
+     .dot{width:7px;height:7px;border-radius:50%;background:${C.accent};box-shadow:0 0 8px ${C.accent}}`,
+  );
+}
+
+/** The backdrop and window chrome that app and terminal recordings are composited into. */
+export function windowFrame({ title, url = false }) {
+  const r = 14;
   return page(
-    `<div class="win"><div class="bar"><i></i><i></i><i></i><span>${esc(title)}</span></div>
-      <pre id="out"></pre></div>
+    `<div class="shadow"></div>
+     <div class="bar"><i></i><i></i><i></i><span class="${url ? "url" : "title"}">${esc(title)}</span></div>
+     <div class="content"></div>`,
+    `body{background:${BACKDROP}}
+     .shadow{position:absolute;left:${WIN.x}px;top:${WIN.y - WIN.bar}px;width:${WIN.w}px;height:${WIN.h + WIN.bar}px;
+       border-radius:${r}px;box-shadow:0 40px 90px rgba(0,0,0,.55),0 0 0 1px rgba(255,255,255,.07)}
+     .bar{position:absolute;left:${WIN.x}px;top:${WIN.y - WIN.bar}px;width:${WIN.w}px;height:${WIN.bar}px;border-radius:${r}px ${r}px 0 0;
+       background:#232321;border-bottom:1px solid #30302d;display:flex;align-items:center;gap:8px;padding:0 16px}
+     .bar i{width:13px;height:13px;border-radius:50%;background:#ff5f57}.bar i:nth-child(2){background:#febc2e}.bar i:nth-child(3){background:#28c840}
+     .bar span{position:absolute;left:50%;transform:translateX(-50%);color:#a3a29b;font-size:16px}
+     .bar .url{padding:4px 70px;border-radius:7px;background:#171716;color:#b9b8b0;font-size:15px}
+     .content{position:absolute;left:${WIN.x}px;top:${WIN.y}px;width:${WIN.w}px;height:${WIN.h}px;background:#000;border-radius:0 0 ${r}px ${r}px}`,
+  );
+}
+
+/** White where the window's content shows (rounded bottom corners), black elsewhere: the alpha mask. */
+export function windowMask() {
+  return page(
+    `<div class="m"></div>`,
+    `.m{position:absolute;left:${WIN.x}px;top:${WIN.y}px;width:${WIN.w}px;height:${WIN.h}px;background:#fff;border-radius:0 0 14px 14px}`,
+    { bg: "#000" },
+  );
+}
+
+/** The terminal's contents (the window frame adds its title bar). Driven through window.term. */
+export function terminalPage({ cwd = "~/witness" } = {}) {
+  return page(
+    `<pre id="out"></pre>
     <script>
     const out = document.getElementById("out");
     const PROMPT = ${JSON.stringify(cwd)};
@@ -183,13 +233,8 @@ export function terminalPage({ title = "witness — zsh", cwd = "~/witness" } = 
       },
     };
     </script>`,
-    `body{background:linear-gradient(135deg,#1c2624,#121211)}
-     .win{position:absolute;inset:56px 80px;border-radius:16px;background:#0d0d0c;box-shadow:0 30px 80px rgba(0,0,0,.5);
-       border:1px solid #2b2b29;display:flex;flex-direction:column;overflow:hidden}
-     .bar{height:52px;flex:none;display:flex;align-items:center;gap:10px;padding:0 20px;background:#1d1d1b;border-bottom:1px solid #2b2b29}
-     .bar i{width:15px;height:15px;border-radius:50%;background:#ff5f57}.bar i:nth-child(2){background:#febc2e}.bar i:nth-child(3){background:#28c840}
-     .bar span{flex:1;text-align:center;margin-right:70px;color:#a3a29b;font-size:20px}
-     #out{flex:1;overflow:hidden;padding:26px 34px 120px;font:22px/1.45 ${MONO};color:#e6e6e6;white-space:pre-wrap;word-break:break-all}
-     .win{overflow-y:hidden}`,
+    `#out{position:absolute;inset:0;overflow:hidden;padding:24px 34px 40px;font:22px/1.45 ${MONO};color:#e6e6e6;
+       white-space:pre-wrap;word-break:break-all}`,
+    { bg: "#0d0d0c", w: WIN.w, h: WIN.h },
   );
 }
