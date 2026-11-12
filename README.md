@@ -6,6 +6,10 @@
 
 Built by Rohit Balaji.
 
+<a href="https://www.youtube.com/watch?v=WtN6w7USRxQ"><img src="docs/images/report.jpg" alt="A Witness report: Verdict: Not ready, with 20 bugs (15 confirmed, 3 likely, 2 needing review) and 12 improvements" width="100%"></a>
+
+<sub>The report from a scan of the benchmark app. Click the image to watch the demo video.</sub>
+
 ---
 
 ## What a scan gives you
